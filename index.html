@@ -432,6 +432,23 @@ $('importFile').onchange=async e=>{
  }catch(err){alert('Не удалось импортировать файл: '+err.message)}finally{e.target.value=''}
 };
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>switchView(b.dataset.view));
-try{let stored=localStorage.getItem('fintech-kanban-v6')||localStorage.getItem('fintech-kanban-v5')||localStorage.getItem('fintech-kanban-v3');if(stored){let parsed=JSON.parse(stored);if(Array.isArray(parsed))data=parsed;else{data=parsed.data||data;projectMeta=parsed.projectMeta||{};standaloneTasks=parsed.standaloneTasks||[]}}else{let old=localStorage.getItem('fintech-kanban-v2');if(old)data=JSON.parse(old)}}catch(e){}
+try{
+ let saved=null;
+ for(const key of ['fintech-kanban-v6','fintech-kanban-v5','fintech-kanban-v3','fintech-kanban-v2']){
+  const raw=localStorage.getItem(key);
+  if(!raw)continue;
+  try{
+   const parsed=JSON.parse(raw);
+   const candidate=Array.isArray(parsed)?parsed:parsed?.data;
+   if(Array.isArray(candidate)&&candidate.length>0){saved=parsed;break;}
+  }catch(e){}
+ }
+ if(saved){
+  const candidate=Array.isArray(saved)?saved:saved.data;
+  if(Array.isArray(candidate)&&candidate.length>0)data=candidate;
+  if(!Array.isArray(saved)){projectMeta=saved.projectMeta||{};standaloneTasks=saved.standaloneTasks||[];}
+ }
+}catch(e){}
+if(!Array.isArray(data)||data.length===0)data=JSON.parse(JSON.stringify(original));
 renderAll();
 </script></body></html>
