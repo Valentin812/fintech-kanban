@@ -166,7 +166,7 @@ html,body{height:100%;overflow:hidden}
 @media(max-width:1050px){.app{grid-template-columns:200px minmax(500px,1fr)}.projecthead{padding:15px 16px 10px}.toolbar{padding:9px 16px}.board{padding:0 10px 12px}.top{padding:0 16px}}
 .overview-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:18px;max-width:1000px}.overview-head h3{margin:0 0 6px}.overview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;max-width:1000px}.overview-field{display:flex;flex-direction:column;gap:7px;font-size:13px;font-weight:650;color:var(--ink)}.overview-field:first-child,.overview-field:nth-child(2),.overview-field:last-child{grid-column:1/-1}.overview-field textarea{width:100%;box-sizing:border-box;min-height:90px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;resize:vertical;font:13px/1.5 inherit;color:var(--ink);background:#fff}.overview-field textarea:focus{outline:2px solid #2878f022;border-color:#8db7f4}.overview-note{font-size:12px;color:var(--muted);margin-top:16px;max-width:1000px}@media(max-width:650px){.overview-grid{grid-template-columns:1fr}.overview-field:first-child,.overview-field:nth-child(2),.overview-field:last-child{grid-column:auto}.overview-head{flex-direction:column}}
 </style></head><body>
-<div class="app"><aside class="sidebar"><div class="brand">FinTech<small>Центр управления</small></div><button class="sidebar-inbox" id="standaloneNav" data-view="inbox">Задачи без проектов <span id="standaloneCount"></span></button><div class="sidehead"><span>ПРОЕКТЫ</span><div class="side-actions"><button id="newProject" title="Создать проект" aria-label="Создать проект">＋</button><button id="exportBtn" title="Экспорт данных">↥</button><button id="projectToTask" title="Преобразовать выбранный проект в задачу">⇢</button><button id="deleteProject" title="Удалить выбранный проект" aria-label="Удалить выбранный проект"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 10v6M14 10v6"/></svg></button></div></div><div class="sidebar-transform-hint">Преобразовать проект в задачу</div><div id="projects"></div><div class="footer">Изменения хранятся в этом браузере</div></aside>
+<div class="app"><aside class="sidebar"><div class="brand">FinTech<small>Центр управления</small></div><button class="sidebar-inbox" id="standaloneNav" data-view="inbox">Задачи без проектов <span id="standaloneCount"></span></button><div class="sidehead"><span>ПРОЕКТЫ</span><div class="side-actions"><button id="newProject" title="Создать проект" aria-label="Создать проект">＋</button><button id="exportBtn" title="Экспорт данных">↥</button><button id="importBtn" title="Импорт задач из JSON">↧</button><input id="importFile" type="file" accept=".json,application/json" hidden><button id="projectToTask" title="Преобразовать выбранный проект в задачу">⇢</button><button id="deleteProject" title="Удалить выбранный проект" aria-label="Удалить выбранный проект"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 10v6M14 10v6"/></svg></button></div></div><div class="sidebar-transform-hint">Преобразовать проект в задачу</div><div id="projects"></div><div class="footer">Изменения хранятся в этом браузере</div></aside>
 <main class="main"><div class="top"><div class="crumb">Проекты　›　<span id="crumbName">Автооплата ГП</span></div><div class="global-search-wrap"><input id="globalSearch" class="topsearch" placeholder="Поиск по всем проектам…"><div id="globalSearchResults" class="global-search-results" hidden></div></div></div>
 <header class="projecthead" id="projectHeader"><div class="headrow"><div><div class="projecttitle" id="projectName">Автооплата ГП</div><div class="subtitle" id="subtitle">Задачи проекта из исходной таблицы</div></div><div class="projectstats" id="stats"></div></div><nav class="tabs" id="tabs"><button class="tab active" data-view="tasks">Задачи</button><button class="tab" data-view="overview">Обзор проекта</button><button class="tab" data-view="roadmap">Дорожная карта</button><button class="tab" data-view="documents">Документы</button><button class="tab" data-view="links">Ссылки</button><button class="tab" data-view="people">Участники</button></nav></header>
 <div class="toolbar" id="taskToolbar"><input id="taskSearch" placeholder="⌕  Поиск в текущем проекте…"><select id="ownerFilter"><option value="">Все ответственные</option></select><select id="sortFilter"><option value="source">Порядок из таблицы</option><option value="date">Сначала ближайший срок</option><option value="title">По названию</option></select><span class="hint" id="summary"></span></div>
@@ -400,6 +400,37 @@ document.addEventListener('click',e=>{if(!e.target.closest('.global-search-wrap'
 $('ownerFilter').onchange=renderBoard;$('sortFilter').onchange=renderBoard;
 
 $('exportBtn').onclick=()=>{let blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='fintech-kanban-backup.json';a.click();URL.revokeObjectURL(a.href);toast('Резервная копия выгружена')};
+$('importBtn').onclick=()=>{$('importFile').click()};
+$('importFile').onchange=async e=>{
+ const file=e.target.files&&e.target.files[0];if(!file)return;
+ try{
+  const payload=JSON.parse(await file.text());
+  if(payload.format!=='fintech-kanban-import-v1'||!Array.isArray(payload.projects))throw new Error('Неподдерживаемый формат файла. Используйте JSON для импорта Kanban.');
+  const norm=s=>String(s||'').toLocaleLowerCase('ru').replace(/ё/g,'е').replace(/[\\s\\p{P}\\p{S}]+/gu,' ').trim();
+  let addedProjects=0,addedTasks=0,skipped=0;
+  let nextId=Math.max(0,...data.flatMap(p=>(p.tasks||[]).map(t=>Number(t.id)||0)),...standaloneTasks.map(t=>Number(t.id)||0))+1;
+  for(const sourceProject of payload.projects){
+   const projectName=String(sourceProject.name||'').trim();if(!projectName)continue;
+   let target=data.find(p=>norm(p.name)===norm(projectName));
+   if(!target){
+    if(!(sourceProject.tasks||[]).length)continue;
+    target={name:projectName,tasks:[]};data.push(target);addedProjects++;
+   }
+   if(!Array.isArray(target.tasks))target.tasks=[];
+   const existing=new Set(target.tasks.map(t=>norm(t.title)));
+   for(const sourceTask of (sourceProject.tasks||[])){
+    const title=String(sourceTask.title||'').trim();if(!title){skipped++;continue}
+    const key=norm(title);
+    if(existing.has(key)){skipped++;continue}
+    const task={id:nextId++,title,start:String(sourceTask.start||''),end:String(sourceTask.end||''),status:['Очередь','В работе','На анализе','Готово'].includes(sourceTask.status)?sourceTask.status:'Очередь',rawStatus:String(sourceTask.rawStatus||''),description:String(sourceTask.description||''),owner:String(sourceTask.owner||''),comment:String(sourceTask.comment||''),link:String(sourceTask.link||''),mt:String(sourceTask.mt||''),parent:''};
+    if(sourceTask.parent)task.description=(task.description?task.description+'\\n':'')+'Родительская задача / пересечение: '+sourceTask.parent;
+    target.tasks.push(task);existing.add(key);addedTasks++;
+   }
+  }
+  save();renderAll();toast('Импорт завершён: задач добавлено '+addedTasks+', дублей пропущено '+skipped);
+  alert('Импорт завершён.\\nНовых проектов: '+addedProjects+'\\nДобавлено задач: '+addedTasks+'\\nПропущено пустых/дублирующихся задач: '+skipped+'\\n\\nИмпорт только добавляет данные и не перезаписывает существующие задачи.');
+ }catch(err){alert('Не удалось импортировать файл: '+err.message)}finally{e.target.value=''}
+};
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>switchView(b.dataset.view));
 try{let stored=localStorage.getItem('fintech-kanban-v6')||localStorage.getItem('fintech-kanban-v5')||localStorage.getItem('fintech-kanban-v3');if(stored){let parsed=JSON.parse(stored);if(Array.isArray(parsed))data=parsed;else{data=parsed.data||data;projectMeta=parsed.projectMeta||{};standaloneTasks=parsed.standaloneTasks||[]}}else{let old=localStorage.getItem('fintech-kanban-v2');if(old)data=JSON.parse(old)}}catch(e){}
 renderAll();
