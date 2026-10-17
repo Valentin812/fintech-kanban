@@ -165,6 +165,67 @@ html,body{height:100%;overflow:hidden}
 .timeline-row{min-height:58px}
 @media(max-width:1050px){.app{grid-template-columns:200px minmax(500px,1fr)}.projecthead{padding:15px 16px 10px}.toolbar{padding:9px 16px}.board{padding:0 10px 12px}.top{padding:0 16px}}
 .overview-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:18px;max-width:1000px}.overview-head h3{margin:0 0 6px}.overview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;max-width:1000px}.overview-field{display:flex;flex-direction:column;gap:7px;font-size:13px;font-weight:650;color:var(--ink)}.overview-field:first-child,.overview-field:nth-child(2),.overview-field:last-child{grid-column:1/-1}.overview-field textarea{width:100%;box-sizing:border-box;min-height:90px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;resize:vertical;font:13px/1.5 inherit;color:var(--ink);background:#fff}.overview-field textarea:focus{outline:2px solid #2878f022;border-color:#8db7f4}.overview-note{font-size:12px;color:var(--muted);margin-top:16px;max-width:1000px}@media(max-width:650px){.overview-grid{grid-template-columns:1fr}.overview-field:first-child,.overview-field:nth-child(2),.overview-field:last-child{grid-column:auto}.overview-head{flex-direction:column}}
+
+/* Stable mobile layout: keep projects visible; avoid overlay drawers. */
+@media (max-width:700px){
+ html,body{height:100%;min-height:100%;overflow:hidden}
+ .app{display:flex!important;flex-direction:column!important;grid-template-columns:none!important;width:100%;height:100dvh;min-height:0;overflow:hidden}
+ .sidebar{position:relative!important;inset:auto!important;transform:none!important;visibility:visible!important;pointer-events:auto!important;z-index:2!important;display:flex;flex-direction:column;width:100%!important;max-width:100%;height:auto;max-height:150px;flex:0 0 auto;box-sizing:border-box;overflow:hidden;padding:7px 10px 8px;border-right:0;border-bottom:1px solid var(--line);box-shadow:none;background:#fcfdff}
+ .brand{font-size:14px;line-height:18px;padding:0 2px 4px;margin:0}
+ .brand small{display:inline;margin-left:6px;font-size:10px}
+ .sidebar-inbox{flex:0 0 auto;align-self:flex-start;max-width:100%;padding:4px 7px;margin:0 0 5px;font-size:11px}
+ .sidehead{flex:0 0 auto;min-height:22px;margin:0;padding:0 2px 4px}
+ .sidehead>span{font-size:10px}
+ .side-actions{gap:3px}
+ .side-actions button{min-width:25px;min-height:24px;padding:3px}
+ .sidebar-transform-hint{display:none!important}
+ #projects{display:flex!important;flex:1 1 auto;gap:5px;min-width:0;min-height:0;max-width:100%;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:thin;padding:0 0 3px}
+ #projects .project{display:flex;flex:0 0 165px;width:165px;min-width:0;min-height:34px;box-sizing:border-box;align-items:center;justify-content:space-between;gap:6px;margin:0;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font-size:12px;line-height:1.25;overflow:hidden}
+ #projects .project>span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ #projects .project .count{flex:0 0 auto}
+ .footer{display:none}
+ .main{display:flex!important;flex:1 1 auto!important;flex-direction:column!important;width:100%;height:auto!important;min-width:0!important;min-height:0!important;overflow:hidden}
+ .top{height:auto;min-height:48px;flex:0 0 auto;display:flex;flex-wrap:wrap;gap:7px;padding:7px 9px}
+ .crumb{font-size:11px;min-width:0;flex:1 1 90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .global-search-wrap{flex:1 1 100%;width:100%;min-width:0;order:3}
+ .topsearch{width:100%;max-width:100%;min-width:0;box-sizing:border-box}
+ .projecthead{flex:0 0 auto;min-width:0;padding:9px 10px 5px}
+ .headrow{display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap}
+ .projecttitle{font-size:19px;line-height:1.2;overflow-wrap:anywhere}
+ .subtitle{font-size:11px;line-height:1.35}
+ .projectstats{display:flex;flex-wrap:wrap;gap:4px}
+ .tabs{display:flex;gap:6px;max-width:100%;overflow-x:auto;white-space:nowrap;scrollbar-width:thin;margin-top:8px;padding:2px 0 4px}
+ .tab{flex:0 0 auto;padding:7px 9px;font-size:11px}
+ .toolbar{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px;flex:0 0 auto;padding:7px 9px}
+ .toolbar input{grid-column:1/-1;width:100%;min-width:0;box-sizing:border-box}
+ .toolbar select{width:100%;min-width:0;max-width:100%;box-sizing:border-box;font-size:11px;padding:7px 5px}
+ .toolbar .hint{grid-column:1/-1;font-size:10px}
+ .board{display:flex;flex:1 1 auto;min-height:0;min-width:0;gap:8px;padding:0 9px 10px;overflow-x:auto;overflow-y:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+ .column{flex:0 0 min(82vw,310px);width:min(82vw,310px);min-width:min(82vw,310px);max-width:min(82vw,310px);scroll-snap-align:start}
+ .task{max-width:100%;overflow-wrap:anywhere}
+ .tasktitle{overflow-wrap:anywhere;word-break:break-word}
+ .extra-view{flex:1 1 auto;min-height:0;min-width:0;overflow:auto;padding:12px 10px}
+ .overview-grid{grid-template-columns:minmax(0,1fr)}
+ .overview-field:first-child,.overview-field:nth-child(2),.overview-field:last-child{grid-column:auto}
+ .viewhead{gap:8px;flex-wrap:wrap}
+ .roadmap-summary{grid-template-columns:minmax(0,1fr)}
+ .timeline-inner{min-width:790px}
+ .drawer{width:100%;max-width:100%;max-height:calc(100dvh - 24px);box-sizing:border-box;overflow:auto}
+ .modal{padding:10px}
+ .modalcard{width:100%;max-width:100%;box-sizing:border-box}
+ input,select,textarea,button{max-width:100%}
+}
+@media(max-width:380px){
+ .sidebar{max-height:145px;padding:6px 8px}
+ #projects .project{flex-basis:145px;width:145px}
+ .projecttitle{font-size:17px}
+ .tabs{gap:4px}
+ .tab{padding:7px;font-size:10px}
+ .column{flex-basis:86vw;width:86vw;min-width:86vw;max-width:86vw}
+ .toolbar{padding:6px 7px}
+ .board{padding-left:7px;padding-right:7px}
+}
+
 </style></head><body>
 <div class="app"><aside class="sidebar"><div class="brand">FinTech<small>Центр управления</small></div><button class="sidebar-inbox" id="standaloneNav" data-view="inbox">Задачи без проектов <span id="standaloneCount"></span></button><div class="sidehead"><span>ПРОЕКТЫ</span><div class="side-actions"><button id="newProject" title="Создать проект" aria-label="Создать проект">＋</button><button id="exportBtn" title="Экспорт данных">↥</button><button id="importBtn" title="Импорт задач из JSON">↧</button><input id="importFile" type="file" accept=".json,application/json" hidden><button id="projectToTask" title="Преобразовать выбранный проект в задачу">⇢</button><button id="deleteProject" title="Удалить выбранный проект" aria-label="Удалить выбранный проект"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 10v6M14 10v6"/></svg></button></div></div><div class="sidebar-transform-hint">Преобразовать проект в задачу</div><div id="projects"></div><div class="footer">Изменения хранятся в этом браузере</div></aside>
 <main class="main"><div class="top"><div class="crumb">Проекты　›　<span id="crumbName">Автооплата ГП</span></div><div class="global-search-wrap"><input id="globalSearch" class="topsearch" placeholder="Поиск по всем проектам…"><div id="globalSearchResults" class="global-search-results" hidden></div></div></div>
