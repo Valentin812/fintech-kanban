@@ -478,10 +478,10 @@ $('importFile').onchange=async e=>{
     target={name:projectName,tasks:[]};data.push(target);addedProjects++;
    }
    if(!Array.isArray(target.tasks))target.tasks=[];
-   const existing=new Set(target.tasks.map(t=>norm(t.title)));
+   const taskKey=t=>norm(t.title)+'|'+norm(t.start)+'|'+norm(t.end);const existing=new Set(target.tasks.map(taskKey));
    for(const sourceTask of (sourceProject.tasks||[])){
     const title=String(sourceTask.title||'').trim();if(!title){skipped++;continue}
-    const key=norm(title);
+    const key=norm(title)+'|'+norm(sourceTask.start)+'|'+norm(sourceTask.end);
     if(existing.has(key)){skipped++;continue}
     const task={id:nextId++,title,start:String(sourceTask.start||''),end:String(sourceTask.end||''),status:['Очередь','В работе','На анализе','Готово'].includes(sourceTask.status)?sourceTask.status:'Очередь',rawStatus:String(sourceTask.rawStatus||''),description:String(sourceTask.description||''),owner:String(sourceTask.owner||''),comment:String(sourceTask.comment||''),link:String(sourceTask.link||''),mt:String(sourceTask.mt||''),parent:''};
     if(sourceTask.parent)task.description=(task.description?task.description+'\\n':'')+'Родительская задача / пересечение: '+sourceTask.parent;
