@@ -164,10 +164,59 @@ html,body{height:100%;overflow:hidden}
 .footer{padding:6px 20px 9px}
 .timeline-row{min-height:58px}
 @media(max-width:1050px){.app{grid-template-columns:200px minmax(500px,1fr)}.projecthead{padding:15px 16px 10px}.toolbar{padding:9px 16px}.board{padding:0 10px 12px}.top{padding:0 16px}}
+/* Mobile layout */
+.mobile-menu-btn{display:none;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:9px;padding:8px 10px;font-size:13px;font-weight:650;white-space:nowrap}
+@media(max-width:700px){
+ html,body{height:100%;overflow:hidden}
+ .app{display:block;height:100dvh;min-height:0;width:100%;overflow:hidden}
+ .sidebar{position:fixed;z-index:100;left:0;top:0;bottom:0;width:min(86vw,320px);height:100dvh;box-sizing:border-box;box-shadow:12px 0 40px rgba(20,35,60,.18);transform:translateX(-110%);transition:transform .2s ease;overflow-y:auto;padding:18px 12px;background:#fcfdff}
+ body.mobile-projects-open .sidebar{transform:translateX(0)}
+ body.mobile-projects-open:after{content:"";position:fixed;z-index:90;inset:0;background:rgba(15,23,42,.36)}
+ .main{height:100%;width:100%;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+ .top{height:auto;min-height:52px;flex:0 0 auto;padding:8px 10px;gap:8px;flex-wrap:wrap}
+ .mobile-menu-btn{display:inline-flex;flex:0 0 auto}
+ .crumb{font-size:12px;min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .global-search-wrap{order:3;flex:1 1 100%;width:100%;min-width:0}
+ .topsearch{width:100%;box-sizing:border-box}
+ .projecthead{padding:12px 12px 8px;flex:0 0 auto;min-width:0}
+ .headrow{align-items:flex-start;gap:8px;flex-wrap:wrap}
+ .projecttitle{font-size:21px;line-height:1.2;overflow-wrap:anywhere}
+ .subtitle{font-size:12px}
+ .projectstats{gap:6px;flex-wrap:wrap}
+ .tabs{display:flex;gap:5px;overflow-x:auto;white-space:nowrap;padding:8px 0 2px;scrollbar-width:thin}
+ .tab{flex:0 0 auto;padding:8px 10px;font-size:12px}
+ .toolbar{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);padding:8px 10px;gap:7px;flex:0 0 auto}
+ .toolbar input{grid-column:1/-1;width:100%;min-width:0;box-sizing:border-box}
+ .toolbar select{width:100%;min-width:0;max-width:100%;font-size:12px}
+ .toolbar .hint{grid-column:1/-1}
+ .board{display:flex;flex:1 1 auto;min-height:0;min-width:0;gap:8px;padding:0 10px 12px;overflow-x:auto;overflow-y:auto;scroll-snap-type:x proximity}
+ .column{flex:0 0 min(84vw,310px);width:min(84vw,310px);min-width:min(84vw,310px);max-width:min(84vw,310px);scroll-snap-align:start}
+ .task{max-width:100%;overflow-wrap:anywhere}
+ .tasktitle{overflow-wrap:anywhere;word-break:break-word}
+ .extra-view{padding:14px 12px;overflow:auto;min-width:0}
+ .overview-grid{grid-template-columns:minmax(0,1fr)}
+ .overview-field:first-child,.overview-field:nth-child(2),.overview-field:last-child{grid-column:auto}
+ .viewhead{gap:8px;flex-wrap:wrap}
+ .roadmap-summary{grid-template-columns:minmax(0,1fr)}
+ .timeline-inner{min-width:790px}
+ .drawer{width:100vw;max-width:100vw;padding:16px;box-sizing:border-box;overflow-y:auto}
+ .modal{padding:12px}
+ .modalcard{width:100%;max-width:100%;box-sizing:border-box}
+ .side-actions{gap:3px}
+ .side-actions button{min-width:30px;min-height:30px}
+ .footer{font-size:11px}
+}
+@media(max-width:380px){
+ .column{flex-basis:86vw;width:86vw;min-width:86vw;max-width:86vw}
+ .projectstats .stat{padding:7px 9px}
+ .projectstats .stat b{font-size:16px}
+ .task{padding:10px}
+ .tab{padding:7px 8px}
+}
 .overview-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:18px;max-width:1000px}.overview-head h3{margin:0 0 6px}.overview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;max-width:1000px}.overview-field{display:flex;flex-direction:column;gap:7px;font-size:13px;font-weight:650;color:var(--ink)}.overview-field:first-child,.overview-field:nth-child(2),.overview-field:last-child{grid-column:1/-1}.overview-field textarea{width:100%;box-sizing:border-box;min-height:90px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;resize:vertical;font:13px/1.5 inherit;color:var(--ink);background:#fff}.overview-field textarea:focus{outline:2px solid #2878f022;border-color:#8db7f4}.overview-note{font-size:12px;color:var(--muted);margin-top:16px;max-width:1000px}@media(max-width:650px){.overview-grid{grid-template-columns:1fr}.overview-field:first-child,.overview-field:nth-child(2),.overview-field:last-child{grid-column:auto}.overview-head{flex-direction:column}}
 </style></head><body>
 <div class="app"><aside class="sidebar"><div class="brand">FinTech<small>Центр управления</small></div><button class="sidebar-inbox" id="standaloneNav" data-view="inbox">Задачи без проектов <span id="standaloneCount"></span></button><div class="sidehead"><span>ПРОЕКТЫ</span><div class="side-actions"><button id="newProject" title="Создать проект" aria-label="Создать проект">＋</button><button id="exportBtn" title="Экспорт данных">↥</button><button id="importBtn" title="Импорт задач из JSON">↧</button><input id="importFile" type="file" accept=".json,application/json" hidden><button id="projectToTask" title="Преобразовать выбранный проект в задачу">⇢</button><button id="deleteProject" title="Удалить выбранный проект" aria-label="Удалить выбранный проект"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 10v6M14 10v6"/></svg></button></div></div><div class="sidebar-transform-hint">Преобразовать проект в задачу</div><div id="projects"></div><div class="footer">Изменения хранятся в этом браузере</div></aside>
-<main class="main"><div class="top"><div class="crumb">Проекты　›　<span id="crumbName">Автооплата ГП</span></div><div class="global-search-wrap"><input id="globalSearch" class="topsearch" placeholder="Поиск по всем проектам…"><div id="globalSearchResults" class="global-search-results" hidden></div></div></div>
+<main class="main"><div class="top"><button id="mobileMenuBtn" class="mobile-menu-btn" aria-label="Открыть список проектов">☰ Проекты</button><div class="crumb">Проекты　›　<span id="crumbName">Автооплата ГП</span></div><div class="global-search-wrap"><input id="globalSearch" class="topsearch" placeholder="Поиск по всем проектам…"><div id="globalSearchResults" class="global-search-results" hidden></div></div></div>
 <header class="projecthead" id="projectHeader"><div class="headrow"><div><div class="projecttitle" id="projectName">Автооплата ГП</div><div class="subtitle" id="subtitle">Задачи проекта из исходной таблицы</div></div><div class="projectstats" id="stats"></div></div><nav class="tabs" id="tabs"><button class="tab active" data-view="tasks">Задачи</button><button class="tab" data-view="overview">Обзор проекта</button><button class="tab" data-view="roadmap">Дорожная карта</button><button class="tab" data-view="documents">Документы</button><button class="tab" data-view="links">Ссылки</button><button class="tab" data-view="people">Участники</button></nav></header>
 <div class="toolbar" id="taskToolbar"><input id="taskSearch" placeholder="⌕  Поиск в текущем проекте…"><select id="ownerFilter"><option value="">Все ответственные</option></select><select id="sortFilter"><option value="source">Порядок из таблицы</option><option value="date">Сначала ближайший срок</option><option value="title">По названию</option></select><span class="hint" id="summary"></span></div>
 <section class="board viewpanel" id="board"></section><section class="viewpanel extra-view" id="overviewView" hidden></section><section class="viewpanel extra-view" id="inboxView" hidden></section><section class="viewpanel extra-view" id="roadmapView" hidden></section><section class="viewpanel extra-view" id="documentsView" hidden></section><section class="viewpanel extra-view" id="linksView" hidden></section><section class="viewpanel extra-view" id="peopleView" hidden></section><div class="footer" id="viewFooter">Перетаскивай карточки между колонками · нажми на задачу, чтобы открыть подробности</div></main></div>
@@ -432,6 +481,16 @@ $('importFile').onchange=async e=>{
  }catch(err){alert('Не удалось импортировать файл: '+err.message)}finally{e.target.value=''}
 };
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>switchView(b.dataset.view));
+const mobileMenuBtn=$('mobileMenuBtn');
+if(mobileMenuBtn)mobileMenuBtn.onclick=()=>document.body.classList.toggle('mobile-projects-open');
+document.addEventListener('click',e=>{
+ if(!document.body.classList.contains('mobile-projects-open'))return;
+ if(e.target.closest('#mobileMenuBtn'))return;
+ if(e.target.closest('.sidebar')&&e.target.closest('[data-project]'))document.body.classList.remove('mobile-projects-open');
+ if(e.target.matches('body.mobile-projects-open:after'))document.body.classList.remove('mobile-projects-open');
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.body.classList.remove('mobile-projects-open')});
+
 try{let stored=localStorage.getItem('fintech-kanban-v6')||localStorage.getItem('fintech-kanban-v5')||localStorage.getItem('fintech-kanban-v3');if(stored){let parsed=JSON.parse(stored);if(Array.isArray(parsed))data=parsed;else{data=parsed.data||data;projectMeta=parsed.projectMeta||{};standaloneTasks=parsed.standaloneTasks||[]}}else{let old=localStorage.getItem('fintech-kanban-v2');if(old)data=JSON.parse(old)}}catch(e){}
 renderAll();
 </script></body></html>
