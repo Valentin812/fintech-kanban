@@ -366,9 +366,9 @@ async function cloudAuth(mode){const email=$('cloudEmail').value.trim(),password
  try{
   const authPath=mode==='signup'?('/auth/v1/signup?redirect_to='+encodeURIComponent('https://valentin812.github.io/fintech-kanban/')):'/auth/v1/token?grant_type=password';const result=await cloudRequest(authPath,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});
   if(!result?.access_token){cloudMessage('Аккаунт создан. Если Supabase запросил подтверждение email, подтверди письмо и затем войди.');return}
-  cloudSession=result;localStorage.setItem('fintech-kanban-session',JSON.stringify(result));$('cloudLogout').hidden=false;$('cloudButton').textContent='☁ Облако: подключено';
-  await cloudSyncOnLogin();$('cloudLogout').hidden=false;cloudMessage('Синхронизация подключена для '+email+'.');toast('Облачная синхронизация подключена');cloudClose();
- }catch(err){cloudMessage('Ошибка: '+err.message)}
+  cloudSession=result;localStorage.setItem('fintech-kanban-session',JSON.stringify(result));$('cloudLogout').hidden=false;$('cloudButton').textContent='☁ Облако: подключено';cloudMessage('Вход выполнен. Синхронизируем данные…');cloudClose();
+  try{await cloudSyncOnLogin();$('cloudLogout').hidden=false;toast('Облачная синхронизация подключена')}catch(syncErr){console.error('Cloud sync failed',syncErr);toast('Вход выполнен, но синхронизация не завершилась. Нажми «Облако» для деталей.');cloudOpen();cloudMessage('Вход выполнен, ошибка синхронизации: '+syncErr.message)}
+ }catch(err){cloudMessage('Ошибка входа: '+err.message)}
 }
 async function cloudAutoRestore(){if(!cloudSession?.access_token)return;try{const userId=cloudSession.user?.id;if(!userId)return;const rows=await cloudRequest('/rest/v1/kanban_state?select=state&user_id=eq.'+encodeURIComponent(userId),{method:'GET'});if(rows&&rows.length&&rows[0].state){const s=rows[0].state;if(Array.isArray(s.data)&&s.data.length)data=s.data;projectMeta=s.projectMeta||{};standaloneTasks=s.standaloneTasks||[];localStorage.setItem('fintech-kanban-v6',JSON.stringify(currentCloudState()));renderAll();}else{await cloudWriteNow();}}catch(err){console.error('Cloud restore failed',err);toast('Облако пока недоступно; локальные данные сохранены.')}}
 async function cloudSyncOnLogin(){
