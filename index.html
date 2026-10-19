@@ -370,6 +370,7 @@ async function cloudAuth(mode){const email=$('cloudEmail').value.trim(),password
   await cloudSyncOnLogin();$('cloudLogout').hidden=false;cloudMessage('Синхронизация подключена для '+email+'.');toast('Облачная синхронизация подключена');
  }catch(err){cloudMessage('Ошибка: '+err.message)}
 }
+async function cloudAutoRestore(){if(!cloudSession?.access_token)return;try{const userId=cloudSession.user?.id;if(!userId)return;const rows=await cloudRequest('/rest/v1/kanban_state?select=state&user_id=eq.'+encodeURIComponent(userId),{method:'GET'});if(rows&&rows.length&&rows[0].state){const s=rows[0].state;if(Array.isArray(s.data)&&s.data.length)data=s.data;projectMeta=s.projectMeta||{};standaloneTasks=s.standaloneTasks||[];localStorage.setItem('fintech-kanban-v6',JSON.stringify(currentCloudState()));renderAll();}else{await cloudWriteNow();}}catch(err){console.error('Cloud restore failed',err);toast('Облако пока недоступно; локальные данные сохранены.')}}
 async function cloudSyncOnLogin(){
  const userId=cloudSession.user?.id;if(!userId)throw new Error('Не удалось определить пользователя.');
  const rows=await cloudRequest('/rest/v1/kanban_state?select=state&user_id=eq.'+encodeURIComponent(userId),{method:'GET'});
@@ -545,5 +546,5 @@ try{
 if(!Array.isArray(data)||data.length===0)data=JSON.parse(JSON.stringify(original));
 renderAll();
 $('cloudButton').addEventListener('click',cloudOpen);$('cloudClose').addEventListener('click',cloudClose);$('cloudSignup').addEventListener('click',()=>cloudAuth('signup'));$('cloudLogin').addEventListener('click',()=>cloudAuth('login'));$('cloudLogout').addEventListener('click',cloudLogout);
-if(cloudSession?.access_token){$('cloudButton').textContent='☁ Облако: подключено';}
+if(cloudSession?.access_token){$('cloudButton').textContent='☁ Облако: подключено';cloudAutoRestore();}
 </script></body></html>
