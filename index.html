@@ -364,7 +364,7 @@ async function cloudRequest(path,options={}){const response=await fetch(CLOUD_UR
 async function cloudAuth(mode){const email=$('cloudEmail').value.trim(),password=$('cloudPassword').value;if(!email||!password){cloudMessage('Укажи email и пароль.');return}if(password.length<6){cloudMessage('Пароль должен содержать не менее 6 символов.');return}
  cloudMessage(mode==='signup'?'Создаём аккаунт…':'Входим…');
  try{
-  const result=await cloudRequest('/auth/v1/'+(mode==='signup'?'signup':'token?grant_type=password'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});
+  const authPath=mode==='signup'?('/auth/v1/signup?redirect_to='+encodeURIComponent('https://valentin812.github.io/fintech-kanban/')):'/auth/v1/token?grant_type=password';const result=await cloudRequest(authPath,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});
   if(!result?.access_token){cloudMessage('Аккаунт создан. Если Supabase запросил подтверждение email, подтверди письмо и затем войди.');return}
   cloudSession=result;localStorage.setItem('fintech-kanban-session',JSON.stringify(result));$('cloudLogout').hidden=false;$('cloudButton').textContent='☁ Облако: подключено';
   await cloudSyncOnLogin();$('cloudLogout').hidden=false;cloudMessage('Синхронизация подключена для '+email+'.');toast('Облачная синхронизация подключена');
