@@ -402,7 +402,7 @@ async function cloudAuth(mode){const email=($('authEmail')?.value||$('cloudEmail
  try{
   const authPath=mode==='signup'?('/auth/v1/signup?redirect_to='+encodeURIComponent('https://valentin812.github.io/fintech-kanban/')):'/auth/v1/token?grant_type=password';const result=await cloudRequest(authPath,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});
   if(!result?.access_token){authMessage('Аккаунт создан. Проверь почту и подтверди email, затем вернись сюда и войди.');return}
-  cloudSession=result;localStorage.setItem('fintech-kanban-session',JSON.stringify(result));$('cloudLogout').hidden=false;$('telegramLinkButton').hidden=false;$('cloudButton').textContent='☁ Облако: подключено';authMessage('Вход выполнен. Загружаем твою доску…');
+  cloudSession=result;localStorage.setItem('fintech-kanban-session',JSON.stringify(result));$('cloudLogout').hidden=false;$('telegramLinkButton').hidden=false;renderAccountChip();authMessage('Вход выполнен. Загружаем твою доску…');
   $('authScreen').classList.remove('show');try{await cloudSyncOnLogin();$('cloudLogout').hidden=false;toast('Ты вошёл в свой Kanban')}catch(syncErr){console.error('Cloud sync failed',syncErr);$('authScreen').classList.add('show');authMessage('Вход выполнен, но не удалось синхронизировать данные: '+syncErr.message)}
  }catch(err){authMessage('Не удалось войти: '+err.message)}
 }
