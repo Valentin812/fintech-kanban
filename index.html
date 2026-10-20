@@ -397,6 +397,58 @@ body.dark-theme .sidebar .side-actions #newProject{background:#24344a;color:#a9c
 .sidebar .side-actions #newProject{font-size:17px}
 .sidebar .side-actions #deleteProject svg{width:13px;height:13px}
 @media(max-width:1050px){.sidebar .sidehead{grid-template-columns:minmax(0,1fr) auto;gap:2px}.sidebar .sidehead>span{font-size:8px;letter-spacing:0}.sidebar .side-actions button{width:20px;min-width:20px;flex-basis:20px;height:25px}}
+
+
+/* Sidebar project toolbar: reserve a fixed, non-overlapping row for the title and controls. */
+.sidebar .sidehead{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  column-gap:6px;
+  width:100%;
+  min-width:0;
+  box-sizing:border-box;
+  padding:12px 4px 9px;
+}
+.sidebar .sidehead>span{
+  min-width:0;
+  white-space:nowrap;
+  font-size:10px;
+  line-height:1.2;
+  letter-spacing:.05em;
+}
+.sidebar .sidehead .side-actions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:2px;
+  min-width:0;
+  flex:0 0 auto;
+}
+.sidebar .sidehead .side-actions button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  box-sizing:border-box;
+  width:25px;
+  min-width:25px;
+  max-width:25px;
+  height:27px;
+  min-height:27px;
+  flex:0 0 25px;
+  padding:0;
+  margin:0;
+  line-height:1;
+  font-size:16px;
+}
+.sidebar .sidehead .side-actions #projectToTask{font-size:14px}
+.sidebar .sidehead .side-actions #deleteProject svg{display:block;width:13px;height:13px;flex:0 0 13px}
+@media(max-width:1050px){
+  .sidebar .sidehead{grid-template-columns:minmax(0,1fr) auto;column-gap:3px;padding-left:2px;padding-right:2px}
+  .sidebar .sidehead>span{font-size:9px;letter-spacing:.015em}
+  .sidebar .sidehead .side-actions{gap:0}
+  .sidebar .sidehead .side-actions button{width:22px;min-width:22px;max-width:22px;flex-basis:22px;height:25px;min-height:25px;font-size:15px}
+}
 </style></head><body>
 <div class="auth-screen" id="authScreen"><div class="auth-card"><div class="auth-brand">FinTech Kanban<span>Центр управления проектами и задачами</span></div><div class="auth-tabs"><button class="auth-tab active" id="authLoginTab" type="button">Вход</button><button class="auth-tab" id="authSignupTab" type="button">Регистрация</button></div><h2 id="authHeading">С возвращением</h2><p class="auth-description" id="authDescription">Войди, чтобы открыть свои проекты и задачи.</p><div class="field"><label for="authEmail">Email</label><input id="authEmail" type="email" autocomplete="username" placeholder="name@example.com"></div><div class="field"><label for="authPassword">Пароль</label><input id="authPassword" type="password" autocomplete="current-password" placeholder="Не менее 6 символов"></div><button class="btn primary auth-submit" id="authSubmit" type="button">Войти</button><button class="btn auth-submit" id="authReset" type="button" style="margin-top:10px">Забыли пароль?</button><div class="auth-status" id="authStatus" role="status" aria-live="polite"></div><div class="auth-foot">Ваши данные доступны только в вашей учётной записи.</div></div></div>
 <div class="app"><aside class="sidebar"><div class="brand">Канбан проектов</div><button class="home-nav" id="homeNav" data-view="home"><span aria-hidden="true">⌂</span> Главная</button><button class="sidebar-inbox" id="standaloneNav" data-view="inbox">Задачи без проектов <span id="standaloneCount"></span></button><div class="sidehead"><span>ПРОЕКТЫ</span><div class="side-actions"><button id="newProject" title="Создать проект" aria-label="Создать проект">＋</button><button id="exportBtn" title="Экспорт данных">↥</button><button id="importBtn" title="Импорт задач из JSON">↧</button><input id="importFile" type="file" accept=".json,application/json" hidden><button id="projectToTask" title="Преобразовать выбранный проект в задачу">⇢</button><button id="deleteProject" title="Удалить выбранный проект" aria-label="Удалить выбранный проект"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 10v6M14 10v6"/></svg></button></div></div><div class="sidebar-transform-hint">Преобразовать проект в задачу</div><div id="projects"></div></aside>
