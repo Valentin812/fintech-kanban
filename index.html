@@ -449,6 +449,60 @@ body.dark-theme .sidebar .side-actions #newProject{background:#24344a;color:#a9c
   .sidebar .sidehead .side-actions{gap:0}
   .sidebar .sidehead .side-actions button{width:22px;min-width:22px;max-width:22px;flex-basis:22px;height:25px;min-height:25px;font-size:15px}
 }
+
+/* Mobile usability pass: safe areas, touch targets, and compact task editing. */
+@media (max-width:700px){
+  html,body{height:100%;height:100dvh;overscroll-behavior:none}
+  .app{height:100vh;height:100dvh;padding-bottom:env(safe-area-inset-bottom,0px)}
+  .sidebar{max-height:clamp(112px,22dvh,150px);padding-top:6px;padding-bottom:7px}
+  .sidebar .brand{padding-bottom:2px}
+  .sidebar .home-nav{min-height:34px;padding:6px 9px;margin:1px 0;font-size:12px}
+  .sidebar .sidebar-inbox{min-height:32px;padding:5px 8px;margin:0 0 3px;font-size:11px}
+  .sidebar .sidehead{min-height:28px;padding:3px 2px 4px}
+  .sidebar .sidehead>span{font-size:10px}
+  .sidebar .sidehead .side-actions{gap:2px}
+  .sidebar .sidehead .side-actions button{width:30px;min-width:30px;max-width:30px;height:32px;min-height:32px;flex-basis:30px;font-size:17px}
+  #projects .project{flex-basis:155px;width:155px;min-height:38px;padding:8px 10px}
+  .top{padding-top:max(7px,env(safe-area-inset-top,0px));}
+  .top #teamTopButton,.top .theme-toggle{min-height:38px;padding:7px 9px;white-space:nowrap}
+  .account-chip{min-height:38px;padding:4px 7px}
+  .account-chip-label{max-width:95px}
+  .projecthead .headrow>div:first-child{min-width:0;flex:1 1 100%}
+  .projectstats{display:none}
+  .tabs{-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tabs::-webkit-scrollbar,#projects::-webkit-scrollbar{display:none}
+  .toolbar input,.toolbar select{min-height:40px;font-size:16px}
+  .toolbar .hint{line-height:1.35}
+  .board{-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;scrollbar-width:none}
+  .board::-webkit-scrollbar{display:none}
+  .column{scroll-snap-stop:always}
+  .drawer{top:env(safe-area-inset-top,0px);height:100vh;height:100dvh;max-height:100dvh;padding:16px 16px calc(18px + env(safe-area-inset-bottom,0px));overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+  .drawerhead{position:sticky;top:-16px;z-index:2;background:inherit;padding:10px 0 8px;margin-top:-10px}
+  .drawerhead h2{font-size:20px}
+  .twocol{grid-template-columns:minmax(0,1fr);gap:0}
+  .field input,.field select,.field textarea,.checklist-add input{font-size:16px;min-height:42px}
+  .field textarea{min-height:100px}
+  .draweractions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding-bottom:4px}
+  .draweractions .btn{min-width:0;min-height:42px;padding:9px 7px;white-space:normal;line-height:1.25}
+  .modal{align-items:flex-start;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:max(12px,env(safe-area-inset-top,0px)) 10px calc(12px + env(safe-area-inset-bottom,0px))}
+  .modalcard{margin:auto 0;max-height:calc(100dvh - 24px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));overflow-y:auto;overscroll-behavior:contain}
+  .modalcard input,.modalcard select,.modalcard textarea{font-size:16px;min-height:42px}
+  .modalcard button,.drawer button,.top button{touch-action:manipulation}
+}
+@media(max-width:420px){
+  .top{gap:5px;padding-left:7px;padding-right:7px}
+  .top #teamTopButton{font-size:0;width:38px;min-width:38px;padding:0}
+  .top #teamTopButton::first-letter{font-size:16px}
+  .top .theme-toggle{font-size:11px;padding:7px}
+  .account-chip-label{display:none}
+  .projecthead{padding:8px 9px 4px}
+  .projecttitle{font-size:18px}
+  .tab{padding:8px;font-size:11px}
+  .toolbar{gap:5px}
+  .column{flex-basis:88vw;width:88vw;min-width:88vw;max-width:88vw}
+  .draweractions{grid-template-columns:minmax(0,1fr)}
+}
+
 </style></head><body>
 <div class="auth-screen" id="authScreen"><div class="auth-card"><div class="auth-brand">FinTech Kanban<span>Центр управления проектами и задачами</span></div><div class="auth-tabs"><button class="auth-tab active" id="authLoginTab" type="button">Вход</button><button class="auth-tab" id="authSignupTab" type="button">Регистрация</button></div><h2 id="authHeading">С возвращением</h2><p class="auth-description" id="authDescription">Войди, чтобы открыть свои проекты и задачи.</p><div class="field"><label for="authEmail">Email</label><input id="authEmail" type="email" autocomplete="username" placeholder="name@example.com"></div><div class="field"><label for="authPassword">Пароль</label><input id="authPassword" type="password" autocomplete="current-password" placeholder="Не менее 6 символов"></div><button class="btn primary auth-submit" id="authSubmit" type="button">Войти</button><button class="btn auth-submit" id="authReset" type="button" style="margin-top:10px">Забыли пароль?</button><div class="auth-status" id="authStatus" role="status" aria-live="polite"></div><div class="auth-foot">Ваши данные доступны только в вашей учётной записи.</div></div></div>
 <div class="app"><aside class="sidebar"><div class="brand">Канбан проектов</div><button class="home-nav" id="homeNav" data-view="home"><span aria-hidden="true">⌂</span> Главная</button><button class="sidebar-inbox" id="standaloneNav" data-view="inbox">Задачи без проектов <span id="standaloneCount"></span></button><div class="sidehead"><span>ПРОЕКТЫ</span><div class="side-actions"><button id="newProject" title="Создать проект" aria-label="Создать проект">＋</button><button id="exportBtn" title="Экспорт данных">↥</button><button id="importBtn" title="Импорт задач из JSON">↧</button><input id="importFile" type="file" accept=".json,application/json" hidden><button id="projectToTask" title="Преобразовать выбранный проект в задачу">⇢</button><button id="deleteProject" title="Удалить выбранный проект" aria-label="Удалить выбранный проект"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 10v6M14 10v6"/></svg></button></div></div><div class="sidebar-transform-hint">Преобразовать проект в задачу</div><div id="projects"></div></aside>
