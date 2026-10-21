@@ -1,0 +1,30 @@
+name: Basic static app tests
+
+on:
+  push:
+    branches:
+      - chore/add-basic-tests
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check inline JavaScript syntax
+        run: node scripts/check-inline-scripts.mjs
+      - name: Install browser test dependency
+        run: npm install --no-save --package-lock=false playwright@1.64.1
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run browser smoke test
+        run: node tests/smoke.mjs
+
