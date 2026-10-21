@@ -669,6 +669,7 @@ async function cloudSyncOnLogin(){
   projectMeta=s.projectMeta||{};
   standaloneTasks=s.standaloneTasks||[];
   members=Array.isArray(s.members)?s.members:[];
+  await loadRegisteredParticipants();
   if(!data.some(p=>p.name===activeProject))activeProject=data[0]?.name||'Мой Kanban';
   selectedId=null;selectedStandaloneId=null;
   localStorage.setItem('fintech-kanban-v6',JSON.stringify(currentCloudState()));
@@ -677,6 +678,7 @@ async function cloudSyncOnLogin(){
  }else{
   data=[{name:'Мой Kanban',tasks:[]}];activeProject='Мой Kanban';projectMeta={};standaloneTasks=[];members=[];registeredParticipants=[];selectedId=null;
   localStorage.setItem('fintech-kanban-v6',JSON.stringify(currentCloudState()));
+  await loadRegisteredParticipants();
   renderAll();await cloudWriteNow();toast('Создан чистый Kanban');
  }
 }
