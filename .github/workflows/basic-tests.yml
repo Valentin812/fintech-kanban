@@ -3,7 +3,10 @@ name: Basic static app tests
 on:
   push:
     branches:
-      - chore/add-basic-tests
+      - main
+      - "chore/**"
+      - "fix/**"
+      - "feat/**"
   pull_request:
     branches:
       - main
@@ -13,6 +16,7 @@ permissions:
 
 jobs:
   test:
+    name: basic-tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,4 +31,3 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Run browser smoke test
         run: node tests/smoke.mjs
-
