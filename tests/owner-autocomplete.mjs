@@ -54,7 +54,7 @@ try {
       return;
     }
     if (url.pathname === '/rest/v1/kanban_profiles' && request.method() === 'GET') {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ user_id: '00000000-0000-4000-8000-000000000002', display_name: 'Илья Бекетов', email: 'beketov@example.test', created_at: '2026-01-01T00:00:00Z' }]) });
       return;
     }
     if (url.pathname === '/rest/v1/kanban_state' && request.method() === 'POST') {
@@ -80,6 +80,13 @@ try {
   await page.locator('#createTask').click();
   await page.locator('.task').filter({ hasText: 'Проверка ответственного' }).click();
   const owner = page.locator('#dOwner');
+
+  await owner.fill('Бекетов');
+  await page.getByRole('button', { name: /Илья Бекетов/ }).waitFor();
+  await page.getByRole('button', { name: /Илья Бекетов/ }).first().click();
+  if (await owner.inputValue() !== 'Илья Бекетов') {
+    throw new Error('Registered participants were missing from owner search');
+  }
 
   await owner.fill('Анна');
   await page.getByRole('button', { name: /Анна Смирнова/ }).waitFor();
