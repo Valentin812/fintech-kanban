@@ -75,7 +75,10 @@ try {
   await page.locator('#memberEmail').fill('anna@example.test');
   await page.locator('#memberForm button[type="submit"]').click();
   await page.locator('[data-view="tasks"]').click();
-  await page.locator('.task').first().click();
+  await page.locator('.column[data-status="Очередь"] [data-add]').first().click();
+  await page.locator('#newTitle').fill('Проверка ответственного');
+  await page.locator('#createTask').click();
+  await page.locator('.task').filter({ hasText: 'Проверка ответственного' }).click();
   const owner = page.locator('#dOwner');
 
   await owner.fill('Анна');
