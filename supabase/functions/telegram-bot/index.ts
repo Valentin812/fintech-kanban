@@ -85,18 +85,18 @@ Deno.serve(async (req) => {
   }
 
   // Код должен существовать, быть неиспользованным и не просроченным.
+  // Помечаем код использованным одним атомарным запросом: если два сообщения
+  // с одним кодом придут одновременно, сработает только одно из них.
   const { data: link, error: linkError } = await db
     .from("telegram_link_codes")
-    .select("code,user_id,expires_at,used_at")
+    .update({ used_at: new Date().toISOString() })
     .eq("code", code)
+    .is("used_at", null)
+    .gt("expires_at", new Date().toISOString())
+    .select("code,user_id")
     .maybeSingle();
 
-  if (
-    linkError ||
-    !link ||
-    link.used_at ||
-    new Date(link.expires_at).getTime() <= Date.now()
-  ) {
+  if (linkError || !link) {
     await sendMessage(
       chatId,
       "Код недействителен или истёк. Создай новый код в Kanban."
@@ -158,16 +158,6 @@ Deno.serve(async (req) => {
     console.error("Link account failed:", insertError.message);
     await sendMessage(chatId, "Не удалось подключить аккаунт. Попробуй позже.");
     return new Response("OK");
-  }
-
-  const { error: usedError } = await db
-    .from("telegram_link_codes")
-    .update({ used_at: new Date().toISOString() })
-    .eq("code", code)
-    .is("used_at", null);
-
-  if (usedError) {
-    console.error("Mark code used failed:", usedError.message);
   }
 
   await sendMessage(
