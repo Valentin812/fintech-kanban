@@ -1,0 +1,39 @@
+// Run with: node --experimental-strip-types tests/telegram-parse.mjs
+import assert from 'node:assert/strict';
+import { readFile, writeFile, mkdtemp } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+
+const source = await readFile('supabase/functions/telegram-bot/index.ts', 'utf8');
+const start = source.indexOf('const MAX_TITLE_WORDS_CHARS');
+const end = source.indexOf('function normName');
+assert.ok(start > 0 && end > start, 'parseTaskText section not found in the bot source');
+const dir = await mkdtemp(join(tmpdir(), 'bot-parse-'));
+const file = join(dir, 'parse.ts');
+await writeFile(file, source.slice(start, end));
+const { parseTaskText: p } = await import(pathToFileURL(file).href);
+const td = (s) => { const r = p(s); return [r.title, r.description, r.due]; };
+
+// The message that started it: dictated, no punctuation.
+assert.deepEqual(td('Надо позвонить в банк получается тема такая узнать про тарифы завтра'), ['Позвонить в банк', 'Узнать про тарифы', 'завтра']);
+assert.deepEqual(td('Надо позвонить в банк получается тема такая узнать про тарифы'), ['Позвонить в банк', 'Узнать про тарифы', '']);
+assert.deepEqual(td('позвонить в банк чтобы уточнить тарифы и сроки'), ['Позвонить в банк', 'Уточнить тарифы и сроки', '']);
+assert.deepEqual(td('Нужно подготовить отчёт короче там надо сравнить комиссии банков'), ['Подготовить отчёт', 'Там надо сравнить комиссии банков', '']);
+assert.deepEqual(td('Позвонить в банк — узнать тарифы'), ['Позвонить в банк', 'Узнать тарифы', '']);
+assert.deepEqual(td('Встреча с Лимарём: обсудить сроки запуска'), ['Встреча с Лимарём', 'Обсудить сроки запуска', '']);
+assert.deepEqual(td('Отчёт по тарифам описание: собрать данные по всем банкам'), ['Отчёт по тарифам', 'Собрать данные по всем банкам', '']);
+assert.deepEqual(td('Тема: созвон с банком. Обсудить лимиты'), ['Созвон с банком', 'Обсудить лимиты', '']);
+// Plain behaviour stays.
+assert.deepEqual(td('Позвонить в банк. Уточнить тариф и сроки'), ['Позвонить в банк', 'Уточнить тариф и сроки', '']);
+assert.deepEqual(td('Проверить бота завтра #Автооплата'), ['Проверить бота', '', 'завтра']);
+assert.equal(p('Проверить бота завтра #Автооплата').projectHint, 'Автооплата');
+assert.deepEqual(td('Заголовок\nописание строкой'), ['Заголовок', 'описание строкой', '']);
+assert.deepEqual(td('Узнать про тарифы'), ['Узнать про тарифы', '', ''], 'a purpose verb at the start is the topic');
+assert.equal(p('Отчёт v2.0 готов. Отправить Сухову').title, 'Отчёт v2.0 готов');
+assert.equal(p('#Мобилка').title, 'Задача из Telegram');
+const long = 'Нужно подготовить подробное сравнение тарифов всех банков партнёров по автооплате с учётом комиссий и сроков зачисления';
+const r = p(long);
+assert.ok(r.title.endsWith('…') && r.title.length <= 81 && r.title.startsWith('Подготовить подробное'), r.title);
+assert.equal(r.description, long, 'the full text is kept in the description');
+console.log('Telegram parser OK: title and description are separated for dictated and written messages');
