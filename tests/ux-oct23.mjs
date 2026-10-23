@@ -175,9 +175,26 @@ try {
   await page.waitForFunction(() => !document.querySelector('#accountAvatar img'));
   assert(avatarWrites.at(-1).method === 'DELETE' && avatarWrites.at(-1).filter === `eq.${ME}`, 'Removing deletes only my photo');
 
+  // 6. Coffee themes are generated from the existing ones and switch cleanly.
+  const themeInfo = await page.evaluate(() => {
+    const sel = document.getElementById('themeToggle');
+    const options = [...sel.options].map((o) => o.value);
+    applyTheme('cappuccino');
+    const capp = { dark: document.body.classList.contains('dark-theme'), rules: document.getElementById('coffeeThemes')?.sheet?.cssRules.length || 0, bg: getComputedStyle(document.querySelector('.column')).backgroundColor };
+    applyTheme('latte');
+    const latte = { dark: document.body.classList.contains('dark-theme'), bg: getComputedStyle(document.querySelector('.sidebar')).backgroundColor };
+    applyTheme('light');
+    return { options, capp, latte };
+  });
+  assert(themeInfo.options.includes('latte') && themeInfo.options.includes('cappuccino'), `Theme picker should offer Латте and Капучино: ${themeInfo.options}`);
+  assert(themeInfo.capp.dark && themeInfo.capp.rules > 40, `Капучино should build on the dark theme: ${JSON.stringify(themeInfo.capp)}`);
+  assert(!themeInfo.latte.dark, 'Латте is a light theme');
+  const [r, g, b] = themeInfo.capp.bg.match(/\d+/g).map(Number);
+  assert(r > b, `Капучино columns should be brown, not navy: ${themeInfo.capp.bg}`);
+
   assert(!unexpected.length, `Unexpected network requests: ${unexpected.join('; ')}`);
   assert(!errors.length, `Browser page errors: ${errors.join('; ')}`);
-  console.log('UX pack OK: scrollable comment preview, «Без проекта» in My tasks, resizable sidebar, changelog, profile photos');
+  console.log('UX pack OK: scrollable comment preview, «Без проекта» in My tasks, resizable sidebar, changelog, profile photos, coffee themes');
 } finally {
   await browser.close();
   await new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
