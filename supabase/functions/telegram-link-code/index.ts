@@ -35,6 +35,10 @@ Deno.serve(async (req) => {
   if (userError || !user) {
     return Response.json({ error: "Invalid session" }, { status: 401, headers: corsHeaders });
   }
+  // A blocked account keeps a valid access token for up to an hour; stop it here.
+  if (user.banned_until && new Date(user.banned_until).getTime() > Date.now()) {
+    return Response.json({ error: "Forbidden" }, { status: 403, headers: corsHeaders });
+  }
 
   const code = crypto.randomUUID().replaceAll("-", "").slice(0, 24);
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
