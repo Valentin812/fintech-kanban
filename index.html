@@ -739,6 +739,7 @@ async function notifyTelegramAssignment({owner,title,project,due}){
   if(result?.sent)toast('Уведомление отправлено в Telegram');
   else if(result?.reason==='telegram_not_linked')toast('У сотрудника не подключён Telegram');
   else if(result?.reason==='assignee_not_found')toast('Для уведомления укажи email аккаунта Kanban или имя профиля сотрудника');
+  else if(result?.reason==='assignee_ambiguous')toast('Это имя есть у нескольких аккаунтов — укажи email сотрудника, чтобы отправить уведомление');
  }catch(err){console.error('Telegram assignment notification failed',err);toast('Задача сохранена, но Telegram-уведомление не отправлено')}
 }
 async function clearLocalCloudSession(message){cloudSession=null;localStorage.removeItem('fintech-kanban-session');document.querySelector('.app').hidden=true;$('authScreen').classList.add('show');$('cloudLogout').hidden=true;$('cloudLogoutAll').hidden=true;$('telegramLinkButton').hidden=true;$('telegramLinkStatus').textContent='';renderAccountChip();cloudMessage(message);authMessage(message)}
