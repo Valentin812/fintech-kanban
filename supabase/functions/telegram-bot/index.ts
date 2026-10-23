@@ -29,9 +29,10 @@ async function sendMessage(chatId: number, text: string) {
 
 const LINK_CODE = /^[0-9a-f]{24}$/i;
 const TASKS_PER_HOUR = 60;
+const MAX_TITLE_WORDS_CHARS = 80;
 const HELP_TEXT =
   "Как создать задачу:\n" +
-  "• Просто отправь текст — первая строка станет названием, остальное — описанием.\n" +
+  "• Просто отправь текст — первая строка (или первое предложение) станет названием, остальное — описанием.\n" +
   "• Срок: «до 25.10», «до 25.10.2026», «сегодня», «завтра» или «послезавтра».\n" +
   "• Проект: добавь #название, например #Автооплата.\n" +
   "Без проекта задача попадёт в «Мои задачи», ответственный — ты.\n\n" +
@@ -58,7 +59,26 @@ export function parseTaskText(raw: string): ParsedTask {
   const lines = text.split("\n").map((l) => l.trim());
   const firstIndex = lines.findIndex(Boolean);
   let title = (firstIndex >= 0 ? lines[firstIndex] : "").replace(/\s+/g, " ").replace(/[\s,;:—-]+$/u, "").trim();
-  const description = (firstIndex >= 0 ? lines.slice(firstIndex + 1) : []).join("\n").trim().slice(0, 4000);
+  let description = (firstIndex >= 0 ? lines.slice(firstIndex + 1) : []).join("\n").trim();
+  if (!description) {
+    // One-line message: the first sentence becomes the title, the rest the
+    // description ("Позвонить в банк. Уточнить тариф" -> two parts). A new
+    // sentence must start with a capital letter or digit, so "т.е. договор"
+    // is not split.
+    const sentence = title.match(/^(.{3,}?[.!?…])\s+([\p{Lu}\d«"(].*)$/u);
+    if (sentence) {
+      title = sentence[1].replace(/[.…]+$/u, "").trim();
+      description = sentence[2].trim();
+    } else if (title.length > MAX_TITLE_WORDS_CHARS) {
+      // Long text without sentences: short title cut at a word boundary,
+      // the full text goes to the description so nothing is lost.
+      const cut = title.slice(0, MAX_TITLE_WORDS_CHARS);
+      const space = cut.lastIndexOf(" ");
+      description = title;
+      title = (space > 40 ? cut.slice(0, space) : cut).replace(/[\s,;:—-]+$/u, "") + "…";
+    }
+  }
+  description = description.slice(0, 4000);
   if (!title) title = "Задача из Telegram";
   if (title.length > 200) title = title.slice(0, 199) + "…";
   return { title, description, due, projectHint };
