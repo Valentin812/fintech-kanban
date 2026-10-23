@@ -625,7 +625,7 @@ body.dark-theme .autosave-note{color:#9aa8bc}body.dark-theme .autosave-note.save
 .project-menu button:hover,.project-menu button:focus-visible{background:#f1f4f9}.project-menu button.danger{color:#b42318}
 body.dark-theme .project-menu{background:#182233;border-color:#334158}body.dark-theme .project-menu button{color:#dbe4f0}body.dark-theme .project-menu button:hover{background:#223049}body.dark-theme .project-menu button.danger{color:#fda29b}
 #cloudThemeGroup .cloud-theme-select{display:block;width:calc(100% - 12px)!important;max-width:none!important;min-width:0!important;margin:0 6px 4px;text-align:left}
-.colhead[draggable="true"]{cursor:grab}.col-grip{color:#8a94a6;font-size:13px;line-height:1;cursor:grab;user-select:none;margin-right:-2px}@media (hover:hover){.col-grip{opacity:.45}.colhead:hover .col-grip{opacity:1}}.column-dragging{opacity:.5}
+.colhead[draggable="true"]{cursor:grab}.col-grip{color:#8a94a6;font-size:13px;line-height:1;cursor:grab;user-select:none;margin-right:-2px}@media (hover:hover){.col-grip{opacity:.45}.colhead:hover .col-grip{opacity:1}}.column-dragging{opacity:.35;outline:2px dashed #8fb3ef;outline-offset:-2px}
 .column-drop-before{box-shadow:inset 3px 0 0 #1d63d8}.column-drop-after{box-shadow:inset -3px 0 0 #1d63d8}
 @media (max-width:700px){.toolbar .quick-filters{grid-column:1/-1;flex:1 1 100%;display:flex;width:100%;gap:6px}.toolbar .quick-filter{flex:1 1 0;min-width:0;padding:8px 6px;font-size:13px}}
 
@@ -793,7 +793,7 @@ function undoToast(message,onUndo){document.getElementById('undoToast')?.remove(
 
 var draggingColumn=null;
 function wireColumnDrag(){document.querySelectorAll('#board .column').forEach(col=>{const head=col.querySelector('.colhead');if(!head)return;head.draggable=true;head.title='Перетащите, чтобы переставить колонку';
- head.ondragstart=e=>{if(e.target.closest('textarea,input,form'))return;draggingColumn=col.dataset.status;col.classList.add('column-dragging');e.dataTransfer.setData('application/x-kanban-column',draggingColumn);e.dataTransfer.effectAllowed='move'};
+ head.ondragstart=e=>{if(e.target.closest('textarea,input,form'))return;draggingColumn=col.dataset.status;e.dataTransfer.setData('application/x-kanban-column',draggingColumn);e.dataTransfer.effectAllowed='move';try{const r=col.getBoundingClientRect();e.dataTransfer.setDragImage(col,Math.max(0,Math.min(r.width,e.clientX-r.left)),Math.max(0,Math.min(r.height,e.clientY-r.top)))}catch(err){}requestAnimationFrame(()=>col.classList.add('column-dragging'))};
  head.ondragend=()=>{draggingColumn=null;document.querySelectorAll('.column-dragging,.column-drop-before,.column-drop-after').forEach(x=>x.classList.remove('column-dragging','column-drop-before','column-drop-after'))};
  col.addEventListener('dragover',e=>{if(!draggingColumn||draggingColumn===col.dataset.status)return;e.preventDefault();e.dataTransfer.dropEffect='move';const r=col.getBoundingClientRect(),after=e.clientX>r.left+r.width/2;col.classList.toggle('column-drop-after',after);col.classList.toggle('column-drop-before',!after)});
  col.addEventListener('dragleave',e=>{if(!col.contains(e.relatedTarget))col.classList.remove('column-drop-before','column-drop-after')});
