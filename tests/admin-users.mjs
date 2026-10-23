@@ -64,7 +64,7 @@ async function openPage({ session, isAdmin, isOwner = false }) {
       return ok([{ user_id: session.user.id, state: { data: [{ name: 'Admin project', tasks: [] }], projectMeta: {}, standaloneTasks: [], members: [] } }]);
     }
     if (url.pathname === '/rest/v1/kanban_state' && request.method() === 'POST') return route.fulfill({ status: 201, body: '' });
-    if (url.pathname === '/rest/v1/kanban_profiles' || url.pathname === '/rest/v1/messenger_accounts' || url.pathname === '/rest/v1/notifications' || url.pathname === '/rest/v1/shared_projects') return ok([]);
+    if (url.pathname === '/rest/v1/kanban_profiles' || url.pathname === '/rest/v1/messenger_accounts' || url.pathname === '/rest/v1/notifications' || url.pathname === '/rest/v1/shared_projects' || url.pathname === '/rest/v1/telegram_inbox') return ok([]);
     if (url.pathname === '/functions/v1/admin-users' && request.method() === 'POST') {
       const body = request.postDataJSON();
       adminCalls.push(body);
@@ -145,8 +145,9 @@ try {
   const userSession = sessionFor(USER_ID, 'colleague@example.test');
   const u = await openPage({ session: userSession, isAdmin: false });
   await u.page.locator('.app').waitFor({ state: 'visible' });
+  const adminCheck = u.page.waitForResponse((r) => r.url().includes('/functions/v1/admin-users'));
   await u.page.locator('#cloudButton').click();
-  await u.page.waitForResponse((r) => r.url().includes('/functions/v1/admin-users'));
+  await adminCheck;
   await u.page.waitForTimeout(200);
   assert(await u.page.locator('#cloudAdminGroup').isHidden(), 'Admin section must stay hidden for regular users');
 
