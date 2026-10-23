@@ -64,7 +64,7 @@ async function openPage({ session, isAdmin, isOwner = false }) {
       return ok([{ user_id: session.user.id, state: { data: [{ name: 'Admin project', tasks: [] }], projectMeta: {}, standaloneTasks: [], members: [] } }]);
     }
     if (url.pathname === '/rest/v1/kanban_state' && request.method() === 'POST') return route.fulfill({ status: 201, body: '' });
-    if (url.pathname === '/rest/v1/kanban_profiles' || url.pathname === '/rest/v1/messenger_accounts') return ok([]);
+    if (url.pathname === '/rest/v1/kanban_profiles' || url.pathname === '/rest/v1/messenger_accounts' || url.pathname === '/rest/v1/notifications') return ok([]);
     if (url.pathname === '/functions/v1/admin-users' && request.method() === 'POST') {
       const body = request.postDataJSON();
       adminCalls.push(body);

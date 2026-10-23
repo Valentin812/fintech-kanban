@@ -112,8 +112,8 @@ Deno.serve(async (req) => {
     matchingUser = byName[0];
   }
   if (!matchingUser) return Response.json({ sent: false, reason: "assignee_not_found", hint: "Use the assignee's Kanban account email or profile name in the Responsible field." }, { headers: corsHeaders });
-  const account = (accounts ?? []).find((a) => a.user_id === matchingUser.id);
-  if (!account) return Response.json({ sent: false, reason: "telegram_not_linked" }, { headers: corsHeaders });
+  // Assigning yourself is not worth a notification.
+  if (matchingUser.id === sender.id) return Response.json({ sent: false, in_app: false, reason: "self" }, { headers: corsHeaders });
 
   const { count: pairCount, error: pairCountError } = await admin
     .from("telegram_notification_log")
@@ -135,26 +135,53 @@ Deno.serve(async (req) => {
   const senderEmail = String(sender.email ?? "").trim();
   const senderLabel = senderName && senderEmail ? `${senderName} (${senderEmail})` : senderName || senderEmail || "участник Kanban";
 
-  const lines = [
-    "📌 Тебе назначена задача в FinTech Kanban",
-    `От: ${senderLabel}`,
-    `Задача: ${taskTitle}`,
-    project ? `Проект: ${project}` : "",
-    due ? `Срок: ${due}` : "",
-    "Открой Kanban, чтобы посмотреть подробности.",
-    "https://valentin812.github.io/fintech-kanban/",
-  ].filter(Boolean);
-  try {
-    await telegramSend(account.provider_user_id, lines.join("\n"));
-  } catch (error) {
-    console.error("Telegram notification failed:", error instanceof Error ? error.message : error);
-    return Response.json({ sent: false, reason: "telegram_delivery_failed" }, { status: 502, headers: corsHeaders });
+  // 1. In-app notification (always, Telegram or not).
+  const { error: inAppError } = await admin.from("notifications").insert({
+    recipient_id: matchingUser.id,
+    sender_id: sender.id,
+    sender_name: senderLabel,
+    kind: "assignment",
+    title: taskTitle,
+    project,
+    due,
+  });
+  if (inAppError) console.error("In-app notification insert failed:", inAppError.message);
+  const inApp = !inAppError;
+
+  // 2. Telegram, if the assignee linked it.
+  const account = (accounts ?? []).find((a) => a.user_id === matchingUser.id);
+  let sent = false;
+  let reason: string | undefined;
+  if (!account) {
+    reason = "telegram_not_linked";
+  } else {
+    const lines = [
+      "📌 Тебе назначена задача в FinTech Kanban",
+      `От: ${senderLabel}`,
+      `Задача: ${taskTitle}`,
+      project ? `Проект: ${project}` : "",
+      due ? `Срок: ${due}` : "",
+      "Открой Kanban, чтобы посмотреть подробности.",
+      "https://valentin812.github.io/fintech-kanban/",
+    ].filter(Boolean);
+    try {
+      await telegramSend(account.provider_user_id, lines.join("\n"));
+      sent = true;
+    } catch (error) {
+      console.error("Telegram notification failed:", error instanceof Error ? error.message : error);
+      reason = "telegram_delivery_failed";
+    }
   }
 
-  const { error: logError } = await admin
-    .from("telegram_notification_log")
-    .insert({ sender_id: sender.id, recipient_id: matchingUser.id });
-  if (logError) console.error("Notification log insert failed:", logError.message);
+  if (inApp || sent) {
+    const { error: logError } = await admin
+      .from("telegram_notification_log")
+      .insert({ sender_id: sender.id, recipient_id: matchingUser.id });
+    if (logError) console.error("Notification log insert failed:", logError.message);
+  }
 
-  return Response.json({ sent: true }, { headers: corsHeaders });
+  if (!inApp && !sent) {
+    return Response.json({ sent: false, in_app: false, reason: reason ?? "delivery_failed" }, { status: 502, headers: corsHeaders });
+  }
+  return Response.json({ sent, in_app: inApp, ...(reason ? { reason } : {}) }, { headers: corsHeaders });
 });
