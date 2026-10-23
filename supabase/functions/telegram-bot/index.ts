@@ -32,13 +32,93 @@ const TASKS_PER_HOUR = 60;
 const MAX_TITLE_WORDS_CHARS = 80;
 const HELP_TEXT =
   "Как создать задачу:\n" +
-  "• Просто отправь текст — первая строка (или первое предложение) станет названием, остальное — описанием.\n" +
+  "• Просто отправь текст. Название — короткая суть, подробности уйдут в описание. Делится по новой строке, точке, «:», « — », словам «тема такая», «чтобы», «узнать…» или явному «Описание: …».\n" +
   "• Срок: «до 25.10», «до 25.10.2026», «сегодня», «завтра» или «послезавтра».\n" +
   "• Проект: добавь #название, например #Автооплата.\n" +
   "Без проекта задача попадёт в «Мои задачи», ответственный — ты.\n\n" +
-  "Пример:\nПодготовить отчёт по тарифам до 30.10 #Автооплата\nСравнить Альфу и Тбанк";
+  "Примеры:\nПодготовить отчёт по тарифам до 30.10 #Автооплата\nСравнить Альфу и Тбанк\n\nНадо позвонить в банк, тема такая: узнать про тарифы, завтра";
 
 type ParsedTask = { title: string; description: string; due: string; projectHint: string };
+
+// Spoken / dictated messages rarely have punctuation, e.g.
+// "Надо позвонить в банк получается тема такая узнать про тарифы".
+// Filler words mark where the topic ends; purpose words start the details.
+const FILLERS = ["получается", "тема такая", "суть такая", "смысл такой", "в общем", "вообщем", "короче", "то есть", "т\\.е\\.", "значит", "а именно", "типа", "и вот", "ну и"];
+const PURPOSE = ["чтобы", "и узнать", "и уточнить", "и спросить", "и обсудить", "и договориться", "и проверить", "узнать", "уточнить", "спросить", "обсудить", "договориться"];
+const SEP = "(?<=^|[\\s,;:—–-])";
+const END = "(?=$|[\\s,;:—–-])";
+const FILLER_RE = new RegExp(`${SEP}(?:${FILLERS.join("|")})${END}`, "iu");
+const PURPOSE_RE = new RegExp(`${SEP}(?:${PURPOSE.join("|")})${END}`, "iu");
+const LEADING_FILLERS_RE = new RegExp(`^(?:[\\s,;:—–-]*(?:${FILLERS.join("|")}|что|это)${END})+[\\s,;:—–-]*`, "iu");
+const TRAILING_FILLERS_RE = new RegExp(`(?:[\\s,;:—–-]+(?:${FILLERS.join("|")}|и|а|ну))+[\\s,;:—–-]*$`, "iu");
+const LEAD_RE = /^(?:мне\s+)?(?:надо|нужно|необходимо|требуется|не\s+забыть|напомни(?:ть)?(?:\s+мне)?)(?:\s+бы)?\s+(?=\p{L})/iu;
+const LABEL_RE = /^(?:тема|задача|заголовок|название)\s*[:—–-]\s*/iu;
+const DETAILS_RE = /\s*[,.;]?\s*(?:описание|подробности|детали|суть)\s*[:—–-]\s*/iu;
+
+const words = (v: string) => v.trim().split(/\s+/).filter(Boolean).length;
+function capitalize(v: string) {
+  const t = v.trim();
+  return t ? t[0].toLocaleUpperCase("ru") + t.slice(1) : t;
+}
+function stripLeadingFillers(v: string) {
+  return String(v ?? "").replace(LEADING_FILLERS_RE, "").trim();
+}
+function cleanTitle(v: string) {
+  let t = String(v ?? "").replace(LABEL_RE, "").replace(TRAILING_FILLERS_RE, "").replace(/[\s,;:—–-]+$/u, "").trim();
+  const withoutLead = t.replace(LEAD_RE, "");
+  if (words(withoutLead) >= 1) t = withoutLead;
+  return capitalize(t);
+}
+
+export function splitOneLine(line: string): { title: string; description: string } {
+  const text = String(line ?? "").replace(LABEL_RE, "").trim();
+  const accept = (left: string, right: string) => {
+    const l = left.replace(TRAILING_FILLERS_RE, "").replace(/[\s,;:—–-]+$/u, "").trim();
+    const r = stripLeadingFillers(right);
+    return words(l) >= 2 && words(r) >= 2 ? { title: l, description: r } : null;
+  };
+  // 1. Explicit "Описание: …".
+  const details = text.match(DETAILS_RE);
+  if (details && details.index) {
+    const found = accept(text.slice(0, details.index), text.slice(details.index + details[0].length));
+    if (found) return found;
+  }
+  // 2. First sentence ("Позвонить в банк. Уточнить тариф"). A new sentence must
+  //    start with a capital letter or digit, so "т.е. договор" is not split.
+  const sentence = text.match(/^(.{3,}?[.!?…])\s+([\p{Lu}\d«"(].*)$/u);
+  if (sentence) return { title: sentence[1].replace(/[.…]+$/u, "").trim(), description: sentence[2].trim() };
+  // 3. Dash or colon between two parts ("Позвонить в банк — узнать тарифы").
+  const dash = text.match(/^(.+?)\s+[—–-]\s+(.+)$/u) ?? text.match(/^(.+?):\s+(.+)$/u);
+  if (dash) {
+    const found = accept(dash[1], dash[2]);
+    if (found) return found;
+  }
+  // 4. Spoken fillers / purpose words, whichever comes first after the topic.
+  const candidates: { at: number; cut: number }[] = [];
+  for (const re of [FILLER_RE, PURPOSE_RE]) {
+    const g = new RegExp(re.source, "giu");
+    for (const m of text.matchAll(g)) {
+      const at = m.index ?? 0;
+      if (words(text.slice(0, at)) < 2) continue;
+      // Purpose verbs stay in the description; fillers and "чтобы"/"и" are dropped.
+      const keep = re === PURPOSE_RE ? m[0].replace(/^(?:чтобы|и)\s*/iu, "") : "";
+      candidates.push({ at, cut: at + m[0].length - keep.length });
+      break;
+    }
+  }
+  candidates.sort((a, b) => a.at - b.at);
+  for (const c of candidates) {
+    const found = accept(text.slice(0, c.at), text.slice(c.cut));
+    if (found) return found;
+  }
+  // 5. Long text without any structure: short title, full text in the description.
+  if (text.length > MAX_TITLE_WORDS_CHARS) {
+    const cut = text.slice(0, MAX_TITLE_WORDS_CHARS);
+    const space = cut.lastIndexOf(" ");
+    return { title: (space > 40 ? cut.slice(0, space) : cut).replace(/[\s,;:—-]+$/u, "") + "…", description: text };
+  }
+  return { title: text, description: "" };
+}
 
 export function parseTaskText(raw: string): ParsedTask {
   let text = String(raw ?? "").replace(/\r\n?/g, "\n").trim();
@@ -61,23 +141,11 @@ export function parseTaskText(raw: string): ParsedTask {
   let title = (firstIndex >= 0 ? lines[firstIndex] : "").replace(/\s+/g, " ").replace(/[\s,;:—-]+$/u, "").trim();
   let description = (firstIndex >= 0 ? lines.slice(firstIndex + 1) : []).join("\n").trim();
   if (!description) {
-    // One-line message: the first sentence becomes the title, the rest the
-    // description ("Позвонить в банк. Уточнить тариф" -> two parts). A new
-    // sentence must start with a capital letter or digit, so "т.е. договор"
-    // is not split.
-    const sentence = title.match(/^(.{3,}?[.!?…])\s+([\p{Lu}\d«"(].*)$/u);
-    if (sentence) {
-      title = sentence[1].replace(/[.…]+$/u, "").trim();
-      description = sentence[2].trim();
-    } else if (title.length > MAX_TITLE_WORDS_CHARS) {
-      // Long text without sentences: short title cut at a word boundary,
-      // the full text goes to the description so nothing is lost.
-      const cut = title.slice(0, MAX_TITLE_WORDS_CHARS);
-      const space = cut.lastIndexOf(" ");
-      description = title;
-      title = (space > 40 ? cut.slice(0, space) : cut).replace(/[\s,;:—-]+$/u, "") + "…";
-    }
+    const split = splitOneLine(title);
+    title = split.title;
+    description = capitalize(split.description);
   }
+  title = cleanTitle(title);
   description = description.slice(0, 4000);
   if (!title) title = "Задача из Telegram";
   if (title.length > 200) title = title.slice(0, 199) + "…";
@@ -182,7 +250,7 @@ async function handleTaskMessage(chatId: number, providerUserId: string, text: s
     chatId,
     `✅ Задача: ${task.title}\nКуда: ${where}` +
       (task.due ? `\nСрок: ${task.due}` : "") +
-      (task.description ? "\nОписание добавлено" : "") +
+      (task.description ? `\nОписание: ${task.description.length > 300 ? task.description.slice(0, 299) + "…" : task.description}` : "") +
       note +
       "\n\nПоявится в Kanban, как только приложение будет открыто."
   );

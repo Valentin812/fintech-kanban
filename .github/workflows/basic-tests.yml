@@ -47,3 +47,7 @@ jobs:
         run: node tests/telegram-inbox.mjs
       - name: Run UX pack browser test
         run: node tests/ux-oct23.mjs
+      - name: Run mobile and themes browser test
+        run: node tests/mobile-themes.mjs
+      - name: Run Telegram message parser test
+        run: node --experimental-strip-types tests/telegram-parse.mjs
