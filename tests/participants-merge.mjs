@@ -70,7 +70,7 @@ try {
     if (url.pathname === '/rest/v1/kanban_profiles') {
       return ok([{ user_id: '00000000-0000-4000-8000-000000000002', display_name: 'a.s.limar', email: 'a.s.limar@example.test', created_at: '2026-10-21T06:07:12Z' }]);
     }
-    if (url.pathname === '/rest/v1/messenger_accounts' || url.pathname === '/rest/v1/notifications' || url.pathname === '/rest/v1/shared_projects') return ok([]);
+    if (url.pathname === '/rest/v1/messenger_accounts' || url.pathname === '/rest/v1/notifications' || url.pathname === '/rest/v1/shared_projects' || url.pathname === '/rest/v1/telegram_inbox') return ok([]);
     if (url.pathname === '/functions/v1/telegram-notify') {
       notifications.push(request.postDataJSON());
       return ok({ sent: true });
@@ -115,8 +115,9 @@ try {
   // Assigning the merged person notifies their account email, only for newly added assignees.
   await page.evaluate(() => { switchView('tasks'); openTask(3); });
   await page.locator('#dOwner').fill('Яковлев В., Лимарь Андрей');
+  const notified = page.waitForResponse((r) => r.url().includes('/functions/v1/telegram-notify'));
   await page.locator('#saveTask').evaluate((button) => button.click());
-  await page.waitForResponse((r) => r.url().includes('/functions/v1/telegram-notify'));
+  await notified;
   await page.waitForTimeout(300);
   assert(notifications.length === 1, `Only the newly added assignee should be notified: ${JSON.stringify(notifications)}`);
   assert(notifications[0].owner === 'a.s.limar@example.test', `Notification should target the account email: ${JSON.stringify(notifications[0])}`);

@@ -86,7 +86,7 @@ try {
       patches.push({ query: url.search, body: request.postDataJSON() });
       return route.fulfill({ status: 204, body: '' });
     }
-    if (url.pathname === '/rest/v1/kanban_profiles' || url.pathname === '/rest/v1/messenger_accounts' || url.pathname === '/rest/v1/shared_projects') return ok([]);
+    if (url.pathname === '/rest/v1/kanban_profiles' || url.pathname === '/rest/v1/messenger_accounts' || url.pathname === '/rest/v1/shared_projects' || url.pathname === '/rest/v1/telegram_inbox') return ok([]);
     unexpected.push(`${request.method()} ${url.pathname}`);
     return ok({ error: 'Unexpected mocked request' }, 501);
   });
