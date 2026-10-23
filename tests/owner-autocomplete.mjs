@@ -53,6 +53,10 @@ try {
       await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
       return;
     }
+    if (url.pathname === '/rest/v1/shared_projects' && request.method() === 'GET') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+      return;
+    }
     if (url.pathname === '/rest/v1/notifications' && request.method() === 'GET') {
       await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
       return;

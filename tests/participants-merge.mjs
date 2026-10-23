@@ -70,7 +70,7 @@ try {
     if (url.pathname === '/rest/v1/kanban_profiles') {
       return ok([{ user_id: '00000000-0000-4000-8000-000000000002', display_name: 'a.s.limar', email: 'a.s.limar@example.test', created_at: '2026-10-21T06:07:12Z' }]);
     }
-    if (url.pathname === '/rest/v1/messenger_accounts' || url.pathname === '/rest/v1/notifications') return ok([]);
+    if (url.pathname === '/rest/v1/messenger_accounts' || url.pathname === '/rest/v1/notifications' || url.pathname === '/rest/v1/shared_projects') return ok([]);
     if (url.pathname === '/functions/v1/telegram-notify') {
       notifications.push(request.postDataJSON());
       return ok({ sent: true });
