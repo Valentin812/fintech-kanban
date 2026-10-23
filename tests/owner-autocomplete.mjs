@@ -120,11 +120,19 @@ try {
   if (await owner.inputValue() !== '@Анна Смирнова') {
     throw new Error('The existing @ selection behavior changed');
   }
+  // Unregistered employees that only appear as task owners are suggested too.
+  await page.evaluate(() => { standaloneTasks.push({ id: 987654, title: 'Чужая', status: 'Очередь', owner: 'Сидорова Мария, Уже назначен' }); });
+  await owner.fill('Сидор');
+  await page.getByRole('button', { name: /Сидорова Мария.*из задач/ }).waitFor();
+  await page.getByRole('button', { name: /Сидорова Мария/ }).first().click();
+  if (await owner.inputValue() !== 'Сидорова Мария') {
+    throw new Error('Task-only owners were missing from owner search');
+  }
   if (pageErrors.length) {
     throw new Error(`Browser page errors: ${pageErrors.join('; ')}`);
   }
 
-  console.log('Owner autocomplete OK: plain search, multiple assignees, and @ selection');
+  console.log('Owner autocomplete OK: plain search, multiple assignees, @ selection, unregistered task owners');
 } finally {
   await browser.close();
   await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
