@@ -53,7 +53,7 @@ try {
       await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
       return;
     }
-    if (url.pathname === '/rest/v1/telegram_inbox' && request.method() === 'GET') {
+    if ((url.pathname === '/rest/v1/telegram_inbox' || url.pathname === '/rest/v1/kanban_avatars') && request.method() === 'GET') {
       await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
       return;
     }
@@ -128,11 +128,19 @@ try {
   if (await owner.inputValue() !== 'Сидорова Мария') {
     throw new Error('Task-only owners were missing from owner search');
   }
+  // Cyrillic input finds Latin account names (transliteration) and vice versa.
+  const translit = await page.evaluate(() => [
+    ownerMatches({ name: 'e.sukhov', email: 'e.sukhov@example.test' }, 'Сухов'),
+    ownerMatches({ name: 'a.s.limar', email: '' }, 'Лимарь'),
+    ownerMatches({ name: 'Щукин Пётр', email: '' }, 'schukin'),
+    ownerMatches({ name: 'e.sukhov', email: '' }, 'Петров'),
+  ]);
+  if (JSON.stringify(translit) !== '[true,true,true,false]') throw new Error(`Transliterated search is wrong: ${translit}`);
   if (pageErrors.length) {
     throw new Error(`Browser page errors: ${pageErrors.join('; ')}`);
   }
 
-  console.log('Owner autocomplete OK: plain search, multiple assignees, @ selection, unregistered task owners');
+  console.log('Owner autocomplete OK: plain search, multiple assignees, @ selection, unregistered task owners, transliteration');
 } finally {
   await browser.close();
   await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));

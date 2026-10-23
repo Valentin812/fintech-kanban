@@ -63,7 +63,7 @@ async function handle(route, token) {
     db.kanbanState[me.id] = request.postDataJSON().state;
     return route.fulfill({ status: 201, body: '' });
   }
-  if (['/rest/v1/notifications', '/rest/v1/kanban_profiles', '/rest/v1/messenger_accounts', '/rest/v1/telegram_inbox'].includes(path)) {
+  if (['/rest/v1/notifications', '/rest/v1/kanban_profiles', '/rest/v1/messenger_accounts', '/rest/v1/telegram_inbox', '/rest/v1/kanban_avatars'].includes(path)) {
     return method === 'GET' ? ok([]) : route.fulfill({ status: 204, body: '' });
   }
   if (path === '/rest/v1/shared_projects' && method === 'GET') return ok(db.projects.filter((p) => isMember(p.id, me.id)));

@@ -45,3 +45,5 @@ jobs:
         run: node tests/shared-projects.mjs
       - name: Run Telegram inbox browser test
         run: node tests/telegram-inbox.mjs
+      - name: Run UX pack browser test
+        run: node tests/ux-oct23.mjs
