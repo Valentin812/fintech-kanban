@@ -66,6 +66,10 @@ function installSupabaseMocks(page, remoteState = null) {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(rows) });
       return;
     }
+    if (url.pathname === '/rest/v1/notifications' && request.method() === 'GET') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+      return;
+    }
     if (url.pathname === '/rest/v1/kanban_profiles' && request.method() === 'GET') {
       await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
       return;

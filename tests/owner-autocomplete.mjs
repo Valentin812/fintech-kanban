@@ -53,6 +53,10 @@ try {
       await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
       return;
     }
+    if (url.pathname === '/rest/v1/notifications' && request.method() === 'GET') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+      return;
+    }
     if (url.pathname === '/rest/v1/kanban_profiles' && request.method() === 'GET') {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ user_id: '00000000-0000-4000-8000-000000000002', display_name: 'Илья Бекетов', email: 'beketov@example.test', created_at: '2026-01-01T00:00:00Z' }]) });
       return;
