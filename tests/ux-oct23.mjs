@@ -119,7 +119,7 @@ try {
   assert(await page.locator('#standaloneToProject').isVisible() && await page.locator('#removeFromProject').isHidden(), 'Drawer should offer «В проект» for tasks without a project');
   await page.locator('#standaloneToProject').click();
   await page.waitForFunction(() => !document.querySelector('#drawer').classList.contains('open'));
-  assert(await page.locator('text=Проект назначения').count() + await page.locator('.move-modal, .modal.show').count() > 0, 'Move-to-project dialog should open');
+  await page.locator('.move-modal-backdrop .move-modal').waitFor({ timeout: 3000 });
   await page.keyboard.press('Escape');
   await page.evaluate(() => document.querySelectorAll('.move-modal-backdrop, #moveTaskModal').forEach((m) => m.remove()));
   assert(await page.locator('#addInboxTask').isVisible(), 'My tasks should have a «Задача без проекта» button');
