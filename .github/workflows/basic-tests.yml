@@ -39,3 +39,5 @@ jobs:
         run: node tests/participants-merge.mjs
       - name: Run board extras browser test
         run: node tests/board-extras.mjs
+      - name: Run usability browser test
+        run: node tests/usability.mjs
