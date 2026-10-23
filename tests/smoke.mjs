@@ -142,6 +142,21 @@ try {
     throw new Error('The task from mocked cloud state was not restored onto the board');
   }
 
+  const overdueChecks = await restorePage.evaluate(() => ({
+    shortYearPast: isPast('08.10.20'),
+    longYearPast: isPast('08.10.2020'),
+    shortYearFuture: isPast('08.10.99'),
+    noDate: isPast(''),
+    sortKey: dateKey('08.10.26'),
+  }));
+  if (!overdueChecks.shortYearPast || !overdueChecks.longYearPast || overdueChecks.shortYearFuture || overdueChecks.noDate
+    || overdueChecks.sortKey !== '2026-10-08') {
+    throw new Error(`Overdue date detection is wrong: ${JSON.stringify(overdueChecks)}`);
+  }
+  if (await restorePage.evaluate(() => [...document.querySelectorAll('[data-theme-option], #themeToggle option')].some((o) => o.value === 'dota'))) {
+    throw new Error('The removed Dota theme is still offered');
+  }
+
   await restorePage.evaluate(() => openTask(4242));
   await restorePage.locator('#dDescription').fill('Updated by smoke test');
   const savedResponse = restorePage.waitForResponse((response) =>
