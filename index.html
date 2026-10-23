@@ -957,7 +957,7 @@ $('adminModal').addEventListener('click',e=>{if(e.target===$('adminModal'))close
 $('adminUsersList').addEventListener('click',e=>{const button=e.target.closest('[data-admin-action]');if(button)adminSetBan(button.dataset.userId,button.dataset.adminAction)});
 
 function currentCloudState(){return {data:personalProjects(),projectMeta:personalMeta(),standaloneTasks,members,backups:projectBackups||[]}}
-async function cloudRequest(path,options={}){const response=await fetch(CLOUD_URL+path,{...options,headers:cloudHeaders(options.headers||{})});const body=await response.text();let parsed=null;try{parsed=body?JSON.parse(body):null}catch(e){}if(!response.ok)throw new Error(parsed?.msg||parsed?.message||parsed?.error_description||body||('HTTP '+response.status));return parsed}
+async function cloudRequest(path,options={}){const response=await fetch(CLOUD_URL+path,{...options,headers:cloudHeaders(options.headers||{})});const body=await response.text();let parsed=null;try{parsed=body?JSON.parse(body):null}catch(e){}if(!response.ok)throw new Error(parsed?.msg||parsed?.message||parsed?.error_description||(typeof parsed?.error==='string'?parsed.error:'')||body||('HTTP '+response.status));return parsed}
 async function cloudAuth(mode){const email=($('authEmail')?.value||$('cloudEmail').value).trim(),password=$('authPassword')?.value||$('cloudPassword').value;if(!email||!password){authMessage('Укажи email и пароль.');return}if(mode==='signup'&&!passwordMeetsPolicy(password)){authMessage('Пароль должен быть не короче 8 символов и содержать буквы и цифры.');return}
  authMessage(mode==='signup'?'Создаём аккаунт…':'Входим…');
  try{

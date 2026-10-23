@@ -174,6 +174,9 @@ try {
   assert(!personalA.data.some((p) => p.name === 'Team') && personalA.data.some((p) => p.name === 'Personal'), 'Personal state must no longer contain the shared project');
   assert(personalA.backups?.length === 1 && personalA.backups[0].tasks.length === 2, 'A backup of the project should be stored before sharing');
   assert(!personalA.projectMeta.Team, 'Shared project columns must not stay in personal state');
+  await a.page.locator('#sharedInviteEmail').fill('stranger@example.test');
+  await a.page.locator('#sharedInviteForm button[type="submit"]').click();
+  await a.page.locator('#sharedInviteStatus', { hasText: 'Такого пользователя нет' }).waitFor();
   await a.page.locator('#sharedInviteEmail').fill('member@example.test');
   await a.page.locator('#sharedInviteForm button[type="submit"]').click();
   await a.page.locator('#sharedBody', { hasText: 'member@example.test' }).waitFor();
