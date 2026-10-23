@@ -33,3 +33,5 @@ jobs:
         run: node tests/smoke.mjs
       - name: Run owner autocomplete browser test
         run: node tests/owner-autocomplete.mjs
+      - name: Run admin users browser test
+        run: node tests/admin-users.mjs

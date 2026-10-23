@@ -55,6 +55,10 @@ Deno.serve(async (req) => {
   const { data: userResult, error: userError } = await userClient.auth.getUser();
   const sender = userResult?.user;
   if (userError || !sender) return Response.json({ error: "Invalid session" }, { status: 401, headers: corsHeaders });
+  // A blocked account keeps a valid access token for up to an hour; stop it here.
+  if (sender.banned_until && new Date(sender.banned_until).getTime() > Date.now()) {
+    return Response.json({ error: "Forbidden" }, { status: 403, headers: corsHeaders });
+  }
 
   let payload: any;
   try { payload = await req.json(); } catch { return Response.json({ error: "Invalid JSON" }, { status: 400, headers: corsHeaders }); }
