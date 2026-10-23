@@ -84,7 +84,7 @@ try {
       row.consumed_at = request.postDataJSON().consumed_at;
       return ok([row]);
     }
-    if (['/rest/v1/notifications', '/rest/v1/kanban_profiles', '/rest/v1/messenger_accounts', '/rest/v1/shared_projects'].includes(url.pathname)) return ok([]);
+    if (['/rest/v1/notifications', '/rest/v1/kanban_profiles', '/rest/v1/messenger_accounts', '/rest/v1/shared_projects', '/rest/v1/kanban_avatars'].includes(url.pathname)) return ok([]);
     unexpected.push(`${request.method()} ${url.pathname}`);
     return ok({ error: 'Unexpected mocked request' }, 501);
   });
