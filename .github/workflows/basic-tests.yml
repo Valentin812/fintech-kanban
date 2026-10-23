@@ -35,3 +35,5 @@ jobs:
         run: node tests/owner-autocomplete.mjs
       - name: Run admin users browser test
         run: node tests/admin-users.mjs
+      - name: Run participants merge browser test
+        run: node tests/participants-merge.mjs
