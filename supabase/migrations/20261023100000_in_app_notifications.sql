@@ -26,12 +26,10 @@ revoke all on table public.notifications from public, anon, authenticated;
 grant select on table public.notifications to authenticated;
 grant update (read_at) on table public.notifications to authenticated;
 
-drop policy if exists "Users read own notifications" on public.notifications;
 create policy "Users read own notifications"
   on public.notifications for select to authenticated
   using (recipient_id = (select auth.uid()));
 
-drop policy if exists "Users mark own notifications read" on public.notifications;
 create policy "Users mark own notifications read"
   on public.notifications for update to authenticated
   using (recipient_id = (select auth.uid()))
