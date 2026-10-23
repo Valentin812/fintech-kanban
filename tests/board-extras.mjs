@@ -97,10 +97,12 @@ try {
   // 1. Columns can be reordered and the order is saved per project.
   const columnOrder = () => page.locator('#board .column').evaluateAll((cols) => cols.map((c) => c.dataset.status));
   assert(JSON.stringify(await columnOrder()) === JSON.stringify(['Очередь', 'В работе', 'На анализе', 'Готово']), 'Unexpected initial column order');
-  assert(await page.locator('.column[data-status="Очередь"] [data-move-status][data-dir="-1"]').count() === 0, 'First column must not move left');
-  assert(await page.locator('.column[data-status="Готово"] [data-move-status][data-dir="1"]').count() === 0, 'Last column must not move right');
-  await page.locator('.column[data-status="Готово"] [data-move-status][data-dir="-1"]').click();
-  await page.locator('.column[data-status="Очередь"] [data-move-status][data-dir="1"]').click();
+  assert(await page.locator('#board .col-move-btn, #board [data-move-status]').count() === 0, 'Columns are reordered with the mouse only — no arrow buttons');
+  const headerBox = async (st) => page.locator(`.column[data-status="${st}"]`).boundingBox();
+  let box = await headerBox('На анализе');
+  await page.locator('.column[data-status="Готово"] .col-grip').dragTo(page.locator('.column[data-status="На анализе"]'), { targetPosition: { x: 8, y: 20 } });
+  box = await headerBox('В работе');
+  await page.locator('.column[data-status="Очередь"] .col-grip').dragTo(page.locator('.column[data-status="В работе"]'), { targetPosition: { x: Math.round(box.width) - 8, y: 20 } });
   const reordered = ['В работе', 'Очередь', 'Готово', 'На анализе'];
   assert(JSON.stringify(await columnOrder()) === JSON.stringify(reordered), `Columns were not reordered: ${await columnOrder()}`);
   await page.waitForTimeout(1200);
