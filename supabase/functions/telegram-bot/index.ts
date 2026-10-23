@@ -5,7 +5,11 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
 const webhookSecret = Deno.env.get("TELEGRAM_WEBHOOK_SECRET")!;
-// Optional: enables reading screenshots and photos. Without it the bot asks for text.
+// Optional: enables reading screenshots and photos. Gemini (has a free tier) is
+// used when GEMINI_API_KEY is set, otherwise Claude when ANTHROPIC_API_KEY is set.
+// Without either key the bot asks for text.
+const geminiKey = Deno.env.get("GEMINI_API_KEY") ?? "";
+const geminiModel = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash";
 const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
 const visionModel = Deno.env.get("ANTHROPIC_MODEL") ?? "claude-sonnet-5-5";
 
@@ -221,8 +225,28 @@ const IMAGE_SYSTEM_PROMPT =
   'Поле due заполняй, только если срок явно виден: «сегодня», «завтра», «послезавтра» или дата ДД.ММ / ДД.ММ.ГГГГ; иначе пустая строка. ' +
   "Пиши на языке картинки (по умолчанию по-русски). Если задачи на картинке нет, кратко опиши, что на ней.";
 
-async function describeImage(image: { data: string; mime: string }, caption: string): Promise<{ title: string; description: string; due: string } | null> {
-  const today = new Date().toISOString().slice(0, 10);
+async function describeWithGemini(image: { data: string; mime: string }, prompt: string): Promise<string | null> {
+  // The key goes in a header, never in the URL, so it cannot end up in logs.
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(geminiModel)}:generateContent`, {
+    method: "POST",
+    headers: { "x-goog-api-key": geminiKey, "content-type": "application/json" },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: IMAGE_SYSTEM_PROMPT }] },
+      contents: [{ role: "user", parts: [{ inline_data: { mime_type: image.mime, data: image.data } }, { text: prompt }] }],
+      generationConfig: { responseMimeType: "application/json", maxOutputTokens: 800, temperature: 0.2 },
+    }),
+  });
+  if (!response.ok) {
+    console.error("Gemini request failed:", response.status);
+    return null;
+  }
+  const body = await response.json().catch(() => null);
+  const parts = body?.candidates?.[0]?.content?.parts ?? [];
+  const text = parts.map((c: any) => (typeof c?.text === "string" ? c.text : "")).join("\n").trim();
+  return text || null;
+}
+
+async function describeWithClaude(image: { data: string; mime: string }, prompt: string): Promise<string | null> {
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "x-api-key": anthropicKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
@@ -234,7 +258,7 @@ async function describeImage(image: { data: string; mime: string }, caption: str
         role: "user",
         content: [
           { type: "image", source: { type: "base64", media_type: image.mime, data: image.data } },
-          { type: "text", text: `Сегодня ${today}. ` + (caption ? `Подпись пользователя к картинке: «${caption.slice(0, 500)}».` : "Подписи нет.") },
+          { type: "text", text: prompt },
         ],
       }],
     }),
@@ -245,6 +269,13 @@ async function describeImage(image: { data: string; mime: string }, caption: str
   }
   const body = await response.json().catch(() => null);
   const text = (body?.content ?? []).filter((c: any) => c?.type === "text").map((c: any) => c.text).join("\n");
+  return text || null;
+}
+
+async function describeImage(image: { data: string; mime: string }, caption: string): Promise<{ title: string; description: string; due: string } | null> {
+  const today = new Date().toISOString().slice(0, 10);
+  const prompt = `Сегодня ${today}. ` + (caption ? `Подпись пользователя к картинке: «${caption.slice(0, 500)}».` : "Подписи нет.");
+  const text = geminiKey ? await describeWithGemini(image, prompt) : await describeWithClaude(image, prompt);
   return text ? parseImageReply(text) : null;
 }
 
@@ -366,7 +397,7 @@ async function handleTaskMessage(chatId: number, providerUserId: string, text: s
 async function handleImageMessage(chatId: number, providerUserId: string, fileId: string, caption: string) {
   const userId = await authorize(chatId, providerUserId);
   if (!userId) return;
-  if (!anthropicKey) {
+  if (!geminiKey && !anthropicKey) {
     await sendMessage(chatId, "Чтение картинок пока не настроено. Отправь задачу текстом.");
     return;
   }
