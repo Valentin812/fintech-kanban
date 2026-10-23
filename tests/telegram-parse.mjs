@@ -12,7 +12,7 @@ assert.ok(start > 0 && end > start, 'parseTaskText section not found in the bot 
 const dir = await mkdtemp(join(tmpdir(), 'bot-parse-'));
 const file = join(dir, 'parse.ts');
 await writeFile(file, source.slice(start, end));
-const { parseTaskText: p } = await import(pathToFileURL(file).href);
+const { parseTaskText: p, parseImageReply: img } = await import(pathToFileURL(file).href);
 const td = (s) => { const r = p(s); return [r.title, r.description, r.due]; };
 
 // The message that started it: dictated, no punctuation.
@@ -36,4 +36,12 @@ const long = 'Нужно подготовить подробное сравне�
 const r = p(long);
 assert.ok(r.title.endsWith('…') && r.title.length <= 81 && r.title.startsWith('Подготовить подробное'), r.title);
 assert.equal(r.description, long, 'the full text is kept in the description');
+
+// Answers of the screenshot reader are untrusted text and are validated.
+assert.deepEqual(img('{"title":"Согласовать тариф","description":"Лимиты","due":"завтра"}'), { title: 'Согласовать тариф', description: 'Лимиты', due: 'завтра' });
+assert.deepEqual(img('Вот ответ: {"title":"Позвонить","description":"","due":"30.10"} спасибо'), { title: 'Позвонить', description: '', due: '30.10' });
+assert.equal(img('не json').title, 'Скриншот');
+assert.equal(img('{"title":"x","due":"<script>alert(1)</script>"}').due, '');
+assert.equal(img('{"title":"' + 'д'.repeat(300) + '"}').title.length <= 80, true);
+assert.equal(img('{"title":"x","description":123}').description, '');
 console.log('Telegram parser OK: title and description are separated for dictated and written messages');
