@@ -24,6 +24,7 @@ const browser = await chromium.launch(launchOptions);
 const ADMIN_ID = '00000000-0000-4000-8000-0000000000a1';
 const USER_ID = '00000000-0000-4000-8000-0000000000b2';
 const BANNED_ID = '00000000-0000-4000-8000-0000000000c3';
+const HELPER_ID = '00000000-0000-4000-8000-0000000000d4';
 
 function sessionFor(id, email) {
   return {
@@ -35,13 +36,14 @@ function sessionFor(id, email) {
   };
 }
 
-const users = () => [
-  { id: ADMIN_ID, email: 'owner@example.test', name: 'Владелец', created_at: '2026-10-19T09:48:03Z', last_sign_in_at: '2026-10-22T10:50:47Z', email_confirmed: true, banned: false, is_admin: true, is_self: true, telegram: true },
+const users = (selfId = ADMIN_ID) => [
+  { id: ADMIN_ID, email: 'owner@example.test', name: 'Владелец', created_at: '2026-10-19T09:48:03Z', last_sign_in_at: '2026-10-22T10:50:47Z', email_confirmed: true, banned: false, is_admin: true, is_owner: true, is_self: selfId === ADMIN_ID, telegram: true },
+  { id: HELPER_ID, email: 'helper@example.test', name: 'Помощник', created_at: '2026-10-20T09:48:03Z', last_sign_in_at: null, email_confirmed: true, banned: false, is_admin: true, is_owner: false, is_self: selfId === HELPER_ID, telegram: false },
   { id: USER_ID, email: 'colleague@example.test', name: 'Коллега', created_at: '2026-10-21T06:07:12Z', last_sign_in_at: null, email_confirmed: true, banned: false, is_admin: false, is_self: false, telegram: false },
   { id: BANNED_ID, email: 'spammer@example.test', name: '', created_at: '2026-10-22T06:07:12Z', last_sign_in_at: null, email_confirmed: false, banned: true, is_admin: false, is_self: false, telegram: false },
 ];
 
-async function openPage({ session, isAdmin }) {
+async function openPage({ session, isAdmin, isOwner = false }) {
   const page = await browser.newPage();
   const errors = [];
   const adminCalls = [];
@@ -68,7 +70,7 @@ async function openPage({ session, isAdmin }) {
       adminCalls.push(body);
       if (request.headers().authorization !== `Bearer ${session.access_token}`) return ok({ error: 'Sign in required' }, 401);
       if (!isAdmin) return ok({ error: 'Forbidden' }, 403);
-      if (body.action === 'list') return ok({ users: users() });
+      if (body.action === 'list') return ok({ users: users(session.user.id), me: { id: session.user.id, is_owner: isOwner } });
       return ok({ ok: true });
     }
     unexpected.push(`${request.method()} ${url.pathname}`);
@@ -88,16 +90,18 @@ function assert(condition, message) {
 try {
   // 1. Administrator sees the panel and can block / unblock users.
   const adminSession = sessionFor(ADMIN_ID, 'owner@example.test');
-  const a = await openPage({ session: adminSession, isAdmin: true });
+  const a = await openPage({ session: adminSession, isAdmin: true, isOwner: true });
   await a.page.locator('.app').waitFor({ state: 'visible' });
   await a.page.locator('#cloudButton').click();
   await a.page.locator('#cloudAdminGroup').waitFor({ state: 'visible' });
   await a.page.locator('#adminUsersButton').click();
   await a.page.locator('#adminModal.show').waitFor();
   await a.page.locator(`[data-user-row="${BANNED_ID}"]`).waitFor();
-  assert(await a.page.locator('[data-user-row]').count() === 3, 'Admin panel should list all three users');
+  assert(await a.page.locator('[data-user-row]').count() === 4, 'Admin panel should list all users');
   assert(await a.page.locator(`[data-user-row="${ADMIN_ID}"] [data-admin-action]`).count() === 0, 'Administrators must not have a block button');
-  assert((await a.page.locator('#adminStatus').textContent()).includes('3'), 'Status should show the number of accounts');
+  assert((await a.page.locator('#adminStatus').textContent()).includes('4'), 'Status should show the number of accounts');
+  assert(await a.page.locator(`[data-user-row="${BANNED_ID}"] [data-admin-action="grant_admin"]`).count() === 0, 'Blocked users cannot be promoted');
+  assert(await a.page.locator(`[data-user-row="${HELPER_ID}"] [data-admin-action="ban"]`).count() === 0, 'Admins cannot be blocked');
 
   await a.page.locator(`[data-user-row="${USER_ID}"] [data-admin-action="ban"]`).click();
   await a.page.locator(`[data-user-row="${USER_ID}"] .admin-badge.banned`).waitFor();
@@ -106,16 +110,38 @@ try {
   await a.page.locator(`[data-user-row="${BANNED_ID}"] [data-admin-action="unban"]`).click();
   await a.page.locator(`[data-user-row="${BANNED_ID}"] [data-admin-action="ban"]`).waitFor();
 
+  // Owner promotes the colleague, who then has no block button, and demotes the helper.
+  await a.page.locator(`[data-user-row="${USER_ID}"] [data-admin-action="unban"]`).click();
+  await a.page.locator(`[data-user-row="${USER_ID}"] [data-admin-action="grant_admin"]`).click();
+  await a.page.locator(`[data-user-row="${USER_ID}"] [data-admin-action="revoke_admin"]`).waitFor();
+  assert(await a.page.locator(`[data-user-row="${USER_ID}"] [data-admin-action="ban"]`).count() === 0, 'New admin should not be blockable');
+  await a.page.locator(`[data-user-row="${HELPER_ID}"] [data-admin-action="revoke_admin"]`).click();
+  await a.page.locator(`[data-user-row="${HELPER_ID}"] [data-admin-action="grant_admin"]`).waitFor();
+  assert(await a.page.locator(`[data-user-row="${ADMIN_ID}"] [data-admin-action]`).count() === 0, 'Owner row must have no actions');
+
   const mutations = a.adminCalls.filter((call) => call.action !== 'list');
   assert(JSON.stringify(mutations) === JSON.stringify([
     { action: 'ban', user_id: USER_ID },
     { action: 'unban', user_id: BANNED_ID },
+    { action: 'unban', user_id: USER_ID },
+    { action: 'grant_admin', user_id: USER_ID },
+    { action: 'revoke_admin', user_id: HELPER_ID },
   ]), `Unexpected admin requests: ${JSON.stringify(mutations)}`);
 
   await a.page.locator('#adminClose').click();
   assert(!(await a.page.locator('#adminModal').evaluate((el) => el.classList.contains('show'))), 'Admin panel should close');
 
-  // 2. Regular user never sees the admin section.
+  // 2. A non-owner admin can block users but cannot manage admin rights.
+  const helperSession = sessionFor(HELPER_ID, 'helper@example.test');
+  const h = await openPage({ session: helperSession, isAdmin: true, isOwner: false });
+  await h.page.locator('.app').waitFor({ state: 'visible' });
+  await h.page.locator('#cloudButton').click();
+  await h.page.locator('#cloudAdminGroup').waitFor({ state: 'visible' });
+  await h.page.locator('#adminUsersButton').click();
+  await h.page.locator(`[data-user-row="${USER_ID}"] [data-admin-action="ban"]`).waitFor();
+  assert(await h.page.locator('[data-admin-action="grant_admin"], [data-admin-action="revoke_admin"]').count() === 0, 'Only the owner may see admin-rights buttons');
+
+  // 3. Regular user never sees the admin section.
   const userSession = sessionFor(USER_ID, 'colleague@example.test');
   const u = await openPage({ session: userSession, isAdmin: false });
   await u.page.locator('.app').waitFor({ state: 'visible' });
@@ -124,7 +150,7 @@ try {
   await u.page.waitForTimeout(200);
   assert(await u.page.locator('#cloudAdminGroup').isHidden(), 'Admin section must stay hidden for regular users');
 
-  // 3. Sign-up enforces the password policy before any network request;
+  // 4. Sign-up enforces the password policy before any network request;
   //    sign-in still accepts existing shorter passwords.
   const s = await openPage({ session: null, isAdmin: false });
   await s.page.locator('#authScreen').waitFor({ state: 'visible' });
@@ -138,12 +164,12 @@ try {
   }
   assert(s.unexpected.length === 0, `Weak passwords must not reach the server: ${s.unexpected.join('; ')}`);
 
-  const errors = [...a.errors, ...u.errors, ...s.errors];
-  const unexpected = [...a.unexpected, ...u.unexpected, ...s.unexpected];
+  const errors = [...a.errors, ...h.errors, ...u.errors, ...s.errors];
+  const unexpected = [...a.unexpected, ...h.unexpected, ...u.unexpected, ...s.unexpected];
   assert(!unexpected.length, `Unexpected network requests: ${unexpected.join('; ')}`);
   assert(!errors.length, `Browser page errors: ${errors.join('; ')}`);
 
-  console.log('Admin users OK: admin panel list/block/unblock, hidden for regular users, sign-up password policy');
+  console.log('Admin users OK: list/block/unblock, owner grants and revokes admins, non-owner admins cannot, hidden for regular users, sign-up password policy');
 } finally {
   await browser.close();
   await new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
