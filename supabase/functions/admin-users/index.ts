@@ -6,10 +6,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 //   { action: "list" }                  -> { users: [...] }
 //   { action: "ban",   user_id: "..." } -> { ok: true }
 //   { action: "unban", user_id: "..." } -> { ok: true }
+//   { action: "grant_admin",  user_id: "..." } -> { ok: true }  (owner only)
+//   { action: "revoke_admin", user_id: "..." } -> { ok: true }  (owner only)
 //
 // Only accounts listed in public.kanban_admins may call it. Admins cannot be
-// blocked through this function (including yourself), so the owner can never
-// lock themselves out. Accounts are never deleted here.
+// blocked through this function (including yourself). Only the owner can grant
+// or revoke admin rights, and the owner can never be blocked or demoted, so the
+// owner can never be locked out. Accounts are never deleted here.
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -36,10 +39,16 @@ function displayNameOf(user: { email?: string; user_metadata?: Record<string, un
   return String(metadata.full_name ?? metadata.name ?? metadata.display_name ?? "").trim();
 }
 
-async function adminIds() {
-  const { data, error } = await admin.from("kanban_admins").select("user_id");
+async function loadAdmins() {
+  const { data, error } = await admin.from("kanban_admins").select("user_id,is_owner");
   if (error) throw new Error("admin lookup failed: " + error.message);
-  return new Set((data ?? []).map((row) => row.user_id as string));
+  const ids = new Set<string>();
+  const owners = new Set<string>();
+  for (const row of data ?? []) {
+    ids.add(row.user_id as string);
+    if (row.is_owner) owners.add(row.user_id as string);
+  }
+  return { ids, owners };
 }
 
 Deno.serve(async (req) => {
@@ -59,13 +68,15 @@ Deno.serve(async (req) => {
   if (isBanned(caller)) return json({ error: "Forbidden" }, 403);
 
   let admins: Set<string>;
+  let owners: Set<string>;
   try {
-    admins = await adminIds();
+    ({ ids: admins, owners } = await loadAdmins());
   } catch (error) {
     console.error(error instanceof Error ? error.message : error);
     return json({ error: "Could not check permissions" }, 500);
   }
   if (!admins.has(caller.id)) return json({ error: "Forbidden" }, 403);
+  const callerIsOwner = owners.has(caller.id);
 
   let payload: any;
   try { payload = await req.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
@@ -92,11 +103,12 @@ Deno.serve(async (req) => {
         email_confirmed: !!u.email_confirmed_at,
         banned: isBanned(u),
         is_admin: admins.has(u.id),
+        is_owner: owners.has(u.id),
         is_self: u.id === caller.id,
         telegram: linked.has(u.id),
       }))
       .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
-    return json({ users });
+    return json({ users, me: { id: caller.id, is_owner: callerIsOwner } });
   }
 
   if (action === "ban" || action === "unban") {
@@ -113,6 +125,40 @@ Deno.serve(async (req) => {
       return json({ error: "Could not update user" }, 500);
     }
     console.log(`admin ${caller.id} ${action} ${targetId}`);
+    return json({ ok: true });
+  }
+
+  if (action === "grant_admin" || action === "revoke_admin") {
+    if (!callerIsOwner) return json({ error: "Only the owner can manage administrators" }, 403);
+    const targetId = String(payload?.user_id ?? "");
+    if (!/^[0-9a-f-]{36}$/i.test(targetId)) return json({ error: "Invalid user_id" }, 400);
+    if (targetId === caller.id || owners.has(targetId)) {
+      return json({ error: "The owner's rights cannot be changed" }, 400);
+    }
+    const { data: target, error: targetError } = await admin.auth.admin.getUserById(targetId);
+    if (targetError || !target?.user) return json({ error: "User not found" }, 404);
+
+    if (action === "grant_admin") {
+      if (isBanned(target.user)) return json({ error: "Unblock the user before granting admin rights" }, 400);
+      const { error } = await admin
+        .from("kanban_admins")
+        .upsert({ user_id: targetId, is_owner: false, granted_by: caller.id }, { onConflict: "user_id", ignoreDuplicates: true });
+      if (error) {
+        console.error("grant_admin failed:", error.message);
+        return json({ error: "Could not grant admin rights" }, 500);
+      }
+    } else {
+      const { error } = await admin
+        .from("kanban_admins")
+        .delete()
+        .eq("user_id", targetId)
+        .eq("is_owner", false);
+      if (error) {
+        console.error("revoke_admin failed:", error.message);
+        return json({ error: "Could not revoke admin rights" }, 500);
+      }
+    }
+    console.log(`owner ${caller.id} ${action} ${targetId}`);
     return json({ ok: true });
   }
 
