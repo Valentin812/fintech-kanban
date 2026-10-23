@@ -135,6 +135,21 @@ Deno.serve(async (req) => {
   const senderEmail = String(sender.email ?? "").trim();
   const senderLabel = senderName && senderEmail ? `${senderName} (${senderEmail})` : senderName || senderEmail || "участник Kanban";
 
+  // A task in a shared project can be opened from the bell — but only link it
+  // when the sender really is a member of that project.
+  let sharedLink: { project_id: string; task_id: number } | null = null;
+  const sharedProjectId = String(payload?.shared_project_id ?? "");
+  const sharedTaskId = Number(payload?.task_id);
+  if (/^[0-9a-f-]{36}$/i.test(sharedProjectId) && Number.isSafeInteger(sharedTaskId)) {
+    const { data: senderMembership } = await admin
+      .from("shared_project_members")
+      .select("role")
+      .eq("project_id", sharedProjectId)
+      .eq("user_id", sender.id)
+      .maybeSingle();
+    if (senderMembership) sharedLink = { project_id: sharedProjectId, task_id: sharedTaskId };
+  }
+
   // 1. In-app notification (always, Telegram or not).
   const { error: inAppError } = await admin.from("notifications").insert({
     recipient_id: matchingUser.id,
@@ -144,6 +159,7 @@ Deno.serve(async (req) => {
     title: taskTitle,
     project,
     due,
+    ...(sharedLink ?? {}),
   });
   if (inAppError) console.error("In-app notification insert failed:", inAppError.message);
   const inApp = !inAppError;

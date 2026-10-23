@@ -41,3 +41,5 @@ jobs:
         run: node tests/board-extras.mjs
       - name: Run usability browser test
         run: node tests/usability.mjs
+      - name: Run shared projects browser test
+        run: node tests/shared-projects.mjs
