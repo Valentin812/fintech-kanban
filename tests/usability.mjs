@@ -157,6 +157,17 @@ try {
   await page.locator('article.task[data-id="3"]').dragTo(page.locator('.column[data-status="В работе"] .cards'));
   await page.waitForFunction(() => data[0].tasks.find((t) => t.id === 3).status === 'В работе');
 
+  // My tasks: grouped list, active by default, rows open the task.
+  await page.evaluate(() => switchView('mytasks'));
+  const groupTitles = await page.locator('#myTasksView .mytask-group h4').allTextContents();
+  assert(groupTitles[0].startsWith('Просрочено') && !groupTitles.some((g) => g.startsWith('Завершённые')), `Active view should start with overdue and hide finished: ${groupTitles}`);
+  await page.locator('[data-my-filter="done"]').click();
+  assert(await page.locator('#myTasksView .mytask-row.is-done').count() === 1, 'Finished filter should show my finished task');
+  await page.locator('[data-my-filter="active"]').click();
+  await page.locator('#myTasksView .mytask-row').first().click();
+  await page.waitForFunction(() => document.querySelector('#drawer').classList.contains('open'));
+  await page.keyboard.press('Escape');
+
   assert(!unexpected.length, `Unexpected network requests: ${unexpected.join('; ')}`);
   assert(!errors.length, `Browser page errors: ${errors.join('; ')}`);
   console.log('Usability OK: autosave, date input, quick filters + home tile, undo delete, project menu, theme in account menu, sorting, column drag');
