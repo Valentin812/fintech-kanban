@@ -94,6 +94,37 @@ try {
   await page.locator('#mobileBar [data-mb="tasks"]').click();
   await page.waitForFunction(() => activeView === 'tasks');
 
+  // Space: the board gets most of the screen; the top bar lives under «Ещё».
+  const room = await page.evaluate(() => {
+    const col = document.querySelector('.column').getBoundingClientRect();
+    const barTop = document.getElementById('mobileBar').getBoundingClientRect().top;
+    return { top: col.top, room: barTop - col.top };
+  });
+  assert(room.top <= 200, `Columns should start high on the screen, got ${room.top}px`);
+  assert(room.room >= 0.6 * 844 - 80, `Columns should have most of the screen, got ${room.room}px`);
+  assert(await page.locator('#globalSearch').isHidden(), 'Global search is tucked under «Ещё» on a phone');
+  await page.locator('#mobileBar [data-mb="more"]').click();
+  await page.locator('#globalSearch').waitFor({ state: 'visible' });
+  assert(await page.locator('#cloudButton').isVisible() && await page.locator('#teamTopButton').isVisible(), '«Ещё» shows account and participants');
+  await page.keyboard.press('Escape');
+  await page.locator('#globalSearch').waitFor({ state: 'hidden' });
+  await page.locator('#mobileBar [data-mb="more"]').click();
+  await page.locator('#cloudButton').click();
+  await page.locator('#globalSearch').waitFor({ state: 'hidden' });
+  await page.locator('#cloudModal.show').waitFor();
+  await page.locator('#cloudModal').evaluate((m) => m.classList.remove('show'));
+
+  // Quick filters live in the filter panel and mark the button when active.
+  assert(await page.locator('[data-quick-filter="mine"]').isHidden(), 'Quick filters are folded away by default');
+  await page.locator('#toolbarToggle').click();
+  await page.locator('[data-quick-filter="mine"]').waitFor({ state: 'visible' });
+  await page.locator('[data-quick-filter="mine"]').click();
+  await page.locator('#toolbarToggle').click();
+  assert((await page.locator('#toolbarToggle').textContent()).includes('•'), 'An active filter should be marked on the button');
+  await page.locator('#toolbarToggle').click();
+  await page.locator('[data-quick-filter="mine"]').click();
+  await page.locator('#toolbarToggle').click();
+
   // Typing hides the bar so it never covers the keyboard.
   await page.locator('#taskSearch').focus();
   assert(await page.locator('#mobileBar').isHidden(), 'Bar should hide while typing');
