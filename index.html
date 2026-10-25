@@ -882,7 +882,9 @@ body[data-theme="cappuccino"] .project.active{border-color:#8a6240}body[data-the
   #mobileBar .mb-add .mb-icon{display:grid;place-items:center;width:44px;height:44px;margin-top:-18px;border-radius:50%;background:var(--mb-accent,#2878f0);color:#fff;font-size:26px;box-shadow:0 4px 12px #0003}
   #mobileBar .mb-count{position:absolute;top:4px;right:calc(50% - 22px);min-width:16px;height:16px;border-radius:8px;background:#e5484d;color:#fff;font-size:10px;line-height:16px;text-align:center;padding:0 4px}
   #mobileBar .mb-count:empty{display:none}
-  body:has(input:focus,textarea:focus,select:focus) #mobileBar{display:none}
+  .kb-open #mobileBar{display:none}
+  .kb-open .main{padding-bottom:0!important}
+  html,body,.app{height:100dvh!important;min-height:0!important}
   #statusStrip{display:flex;gap:6px;overflow-x:auto;padding:2px 10px 8px;scrollbar-width:none}
   #statusStrip[hidden]{display:none!important}
   #statusStrip::-webkit-scrollbar{display:none}
@@ -1573,6 +1575,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.10.25-3',date:'25.10.2026',title:'Стабильность мобильной версии',items:['Нижняя панель больше не пропадает после выбора в списках и при установке курсора в поле: она прячется только пока реально открыта клавиатура','Меню «Ещё» не вызывает клавиатуру само и закрывается при переходе по вкладкам','Высота экрана считается с учётом адресной строки браузера, поэтому низ доски не уходит под неё']},
  {v:'2026.10.25-2',date:'25.10.2026',title:'Больше места для колонок на телефоне',items:['Поиск по проектам, участники, уведомления и аккаунт спрятаны под кнопку «Ещё» в нижней панели: верхняя строка больше не занимает экран','Фильтры («Только мои», «Просроченные», ответственный, сортировка) свёрнуты под кнопку «Фильтры»; точка на кнопке показывает, что фильтр включён','Карточки компактнее: на экране помещается на треть больше задач']},
  {v:'2026.10.25-1',date:'25.10.2026',title:'Удобная мобильная версия',items:['Внизу экрана появилась панель: Главная, Доска, «+» (новая задача) и Мои задачи — всё достаётся большим пальцем','Над доской — переключатель колонок с количеством задач: нажми «В работе», и доска сама прокрутится','Колонки на телефоне занимают почти весь экран и «прилипают» при свайпе','Шапка стала ниже: больше места под задачи; при вводе текста нижняя панель прячется']},
  {v:'2026.10.23-7',date:'23.10.2026',title:'Бот, компактная карточка, мобильная версия, темы',items:['Telegram-бот разделяет сообщение на название и описание: «Надо позвонить в банк, тема такая: узнать про тарифы» даёт задачу «Позвонить в банк» с описанием «Узнать про тарифы»; в ответе бот показывает и название, и описание','Окно задачи стало компактнее: меньше отступов, подсказка про ответственных показывается только при вводе','Мобильная версия: шапка стала вдвое ниже, фильтры доски спрятаны за кнопку «Фильтры», кнопки крупнее, нет горизонтальной прокрутки','Новые темы «Латте» (светлая) и «Капучино» (тёмная): выбираются в меню аккаунта']},
@@ -1622,6 +1625,9 @@ async function removeAvatar(){const id=cloudSession?.user?.id;if(!id)return;try{
     const x=board.scrollLeft+board.clientWidth/3;let idx=0;cols.forEach((c,i)=>{if(c.offsetLeft-board.offsetLeft<=x)idx=i});
     strip.querySelectorAll('button').forEach((b,i)=>{b.classList.toggle('active',i===idx);b.setAttribute('aria-selected',String(i===idx));if(i===idx&&isMobile()&&strip.scrollWidth>strip.clientWidth)strip.scrollTo({left:b.offsetLeft-12,behavior:'auto'})});
   };
+  const vv=window.visualViewport;let baseH=0,baseW=0;
+  const checkKeyboard=()=>{const h=vv?vv.height:innerHeight,w=innerWidth;if(w!==baseW){baseW=w;baseH=h}baseH=Math.max(baseH,h);const tag=document.activeElement?.tagName;const typing=(tag==='INPUT'&&!['checkbox','radio','button','submit','file','color','range'].includes(document.activeElement.type))||tag==='TEXTAREA';document.documentElement.classList.toggle('kb-open',isMobile()&&typing&&baseH-h>140)};
+  if(vv)vv.addEventListener('resize',checkKeyboard);window.addEventListener('resize',checkKeyboard);document.addEventListener('focusin',()=>setTimeout(checkKeyboard,150));document.addEventListener('focusout',()=>setTimeout(checkKeyboard,150));checkKeyboard();
   const paint=()=>{const sb=document.querySelector('.sidebar'),tab=document.querySelector('.tab.active')||document.querySelector('.tab');if(!sb)return;const cs=getComputedStyle(sb),root=document.documentElement.style;const bg=cs.backgroundColor;root.setProperty('--mb-bg',bg&&bg!=='rgba(0, 0, 0, 0)'?bg:getComputedStyle(document.body).backgroundColor);root.setProperty('--mb-ink',getComputedStyle(document.body).color);root.setProperty('--mb-muted',getComputedStyle(document.querySelector('.mini')||document.body).color);const bc=cs.borderRightColor;root.setProperty('--mb-line',bc&&!/rgba\(0, 0, 0, 0\)/.test(bc)?bc:'#8884');if(tab){const c=getComputedStyle(tab).color;if(c)root.setProperty('--mb-accent',c)}};
   board.addEventListener('scroll',()=>requestAnimationFrame(markActive),{passive:true});
   bar.addEventListener('click',e=>{const b=e.target.closest('[data-mb]');if(!b)return;const m=b.dataset.mb;
@@ -1629,13 +1635,13 @@ async function removeAvatar(){const id=cloudSession?.user?.id;if(!id)return;try{
     else if(m==='tasks')switchView('tasks');
     else if(m==='add'){if(activeView==='tasks')openNew('Очередь');else openStandaloneTaskCreate()}
     else if(m==='more')toggleTop();});
-  const toggleTop=(force)=>{const open=force===undefined?!document.body.classList.contains('mb-top-open'):force;document.body.classList.toggle('mb-top-open',open);bar.querySelector('[data-mb="more"]').setAttribute('aria-expanded',String(open));if(open)setTimeout(()=>$('globalSearch')?.focus(),50)};
+  const toggleTop=(force)=>{const open=force===undefined?!document.body.classList.contains('mb-top-open'):force;document.body.classList.toggle('mb-top-open',open);bar.querySelector('[data-mb="more"]').setAttribute('aria-expanded',String(open));};
   document.addEventListener('click',e=>{if(!document.body.classList.contains('mb-top-open'))return;if(e.target.closest('#mobileBar'))return;const top=e.target.closest('.main>.top');if(!top||(e.target.closest('button,select,.global-search-results a,.global-search-results [data-result]')&&!e.target.closest('#globalSearch')))setTimeout(()=>toggleTop(false),0)});
   document.addEventListener('keydown',e=>{if(e.key==='Escape')toggleTop(false)});
   const dot=()=>{const nb=$('notifBadge');$('mbDot').hidden=!nb||nb.hidden||!(nb.textContent||'').trim()};
   new MutationObserver(dot).observe($('notifBadge')||document.body,{attributes:true,childList:true,characterData:true,subtree:true});
   const wrap=(name,after)=>{const orig=window[name];if(typeof orig!=='function')return;window[name]=function(){const r=orig.apply(this,arguments);try{after()}catch(e){console.warn(name,e)}return r}};
-  wrap('switchView',()=>{sync();paint()});if(typeof applyTheme==='function')wrap('applyTheme',()=>{setTimeout(paint,0);setTimeout(paint,250)});wrap('renderBoard',()=>{buildStrip();sync()});wrap('renderMyTasks',sync);
+  wrap('switchView',()=>{sync();paint();toggleTop(false)});if(typeof applyTheme==='function')wrap('applyTheme',()=>{setTimeout(paint,0);setTimeout(paint,250)});wrap('renderBoard',()=>{buildStrip();sync()});wrap('renderMyTasks',sync);
   try{sync();buildStrip();paint()}catch(e){}
 })();
 </script></body></html>
