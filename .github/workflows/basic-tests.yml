@@ -59,5 +59,8 @@ jobs:
       - name: Run My tasks focus browser test
         run: node tests/my-tasks-focus.mjs
 
+      - name: Run drawer fixes browser test
+        run: node tests/drawer-fixes.mjs
+
       - name: Run Telegram message parser test
         run: node --experimental-strip-types tests/telegram-parse.mjs
