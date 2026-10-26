@@ -79,7 +79,7 @@ try {
   const lastSavedTask = (id) => writes.at(-1)?.state?.data?.flatMap((p) => p.tasks).find((t) => t.id === id);
   const visibleCards = () => page.locator('#board article.task').evaluateAll((els) => els.map((e) => Number(e.dataset.id)).sort((a, b) => a - b));
 
-  // 1. Autosave: edits are saved while the drawer stays open; Escape keeps an unsent comment.
+  // 1. Autosave: edits are saved while the drawer stays open; Escape cancels (with undo), outside click saves.
   await page.evaluate(() => openTask(3));
   assert(await page.locator('#saveTask').textContent() === 'Готово', 'Save button should read «Готово»');
   await page.locator('#dDescription').fill('Autosaved description');
@@ -99,11 +99,24 @@ try {
   assert(await page.locator('#dEnd').inputValue() === '31.02.2026', 'Impossible dates are left as typed');
   await page.locator('#dEnd').fill('01.12.2099');
   await page.locator('#newComment').fill('Comment kept on Escape');
+  // Escape cancels: the task returns to the state it had when the drawer opened...
   await page.keyboard.press('Escape');
   await page.waitForFunction(() => !document.querySelector('#drawer').classList.contains('open'));
+  const reverted = await page.evaluate(() => active().tasks.find((t) => t.id === 3));
+  assert(reverted.description !== 'Autosaved description' && reverted.end !== '01.12.2099' && !(reverted.comment || '').includes('Comment kept on Escape'), `Escape should cancel the edits: ${JSON.stringify(reverted)}`);
+  // ...and «Отменить» in the toast brings everything back, including the unsent comment.
+  await page.locator('#undoToast button').click();
   await page.waitForTimeout(1100);
-  assert((lastSavedTask(3)?.comment || '').includes('Comment kept on Escape'), 'Closing with Escape should keep the typed comment');
-  assert(lastSavedTask(3)?.end === '01.12.2099', 'Closing should keep the typed due date');
+  assert((lastSavedTask(3)?.comment || '').includes('Comment kept on Escape'), 'Undo should restore the typed comment');
+  assert(lastSavedTask(3)?.end === '01.12.2099', 'Undo should restore the typed due date');
+  assert(lastSavedTask(3)?.description === 'Autosaved description', 'Undo should restore the description');
+  // Clicking outside (the overlay) saves and closes.
+  await page.evaluate(() => openTask(3));
+  await page.locator('#dDescription').fill('Saved by outside click');
+  await page.locator('#overlay').click({ position: { x: 5, y: 5 } });
+  await page.waitForFunction(() => !document.querySelector('#drawer').classList.contains('open'));
+  await page.waitForTimeout(1100);
+  assert(lastSavedTask(3)?.description === 'Saved by outside click', 'Outside click should save');
 
   // 3. Quick filters + home tile.
   await page.locator('[data-quick-filter="overdue"]').click();
