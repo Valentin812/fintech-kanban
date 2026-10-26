@@ -65,27 +65,69 @@ try {
   await page.locator('.app').waitFor({ state: 'visible' });
   await page.evaluate(() => { activeProject = 'Alpha'; switchView('tasks'); renderAll(); });
 
-  // Complete from a project task and from a standalone task; undo; reopen.
+  const T = (id) => page.evaluate((i) => { const x = active().tasks.find((t) => t.id === i); return x ? { status: x.status, archived: !!x.archived, completedAt: x.completedAt || '' } : null; }, id);
+  const onBoard = (id) => page.locator(`#board article.task[data-id="${id}"]`).count();
+
+  // «Завершить» on a board task: Готово + off the board + completion date; undo restores everything.
   await page.evaluate(() => openTask(5));
   assert(await page.locator('#completeTask').textContent() === '✔ Завершить', 'Complete button is offered');
   await page.locator('#completeTask').click();
-  assert(await page.evaluate(() => active().tasks.find((t) => t.id === 5).status) === 'Готово', 'Task moves to «Готово»');
+  let s5 = await T(5);
+  assert(s5.status === 'Готово' && s5.archived && /^\d{4}-\d\d-\d\d/.test(s5.completedAt), 'Task is done, archived and dated: ' + JSON.stringify(s5));
   assert(!(await page.evaluate(() => document.querySelector('#drawer').classList.contains('open'))), 'Drawer closes after completing');
+  assert((await onBoard(5)) === 0, 'Completed task leaves the board');
   await page.locator('#undoToast button').click();
-  assert(await page.evaluate(() => active().tasks.find((t) => t.id === 5).status) === 'Очередь', 'Undo restores the old status');
+  s5 = await T(5);
+  assert(s5.status === 'Очередь' && !s5.archived && !s5.completedAt && (await onBoard(5)) === 1, 'Undo restores the task: ' + JSON.stringify(s5));
+
+  // The «Завершённые» chip shows archived cards again; «Вернуть в работу» reopens.
+  await page.evaluate(() => openTask(5)); await page.locator('#completeTask').click();
+  assert((await page.locator('#archivedChip').textContent()).includes('1'), 'Chip counts archived tasks');
+  await page.locator('#archivedChip').click();
+  assert((await onBoard(5)) === 1, 'Chip brings archived cards back to the board');
+  assert(await page.locator('article.task[data-id="5"] .done-date').count() === 1, 'Card shows the completion date');
   await page.evaluate(() => openTask(5));
+  assert(await page.locator('#completeTask').textContent() === '↩ Вернуть в работу', 'Archived task offers to reopen');
+  assert((await page.locator('#dCompleted').textContent()).startsWith('Завершено: '), 'Drawer shows the completion date');
   await page.locator('#completeTask').click();
-  await page.evaluate(() => openTask(5));
-  assert(await page.locator('#completeTask').textContent() === '↩ Вернуть в работу', 'Done tasks offer to reopen');
-  await page.locator('#completeTask').click();
-  assert(await page.evaluate(() => active().tasks.find((t) => t.id === 5).status) === 'Очередь', 'Reopen returns to the queue');
+  s5 = await T(5);
+  assert(s5.status === 'Очередь' && !s5.archived && !s5.completedAt, 'Reopen clears archive and date: ' + JSON.stringify(s5));
+  await page.locator('#archivedChip').click();
+
+  // Task already in the «Готово» column: per-card button, then «all at once».
+  assert((await T(6)).status === 'Готово' && !(await T(6)).archived && (await onBoard(6)) === 1, 'Done task stays on the board until archived');
+  await page.locator('article.task[data-id="6"] [data-archive-task]').click();
+  assert((await onBoard(6)) === 0 && (await T(6)).archived, 'Card moved to «Завершённые» from the Done column');
+  await page.locator('#undoToast button').click();
+  assert((await onBoard(6)) === 1, 'Undo returns the card');
+  await page.evaluate(() => { active().tasks.push({ id: 7, title: 'Ещё готовая', status: 'Готово', owner: '', end: '', description: '', comment: '' }); renderAll(); });
+  await page.locator('[data-archive-all]').click();
+  assert((await onBoard(6)) === 0 && (await onBoard(7)) === 0, 'The column button archives all done cards');
+
+  // Delete forever asks for confirmation.
+  await page.locator('#archivedChip').click();
+  await page.evaluate(() => openTask(7));
+  assert(await page.locator('#deleteForever').isVisible(), 'Delete forever is offered for done tasks');
+  await page.locator('#deleteForever').click();
+  await page.locator('.confirm-modal [data-no]').click();
+  assert(await page.evaluate(() => active().tasks.some((t) => t.id === 7)), 'Cancel keeps the task');
+  await page.locator('#deleteForever').click();
+  await page.locator('.confirm-modal [data-yes]').click();
+  await page.waitForFunction(() => !active().tasks.some((t) => t.id === 7));
+  assert(await page.locator('#undoToast').count() === 0, 'No undo after deleting forever');
+  await page.evaluate(() => openTask(1));
+  assert(await page.locator('#deleteForever').isHidden(), 'Open tasks do not offer delete forever');
+  await page.keyboard.press('Escape');
+
+  // Standalone task + «Мои задачи»: finished list shows the date.
   await page.evaluate(() => openStandaloneTask(50));
   await page.locator('#completeTask').click();
   await page.evaluate(() => { window.myTasksFilter = 'done'; switchView('mytasks'); });
-  assert((await page.locator('#myTasksView').textContent()).includes('Быстрая без проекта'), 'A completed standalone task is found under «Завершённые»');
+  const text = await page.locator('#myTasksView').textContent();
+  assert(text.includes('Быстрая без проекта') && /завершено \d\d\.\d\d\.\d{4}/.test(text), 'My finished tasks show the completion date');
   assert(!unexpected.length, `Unexpected requests: ${unexpected.join('; ')}`);
   assert(!errors.length, `Browser page errors: ${errors.join('; ')}`);
-  console.log('Complete button OK: project and standalone tasks, undo, reopen, found in finished');
+  console.log('Completed OK: dates, archive from board and Done column, chip, reopen, delete forever with confirm');
 } finally {
   await browser.close();
   await new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
