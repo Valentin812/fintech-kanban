@@ -1038,6 +1038,23 @@ body[data-theme="cappuccino"] .project.active{border-color:#8a6240}body[data-the
 .task-peek .tp-desc{white-space:pre-wrap;overflow-wrap:anywhere;border-top:1px solid rgba(127,127,127,.25);padding-top:7px}
 .task-peek .tp-empty{opacity:.6;font-style:italic}
 
+/* Mobile review */
+@media(max-width:700px){
+  #drawer .draweractions{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:stretch}
+  #drawer .draweractions .btn{width:100%;min-height:42px;padding:8px 6px;font-size:13px;line-height:1.2;white-space:normal}
+  #drawer .draweractions .btn[hidden]{display:none}
+  #drawer .draweractions #saveTask{grid-column:1/-1;order:-1;min-height:46px;font-size:15px}
+  #drawer .draweractions .autosave-note{grid-column:1/-1;order:9}
+  #drawer .draweractions #completeTask{grid-column:1/-1}
+  #drawer .drawer-completed{margin:0 0 6px}
+  .tabs{scroll-padding:0 24px}
+}
+@media(pointer:coarse){
+  .cm-btn,.cm-actions button,[data-cm-edit],[data-cm-delete]{min-height:32px;padding:6px 10px}
+  .mytask-pin{min-width:36px;min-height:36px;display:inline-flex;align-items:center;justify-content:center}
+  #rlAll,.rl-check{width:20px;height:20px}
+  .smallbtn{min-height:32px}
+}
 /* Compact cards */
 html[data-density="compact"] .cards{gap:3px}
 html[data-density="compact"] .column{padding:5px}
@@ -1765,6 +1782,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.10.26-15',date:'26.10.2026',title:'Мобильная версия: ревизия',items:['Кнопки в карточке задачи на телефоне — компактной сеткой, «Готово» сверху','Активная вкладка проекта (например, «Релизы») подсвечивается и прокручивается в видимую часть','Мелкие кнопки (правка/удаление комментария, закрепление, галочки) стали удобнее для пальца','Короткая подсказка в поле быстрых заметок']},
  {v:'2026.10.26-14',date:'26.10.2026',title:'Компактные карточки',items:['Над доской кнопка «▤ Компактно»: карточки становятся плотнее, на экран влезает больше; выбор запоминается']},
  {v:'2026.10.26-13',date:'26.10.2026',title:'Завершённые: дата, архив доски, удалить навсегда',items:['У завершённых задач появилась дата завершения (в «Мои задачи» и в карточке)','В колонке «Готово» можно убрать карточки в «Завершённые» по одной или все сразу; фишка «📦 Завершённые» над доской показывает их обратно','Кнопка «Завершить» теперь убирает задачу с доски, у готовых — «В завершённые», у убранных — «Вернуть в работу»','Для завершённых задач — «🗑 Удалить навсегда» с подтверждением']},
  {v:'2026.10.26-12',date:'26.10.2026',title:'Кнопка «Завершить»',items:['В карточке задачи появилась кнопка «Завершить»: задача уходит в «Готово» и находится в фильтре «Завершённые»','Для завершённой задачи кнопка превращается в «Вернуть в работу»; действие можно отменить']},
@@ -2222,7 +2240,7 @@ function prune(){const before=quickNotes.length;quickNotes=quickNotes.filter(n=>
 function panel(where){
   const open=quickNotes.filter(n=>!n.done),done=quickNotes.filter(n=>n.done);
   const item=n=>`<li class="qn-item${n.done?' qn-done':''}${!n.done&&Date.now()-n.created>DAY?' qn-old':''}" data-qn="${esc(n.id)}"><label class="qn-check"><input type="checkbox" data-qn-toggle="${esc(n.id)}"${n.done?' checked':''} aria-label="Готово"></label>${editId===n.id?`<input class="qn-edit" data-qn-editing="${esc(n.id)}" value="${esc(n.text)}" maxlength="300" aria-label="Текст заметки">`:`<button type="button" class="qn-text" data-qn-edit="${esc(n.id)}" title="Нажмите, чтобы изменить">${esc(n.text)}</button>`}<span class="qn-age">${esc(ago(n.created))}</span>${n.done?'':`<button type="button" class="qn-act" data-qn-task="${esc(n.id)}" title="Сделать задачей без проекта">→ в задачу</button>`}<button type="button" class="qn-act qn-del" data-qn-del="${esc(n.id)}" title="Удалить" aria-label="Удалить заметку">×</button></li>`;
-  return`<section class="qn-panel" data-qn-where="${where}"><div class="qn-head"><h3>Быстрые заметки</h3><span class="mini">дела на пару часов · ${open.length?open.length+' открыто':'пусто'}</span>${done.length?`<button type="button" class="qn-clear" data-qn-clear="1">Убрать выполненные (${done.length})</button>`:''}</div><form class="qn-add" data-qn-form="1"><input class="qn-input" placeholder="Например: перезвонить Азату после обеда · Enter" maxlength="300" autocomplete="off" aria-label="Новая заметка"><button class="btn" type="submit">＋</button></form>${quickNotes.length?`<ul class="qn-list">${open.map(item).join('')}${done.map(item).join('')}</ul>`:''}</section>`;
+  return`<section class="qn-panel" data-qn-where="${where}"><div class="qn-head"><h3>Быстрые заметки</h3><span class="mini">дела на пару часов · ${open.length?open.length+' открыто':'пусто'}</span>${done.length?`<button type="button" class="qn-clear" data-qn-clear="1">Убрать выполненные (${done.length})</button>`:''}</div><form class="qn-add" data-qn-form="1"><input class="qn-input" placeholder="${matchMedia('(max-width:700px)').matches?'Быстрая заметка · Enter':'Например: перезвонить Азату после обеда · Enter'}" maxlength="300" autocomplete="off" aria-label="Новая заметка"><button class="btn" type="submit">＋</button></form>${quickNotes.length?`<ul class="qn-list">${open.map(item).join('')}${done.map(item).join('')}</ul>`:''}</section>`;
 }
 function inject(viewId,where){
   const v=$(viewId);if(!v||v.hidden&&where!=='my')return;
@@ -2404,5 +2422,12 @@ function fmtDone(iso){const d=new Date(iso);return isNaN(d)?'':d.toLocaleDateStr
   const apply=on=>{document.documentElement.dataset.density=on?'compact':'normal';if(btn){btn.setAttribute('aria-pressed',String(on));btn.classList.toggle('active',on)}};
   apply(get());
   btn?.addEventListener('click',()=>{const on=document.documentElement.dataset.density!=='compact';try{localStorage.setItem(KEY,on?'compact':'normal')}catch(e){}apply(on)});
+})();
+
+/* ===== Мобильная версия: активная вкладка проекта всегда видна ===== */
+(function tabsIntoView(){
+  const reveal=()=>{const t=document.querySelector('#tabs .tab.active');if(t&&t.scrollIntoView)try{t.scrollIntoView({inline:'center',block:'nearest'})}catch(e){}};
+  const o=window.switchView;if(typeof o!=='function')return;
+  window.switchView=function(){const r=o.apply(this,arguments);setTimeout(reveal,0);return r};
 })();
 </script></body></html>
