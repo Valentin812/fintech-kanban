@@ -124,6 +124,22 @@ try {
   await page.evaluate(() => document.querySelectorAll('.move-modal-backdrop, #moveTaskModal').forEach((m) => m.remove()));
   assert(await page.locator('#addInboxTask').isVisible(), 'My tasks should have a «Задача без проекта» button');
 
+  // 2b. The comment preview also works from the «Мои задачи» list (project task and a task without a project).
+  await page.evaluate(() => { standaloneTasks[0].comment = '25.10.2026 10:00 — Комментарий без проекта'; window.myTasksFilter = 'all'; renderMyTasks(); });
+  const myBadges = page.locator('#myTasksView .mytask-comments');
+  assert(await myBadges.count() === 2, 'Both tasks with comments should show a badge in My tasks');
+  const projectBadge = page.locator('#myTasksView .mytask-row', { hasText: 'С комментариями' }).locator('.mytask-comments');
+  await projectBadge.hover();
+  await page.locator('#commentPeek:not([hidden])').waitFor();
+  assert(await page.locator('#commentPeek .comment-peek-item').count() === 12, 'My tasks badge should preview the project task comments');
+  await page.mouse.move(5, 890);
+  await page.locator('#commentPeek').waitFor({ state: 'hidden' });
+  await page.locator('#myTasksView .mytask-row', { hasText: 'Моя без проекта' }).locator('.mytask-comments').hover();
+  await page.locator('#commentPeek:not([hidden])').waitFor();
+  assert((await page.locator('#commentPeek').textContent()).includes('Комментарий без проекта'), 'My tasks badge should preview a no-project task comment');
+  await page.mouse.move(5, 890);
+  await page.locator('#commentPeek').waitFor({ state: 'hidden' });
+
   // 3. Sidebar width can be dragged and is remembered; double click resets.
   const handle = page.locator('.side-resizer');
   const startWidth = (await page.locator('.sidebar').boundingBox()).width;
