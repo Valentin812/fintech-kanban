@@ -934,6 +934,19 @@ body[data-theme="cappuccino"] .project.active{border-color:#8a6240}body[data-the
 .mytask-group-pinned>h4{color:#a06a00}
 .mytask-group-hot>h4{color:#c2362f}
 
+/* Comment actions and links */
+.commentbox .cm-entry{display:flex;gap:10px;align-items:baseline;justify-content:space-between;padding:2px 0}
+.commentbox .cm-entry.cm-editing{display:block}
+.commentbox .cm-text{flex:1;min-width:0}
+.commentbox .cm-text{white-space:pre-wrap;overflow-wrap:anywhere}
+.commentbox .cm-stamp{opacity:.7;font-size:12px}
+.commentbox a{color:var(--blue);text-decoration:underline}
+.cm-actions{display:flex;gap:10px;flex:none;margin:0}
+.cm-editing .cm-actions{margin-top:6px}
+.cm-btn{border:0;background:none;padding:2px 0;font:inherit;font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline}
+.cm-btn:hover{color:var(--ink)}.cm-danger{color:#c24141}
+.cm-edit{display:block;width:100%;box-sizing:border-box;margin-top:4px;border:1px solid var(--line);border-radius:8px;padding:8px;font:inherit;font-size:13px;color:inherit;background:var(--card,#fff)}
+.commentbox .cm-actions .btn{padding:6px 12px;font-size:13px}
 /* Releases tab */
 #releasesView{max-width:980px}
 .rl-add{margin:6px 0 14px}
@@ -1289,7 +1302,7 @@ function addLinkFromInput(inputId,kind){
  else{if(!t.extraLinks)t.extraLinks=[];t.extraLinks.push({title,url})}
  save();input.value='';renderTaskLinks(t);toast(kind==='doc'?'Документ добавлен':'Ссылка добавлена');
 }
-function openTask(id){if($('newComment').value.trim())commitDraftComment();let t=active().tasks.find(t=>t.id===id);if(!t)return;selectedStandaloneId=null;$('removeFromProject').hidden=false;$('standaloneToProject').hidden=true;const ns=projectStatuses();$('dStatus').innerHTML=ns.map(s=>`<option value="${esc(s)}">${esc(statusLabel(s))}</option>`).join('');selectedId=id;$('dProject').textContent=activeProject;$('dTitle').textContent=t.title;$('dStatus').value=t.status;$('dOwner').value=t.owner||'';$('dOwnerSuggestions').hidden=true;$('dOwnerSuggestions').innerHTML='';$('dStart').value=t.start||'';$('dEnd').value=t.end||'';$('dDescription').value=t.description||'';renderChecklist(t);$('dComment').textContent=t.comment||'Комментариев пока нет';$('newComment').value='';$('dNewLink').value='';$('dNewDoc').value='';let links=[];if(t.link)links.push(`<a href="${esc(t.link)}" target="_blank" rel="noopener">Ссылка на материал ↗</a>`);if(t.mt)links.push(`<a href="${esc(t.mt)}" target="_blank" rel="noopener">Задача в МТ ↗</a>`);(t.extraLinks||[]).forEach(x=>links.push(`<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title||x.url)} ↗</a>`));(t.documents||[]).forEach(x=>links.push(`<a href="${esc(x.url)}" target="_blank" rel="noopener">▤ ${esc(x.title||x.url)} ↗</a>`));renderTaskLinks(t);$('overlay').classList.add('show');$('drawer').classList.add('open');renderBoard()}
+function openTask(id){if($('newComment').value.trim())commitDraftComment();let t=active().tasks.find(t=>t.id===id);if(!t)return;selectedStandaloneId=null;$('removeFromProject').hidden=false;$('standaloneToProject').hidden=true;const ns=projectStatuses();$('dStatus').innerHTML=ns.map(s=>`<option value="${esc(s)}">${esc(statusLabel(s))}</option>`).join('');selectedId=id;$('dProject').textContent=activeProject;$('dTitle').textContent=t.title;$('dStatus').value=t.status;$('dOwner').value=t.owner||'';$('dOwnerSuggestions').hidden=true;$('dOwnerSuggestions').innerHTML='';$('dStart').value=t.start||'';$('dEnd').value=t.end||'';$('dDescription').value=t.description||'';renderChecklist(t);renderDrawerComments(t);$('newComment').value='';$('dNewLink').value='';$('dNewDoc').value='';let links=[];if(t.link)links.push(`<a href="${esc(t.link)}" target="_blank" rel="noopener">Ссылка на материал ↗</a>`);if(t.mt)links.push(`<a href="${esc(t.mt)}" target="_blank" rel="noopener">Задача в МТ ↗</a>`);(t.extraLinks||[]).forEach(x=>links.push(`<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title||x.url)} ↗</a>`));(t.documents||[]).forEach(x=>links.push(`<a href="${esc(x.url)}" target="_blank" rel="noopener">▤ ${esc(x.title||x.url)} ↗</a>`));renderTaskLinks(t);$('overlay').classList.add('show');$('drawer').classList.add('open');renderBoard()}
 function closeDrawer(){$('overlay').classList.remove('show');$('drawer').classList.remove('open');selectedId=null;selectedStandaloneId=null;$('removeFromProject').hidden=false;refreshAfterTaskChange()}
 function openNew(st='Очередь'){const ns=projectStatuses();$('newStatus').innerHTML=ns.map(s=>`<option value="${esc(s)}">${esc(statusLabel(s))}</option>`).join('');$('newTitle').value='';$('newOwner').value='';$('newEnd').value='';ownerMenuFor('newOwner').hidden=true;$('newStatus').value=st;$('modal').classList.add('show');$('newTitle').focus()}
 function closeNew(){$('modal').classList.remove('show')}
@@ -1533,7 +1546,7 @@ function openStandaloneTask(id){
  selectedStandaloneId=t.id;selectedId=null;
  const ns=defaultStatuses();$('dStatus').innerHTML=ns.map(s=>`<option value="${esc(s)}">${esc(statusLabel(s))}</option>`).join('');
  $('dProject').textContent='Без проекта';$('dTitle').textContent=t.title;$('dStatus').value=t.status||'Очередь';$('dOwner').value=t.owner||'';$('dOwnerSuggestions').hidden=true;$('dOwnerSuggestions').innerHTML='';$('dStart').value=t.start||'';$('dEnd').value=t.end||'';$('dDescription').value=t.description||'';
- renderChecklist(t);$('dComment').textContent=t.comment||'Комментариев пока нет';$('newComment').value='';$('dNewLink').value='';$('dNewDoc').value='';
+ renderChecklist(t);renderDrawerComments(t);$('newComment').value='';$('dNewLink').value='';$('dNewDoc').value='';
  let links=[];if(t.link)links.push(`<a href="${esc(t.link)}" target="_blank" rel="noopener">Ссылка на материал ↗</a>`);if(t.mt)links.push(`<a href="${esc(t.mt)}" target="_blank" rel="noopener">Задача в МТ ↗</a>`);(t.extraLinks||[]).forEach(x=>links.push(`<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title||x.url)} ↗</a>`));(t.documents||[]).forEach(x=>links.push(`<a href="${esc(x.url)}" target="_blank" rel="noopener">▤ ${esc(x.title||x.url)} ↗</a>`));renderTaskLinks(t);
  $('removeFromProject').hidden=true;$('standaloneToProject').hidden=false;$('overlay').classList.add('show');$('drawer').classList.add('open');
 }
@@ -1567,7 +1580,7 @@ $('standaloneToProject').onclick=()=>{const id=selectedStandaloneId;if(!id)retur
 };
 $('deleteTask').onclick=()=>{const standalone=selectedStandaloneId!==null;const list=standalone?standaloneTasks:active().tasks;const t=list.find(x=>x.id===(standalone?selectedStandaloneId:selectedId));if(!t)return;const project=standalone?null:active();const index=list.indexOf(t);const children=standalone?[]:project.tasks.filter(x=>String(x.parent||'')===String(t.id));if(standalone){standaloneTasks=standaloneTasks.filter(x=>x!==t)}else project.tasks=project.tasks.filter(x=>x!==t&&!children.includes(x));save();closeDrawer();if(standalone){renderInbox();renderProjects()}else renderAll();undoToast(`Задача «${t.title}» удалена`,()=>{if(standalone){standaloneTasks.splice(Math.min(index,standaloneTasks.length),0,t)}else{project.tasks.splice(Math.min(index,project.tasks.length),0,t,...children)}save();if(standalone){renderInbox();renderProjects()}else renderAll();toast('Задача восстановлена')})};
 ['dNewLink','dNewDoc'].forEach(id=>{$(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addLinkFromInput(id,id==='dNewDoc'?'doc':'link')}else if(e.key==='Escape'){e.preventDefault();$(id).value='';$(id).blur()}})});
-$('newComment').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();commitDraftComment() }else if(e.key==='Escape'){e.preventDefault();commitDraftComment();$('newComment').blur()}});$('newComment').addEventListener('blur',commitDraftComment);function commitDraftComment(){const text=$('newComment').value.trim();if(!text)return;const standalone=selectedStandaloneId!==null;const t=standalone?standaloneTasks.find(x=>x.id===selectedStandaloneId):active().tasks.find(x=>x.id===selectedId);if(!t)return;t.comment=(t.comment?t.comment+'\n\n':'')+new Date().toLocaleString('ru-RU')+' — '+text;$('newComment').value='';$('dComment').textContent=t.comment;save();refreshAfterTaskChange();toast('Комментарий сохранён')}
+$('newComment').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();commitDraftComment() }else if(e.key==='Escape'){e.preventDefault();commitDraftComment();$('newComment').blur()}});$('newComment').addEventListener('blur',commitDraftComment);function commitDraftComment(){const text=$('newComment').value.trim();if(!text)return;const standalone=selectedStandaloneId!==null;const t=standalone?standaloneTasks.find(x=>x.id===selectedStandaloneId):active().tasks.find(x=>x.id===selectedId);if(!t)return;t.comment=(t.comment?t.comment+'\n\n':'')+new Date().toLocaleString('ru-RU')+' — '+text;$('newComment').value='';renderDrawerComments(t);save();refreshAfterTaskChange();toast('Комментарий сохранён')}
 function refreshAfterTaskChange(){try{renderBoard()}catch(e){}try{if(activeView==='mytasks')renderMyTasks();else if(activeView==='home')renderHomeDashboard()}catch(e){}try{renderProjects()}catch(e){}}$('saveTask').onclick=()=>{let standalone=selectedStandaloneId!==null;let t=standalone?standaloneTasks.find(x=>x.id===selectedStandaloneId):active().tasks.find(t=>t.id===selectedId);if(!t)return;const previousOwner=String(t.owner||'').trim();t.status=$('dStatus').value;t.owner=$('dOwner').value.trim();t.start=$('dStart').value.trim();t.end=$('dEnd').value.trim();t.description=$('dDescription').value.trim();let extraLink=$('dNewLink').value.trim(),extraDoc=$('dNewDoc').value.trim();if(extraLink){if(!t.extraLinks)t.extraLinks=[];t.extraLinks.push({title:extraLink.split(/\s+/)[0],url:extraLink.split(/\s+/).slice(1).join(' ')||extraLink})}if(extraDoc){if(!t.documents)t.documents=[];t.documents.push({title:extraDoc.split(/\s+/)[0],url:extraDoc.split(/\s+/).slice(1).join(' ')||extraDoc})}let c=$('newComment').value.trim();if(c)t.comment=(t.comment?t.comment+'\n\n':'')+new Date().toLocaleString('ru-RU')+' — '+c;save();if(!standalone&&t.owner&&t.owner!==previousOwner){notifyTelegramAssignment({owner:t.owner,previousOwner,title:t.title,project:activeProject,due:t.end||'',taskId:t.id})}if(standalone){renderInbox();renderProjects()}else renderAll();closeDrawer();toast(cloudSession?.access_token?'Сохранено':'Сохранено в браузере')};
 $('closeDrawer').onclick=$('cancelEdit').onclick=closeDrawerSafely;$('overlay').onclick=closeDrawerSafely;$('newProject').onclick=createProject;$('cancelStandaloneTask').onclick=closeStandaloneTaskCreate;$('confirmStandaloneTask').onclick=confirmStandaloneTaskCreate;$('standaloneTaskModal').addEventListener('click',e=>{if(e.target===$('standaloneTaskModal'))closeStandaloneTaskCreate()});$('standaloneTitle').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();confirmStandaloneTaskCreate()}else if(e.key==='Escape'){e.preventDefault();closeStandaloneTaskCreate()}});$('standaloneTaskModal').addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();closeStandaloneTaskCreate()}});$('cancelProjectCreate').onclick=closeProjectCreate;$('confirmProjectCreate').onclick=confirmProjectCreate;$('projectModal').addEventListener('click',e=>{if(e.target===$('projectModal'))closeProjectCreate()});$('projectNameInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();confirmProjectCreate()}else if(e.key==='Escape'){e.preventDefault();closeProjectCreate()}});$('projectToTask').onclick=convertProjectToTask;$('deleteProject').onclick=beginDeleteProject;$('cancelNew').onclick=closeNew;$('createTask').onclick=()=>{let title=$('newTitle').value.trim();if(!title){toast('Введите название задачи');return}active().tasks.push({id:Date.now(),title,start:'',end:$('newEnd').value.trim(),status:$('newStatus').value,rawStatus:$('newStatus').value,owner:$('newOwner').value.trim(),description:'',comment:'',link:'',mt:''});save();closeNew();renderAll();toast('Задача создана')};
 $('taskSearch').oninput=renderBoard;
@@ -1651,6 +1664,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.10.26-7',date:'26.10.2026',title:'Комментарии: правка, удаление, ссылки',items:['Комментарий можно изменить или удалить прямо в панели задачи','Ссылки в комментариях стали кликабельными']},
  {v:'2026.10.26-6',date:'26.10.2026',title:'Релизы по проектам',items:['Новая вкладка «Релизы»: загрузите презентацию (.pptx), документ (.docx) или текст — карточка заполнится сама','Поиск по словам, версии, тегам и по дате: «октябрь 2026», 15.10.2026, 2026','Файл хранится в облаке, релизы видят все участники проекта']},
  {v:'2026.10.26-5',date:'26.10.2026',title:'Задачи: ответственный, название, панель',items:['При создании задачи работает выбор ответственного из списка','Название задачи в панели можно править: нажмите на него, Enter сохраняет, Esc отменяет','Кнопки панели задачи переносятся на новую строку, панель больше не уезжает вправо']},
  {v:'2026.10.26-4',date:'26.10.2026',title:'«Мои задачи» как рабочий стол: закрепления и горящее',items:['Вкладка «Главное» показывает по порядку: задачи без проекта (с акцентом), закреплённые, горящие и просроченные, остальные активные','«Без проекта» вынесено в начало списка фильтров и выделено цветом','Закрепляйте задачи проектов кнопкой 📌 на карточке или в задаче: они появятся в «Моих задачах», даже если вы не ответственный; закрепления хранятся в вашем аккаунте и видны на всех устройствах','Пометка 🔥 «Важная» в окне задачи: такая задача попадает в «Горят и просрочены» вместе с просроченными и со сроком на сегодня-завтра','Исправлено: форма добавления подзадачи на карточке теперь закрывается кнопкой × и работает по Enter']},
@@ -1735,6 +1749,47 @@ async function removeAvatar(){const id=cloudSession?.user?.id;if(!id)return;try{
   ['openTask','openStandaloneTask'].forEach(n=>{const o=window[n];if(typeof o!=='function')return;window[n]=function(){const r=o.apply(this,arguments);try{syncDrawerFlags()}catch(e){}return r}});
 })();
 
+/* ===== Комментарии: правка, удаление, ссылки ===== */
+let commentEditIndex=-1,commentDeleteIndex=-1;
+function linkifyText(raw){
+  const re=/https?:\/\/[^\s<>"']+/g;let out='',last=0,m;const text=String(raw||'');
+  while((m=re.exec(text))){
+    let url=m[0],tail='';while(/[.,;:!?)\]»”]$/.test(url)){tail=url.slice(-1)+tail;url=url.slice(0,-1)}
+    out+=esc(text.slice(last,m.index))+`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(url)}</a>`+esc(tail);last=m.index+m[0].length;
+  }
+  return out+esc(text.slice(last));
+}
+const COMMENT_STAMP=/^(\d{1,2}\.\d{2}\.\d{4},?\s+\d{1,2}:\d{2}(?::\d{2})?\s+—\s+)/;
+function renderDrawerComments(t){
+  const box=$('dComment');if(!box)return;t=t||currentDrawerTask();
+  const entries=commentEntries(t?.comment);
+  if(!entries.length){box.textContent='Комментариев пока нет';return}
+  box.innerHTML=entries.map((e,i)=>{
+    const stamp=(COMMENT_STAMP.exec(e)||[''])[0],body=e.slice(stamp.length);
+    if(i===commentEditIndex)return`<div class="cm-entry cm-editing" data-cm="${i}"><div class="cm-stamp">${esc(stamp.replace(/\s+—\s+$/,''))}</div><textarea class="cm-edit" rows="3" aria-label="Текст комментария">${esc(body)}</textarea><div class="cm-actions"><button type="button" class="btn primary" data-cm-save="${i}">Сохранить</button><button type="button" class="btn" data-cm-cancel="1">Отмена</button></div></div>`;
+    return`<div class="cm-entry" data-cm="${i}"><div class="cm-text">${stamp?`<span class="cm-stamp">${esc(stamp.replace(/\s+—\s+$/,''))}</span> — `:''}${linkifyText(body)}</div><div class="cm-actions"><button type="button" class="cm-btn" data-cm-edit="${i}">Править</button>${commentDeleteIndex===i?`<button type="button" class="cm-btn cm-danger" data-cm-delete="${i}">Точно удалить?</button><button type="button" class="cm-btn" data-cm-cancel="1">Отмена</button>`:`<button type="button" class="cm-btn" data-cm-ask="${i}">Удалить</button>`}</div></div>`;
+  }).join('');
+}
+function changeComments(mutator){
+  const t=currentDrawerTask();if(!t)return;
+  const entries=commentEntries(t.comment);mutator(entries);
+  t.comment=entries.join('\n\n');commentEditIndex=-1;commentDeleteIndex=-1;
+  save();renderDrawerComments(t);refreshAfterTaskChange();
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest?.('#dComment button');if(!b)return;const d=b.dataset;
+  if('cmEdit' in d){commentEditIndex=Number(d.cmEdit);commentDeleteIndex=-1;renderDrawerComments();$('dComment').querySelector('.cm-edit')?.focus()}
+  else if('cmCancel' in d){commentEditIndex=-1;commentDeleteIndex=-1;renderDrawerComments()}
+  else if('cmAsk' in d){commentDeleteIndex=Number(d.cmAsk);commentEditIndex=-1;renderDrawerComments()}
+  else if('cmDelete' in d){const i=Number(d.cmDelete);changeComments(a=>{a.splice(i,1)});toast('Комментарий удалён')}
+  else if('cmSave' in d){
+    const i=Number(d.cmSave),ta=$('dComment').querySelector('.cm-edit');const text=(ta?.value||'').replace(/\n{2,}/g,'\n').trim();
+    if(!text){toast('Комментарий не может быть пустым');return}
+    changeComments(a=>{const stamp=(COMMENT_STAMP.exec(a[i]||'')||[''])[0];a[i]=stamp+text});toast('Комментарий изменён');
+  }
+});
+document.addEventListener('keydown',e=>{if(e.target?.classList?.contains('cm-edit')){if(e.key==='Escape'){e.preventDefault();e.stopPropagation();commentEditIndex=-1;renderDrawerComments()}else if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();$('dComment').querySelector('[data-cm-save]')?.click()}}},true);
+(function(){const o=window.openTask;if(typeof o==='function')window.openTask=function(){commentEditIndex=-1;commentDeleteIndex=-1;return o.apply(this,arguments)}})();
 /* ===== Релизы по проектам ===== */
 (function(){
 const RL={items:[],extra:new Set(),loading:false,error:'',q:'',all:false,draft:null,openId:null,editId:null,confirmDel:null,seq:0,loadedFor:'',busy:false};
