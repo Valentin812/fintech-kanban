@@ -11,6 +11,7 @@ const webhookSecret = Deno.env.get("TELEGRAM_WEBHOOK_SECRET")!;
 const geminiKey = Deno.env.get("GEMINI_API_KEY") ?? "";
 const geminiModel = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash";
 const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
+const ocrKey = Deno.env.get("OCR_SPACE_API_KEY") ?? "";
 const visionModel = Deno.env.get("ANTHROPIC_MODEL") ?? "claude-sonnet-5-5";
 
 const db = createClient(supabaseUrl, serviceRoleKey);
@@ -38,12 +39,15 @@ const LINK_CODE = /^[0-9a-f]{24}$/i;
 const TASKS_PER_HOUR = 60;
 const MAX_TITLE_WORDS_CHARS = 80;
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+// The free OCR.space plan accepts files up to 1 MB.
+const OCR_MAX_BYTES = 900 * 1024;
+const imageLimit = () => (geminiKey || anthropicKey ? MAX_IMAGE_BYTES : OCR_MAX_BYTES);
 const HELP_TEXT =
   "Как создать задачу:\n" +
   "• Просто отправь текст. Название — короткая суть, подробности уйдут в описание. Делится по новой строке, точке, «:», « — », словам «тема такая», «чтобы», «узнать…» или явному «Описание: …».\n" +
   "• Срок: «до 25.10», «до 25.10.2026», «сегодня», «завтра» или «послезавтра».\n" +
   "• Проект: добавь #название, например #Автооплата.\n" +
-  "• Скриншот или фото: бот прочитает картинку и сделает задачу. Подпись к картинке — твой заголовок, #проект и срок тоже работают.\n" +
+  "• Скриншот или фото: бот распознает текст на картинке и сделает задачу (лучше отправлять как обычное фото, не файлом). Подпись к картинке — твой заголовок, #проект и срок тоже работают.\n" +
   "• Голосовые пока не поддерживаются — напиши текстом.\n" +
   "Без проекта задача попадёт в «Мои задачи», ответственный — ты.\n\n" +
   "Примеры:\nПодготовить отчёт по тарифам до 30.10 #Автооплата\nСравнить Альфу и Тбанк\n\nНадо позвонить в банк, тема такая: узнать про тарифы, завтра";
@@ -190,6 +194,20 @@ export function parseImageReply(raw: string): { title: string; description: stri
   return { title, description, due };
 }
 
+// Text read by OCR (untrusted, noisy): keeps meaningful lines, the first
+// sentence-like line becomes the title and the whole text goes to the description.
+export function ocrTextToTask(raw: string): { title: string; description: string; due: string } | null {
+  const lines = String(raw ?? "").replace(/\r\n?/g, "\n").split("\n")
+    .map((l) => l.replace(/\s+/g, " ").trim())
+    .filter((l) => (l.match(/[\p{L}\p{N}]/gu) ?? []).length >= 3);
+  if (!lines.length) return null;
+  const pick = lines.find((l) => words(l) >= 3 && /\p{L}{3}/u.test(l)) ?? lines[0];
+  let title = cleanTitle(pick.replace(/[\s,;:—–-]+$/u, ""));
+  if (title.length > 80) title = title.slice(0, 79).trimEnd() + "…";
+  if (!title) title = "Скриншот";
+  return { title, description: ("Текст со скриншота:\n" + lines.join("\n")).slice(0, 1500), due: "" };
+}
+
 function toBase64(bytes: Uint8Array) {
   let binary = "";
   for (let i = 0; i < bytes.length; i += 0x8000) {
@@ -200,7 +218,7 @@ function toBase64(bytes: Uint8Array) {
 
 const MIME_BY_EXT: Record<string, string> = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", gif: "image/gif" };
 
-async function downloadTelegramImage(fileId: string): Promise<{ data: string; mime: string } | "too_big" | null> {
+async function downloadTelegramImage(fileId: string, limit: number): Promise<{ data: string; mime: string } | "too_big" | null> {
   const info = await (await fetch(telegramApi("getFile"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -208,11 +226,11 @@ async function downloadTelegramImage(fileId: string): Promise<{ data: string; mi
   })).json().catch(() => null);
   const path: string | undefined = info?.result?.file_path;
   if (!path) return null;
-  if ((info?.result?.file_size ?? 0) > MAX_IMAGE_BYTES) return "too_big";
+  if ((info?.result?.file_size ?? 0) > limit) return "too_big";
   const response = await fetch(`https://api.telegram.org/file/bot${botToken}/${path}`);
   if (!response.ok) return null;
   const bytes = new Uint8Array(await response.arrayBuffer());
-  if (bytes.length > MAX_IMAGE_BYTES) return "too_big";
+  if (bytes.length > limit) return "too_big";
   const mime = MIME_BY_EXT[path.split(".").pop()?.toLowerCase() ?? ""] ?? "image/jpeg";
   return { data: toBase64(bytes), mime };
 }
@@ -272,9 +290,37 @@ async function describeWithClaude(image: { data: string; mime: string }, prompt:
   return text || null;
 }
 
+async function describeWithOcr(image: { data: string; mime: string }): Promise<{ title: string; description: string; due: string } | null> {
+  const form = new FormData();
+  form.set("base64Image", `data:${image.mime};base64,${image.data}`);
+  form.set("OCREngine", "2");
+  form.set("scale", "true");
+  form.set("isOverlayRequired", "false");
+  const language = Deno.env.get("OCR_SPACE_LANGUAGE");
+  if (language) form.set("language", language);
+  const response = await fetch("https://api.ocr.space/parse/image", {
+    method: "POST",
+    headers: { apikey: ocrKey },
+    body: form,
+    signal: AbortSignal.timeout(25000),
+  });
+  if (!response.ok) {
+    console.error("OCR HTTP error:", response.status);
+    return null;
+  }
+  const json = await response.json().catch(() => null);
+  if (!json || json.IsErroredOnProcessing) {
+    console.error("OCR error:", String(json?.ErrorMessage ?? "").slice(0, 200));
+    return null;
+  }
+  const text = (Array.isArray(json.ParsedResults) ? json.ParsedResults : []).map((r: any) => String(r?.ParsedText ?? "")).join("\n");
+  return ocrTextToTask(text);
+}
+
 async function describeImage(image: { data: string; mime: string }, caption: string): Promise<{ title: string; description: string; due: string } | null> {
   const today = new Date().toISOString().slice(0, 10);
   const prompt = `Сегодня ${today}. ` + (caption ? `Подпись пользователя к картинке: «${caption.slice(0, 500)}».` : "Подписи нет.");
+  if (!geminiKey && !anthropicKey) return await describeWithOcr(image);
   const text = geminiKey ? await describeWithGemini(image, prompt) : await describeWithClaude(image, prompt);
   return text ? parseImageReply(text) : null;
 }
@@ -397,13 +443,15 @@ async function handleTaskMessage(chatId: number, providerUserId: string, text: s
 async function handleImageMessage(chatId: number, providerUserId: string, fileId: string, caption: string) {
   const userId = await authorize(chatId, providerUserId);
   if (!userId) return;
-  if (!geminiKey && !anthropicKey) {
+  if (!geminiKey && !anthropicKey && !ocrKey) {
     await sendMessage(chatId, "Чтение картинок пока не настроено. Отправь задачу текстом.");
     return;
   }
-  const image = await downloadTelegramImage(fileId);
+  const image = await downloadTelegramImage(fileId, imageLimit());
   if (image === "too_big") {
-    await sendMessage(chatId, "Картинка слишком большая (больше 4 МБ). Отправь поменьше или текстом.");
+    await sendMessage(chatId, geminiKey || anthropicKey
+      ? "Картинка слишком большая (больше 4 МБ). Отправь поменьше или текстом."
+      : "Картинка слишком большая (больше 1 МБ). Отправь её как обычное фото, а не файлом, или напиши текстом.");
     return;
   }
   if (!image) {
@@ -474,7 +522,7 @@ Deno.serve(async (req) => {
     // Photos and image files become tasks; voice and other media get a hint.
     const caption = String(message?.caption ?? "").trim();
     const photo = Array.isArray(message?.photo) && message.photo.length
-      ? [...message.photo].filter((p: any) => (p?.file_size ?? 0) <= MAX_IMAGE_BYTES).pop() ?? message.photo[0]
+      ? [...message.photo].filter((p: any) => (p?.file_size ?? 0) <= imageLimit()).pop() ?? message.photo[0]
       : null;
     const imageDoc = /^image\/(jpeg|png|webp|gif)$/i.test(message?.document?.mime_type ?? "") ? message.document : null;
     const fileId = photo?.file_id ?? imageDoc?.file_id;
