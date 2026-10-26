@@ -1037,6 +1037,24 @@ body[data-theme="cappuccino"] .project.active{border-color:#8a6240}body[data-the
 .task-peek .tp-late{color:#c24141}
 .task-peek .tp-desc{white-space:pre-wrap;overflow-wrap:anywhere;border-top:1px solid rgba(127,127,127,.25);padding-top:7px}
 .task-peek .tp-empty{opacity:.6;font-style:italic}
+
+/* Mobile review */
+@media(max-width:700px){
+  #drawer .draweractions{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:stretch}
+  #drawer .draweractions .btn{width:100%;min-height:42px;padding:8px 6px;font-size:13px;line-height:1.2;white-space:normal}
+  #drawer .draweractions .btn[hidden]{display:none}
+  #drawer .draweractions #saveTask{grid-column:1/-1;order:-1;min-height:46px;font-size:15px}
+  #drawer .draweractions .autosave-note{grid-column:1/-1;order:9}
+  #drawer .draweractions #completeTask{grid-column:1/-1}
+  #drawer .drawer-completed{margin:0 0 6px}
+  .tabs{scroll-padding:0 24px}
+}
+@media(pointer:coarse){
+  .cm-btn,.cm-actions button,[data-cm-edit],[data-cm-delete]{min-height:32px;padding:6px 10px}
+  .mytask-pin{min-width:36px;min-height:36px;display:inline-flex;align-items:center;justify-content:center}
+  #rlAll,.rl-check{width:20px;height:20px}
+  .smallbtn{min-height:32px}
+}
 </style></head><body>
 <div class="auth-screen show" id="authScreen"><div class="auth-card"><div class="auth-brand">FinTech Kanban<span>Центр управления проектами и задачами</span></div><div class="auth-tabs"><button class="auth-tab active" id="authLoginTab" type="button">Вход</button><button class="auth-tab" id="authSignupTab" type="button">Регистрация</button></div><h2 id="authHeading">С возвращением</h2><p class="auth-description" id="authDescription">Войди, чтобы открыть свои проекты и задачи.</p><div class="field"><label for="authEmail">Email</label><input id="authEmail" type="email" autocomplete="username" placeholder="name@example.com"></div><div class="field"><label for="authPassword">Пароль</label><input id="authPassword" type="password" autocomplete="current-password" placeholder="Не менее 8 символов, буквы и цифры"></div><button class="btn primary auth-submit" id="authSubmit" type="button">Войти</button><button class="btn auth-submit" id="authReset" type="button" style="margin-top:10px">Забыли пароль?</button><div class="auth-status" id="authStatus" role="status" aria-live="polite"></div><div class="auth-foot">Ваши данные доступны только в вашей учётной записи.</div></div></div>
 <div class="app" hidden><nav id="mobileBar" aria-label="Основная навигация"><button type="button" data-mb="home"><span class="mb-icon" aria-hidden="true">⌂</span>Главная</button><button type="button" data-mb="tasks"><span class="mb-icon" aria-hidden="true">▦</span>Доска</button><button type="button" class="mb-add" data-mb="add" aria-label="Новая задача"><span class="mb-icon" aria-hidden="true">+</span></button><button type="button" data-mb="mytasks"><span class="mb-icon" aria-hidden="true">☰</span>Мои задачи<span class="mb-count" id="mbCount"></span></button><button type="button" data-mb="more" aria-expanded="false"><span class="mb-icon" aria-hidden="true">⋯</span>Ещё<span class="mb-count mb-dot" id="mbDot" hidden></span></button></nav><aside class="sidebar"><div class="brand"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#2878f0"/><rect x="6.5" y="7" width="5" height="13" rx="1.6" fill="#fff"/><rect x="13.5" y="7" width="5" height="8" rx="1.6" fill="#fff" fill-opacity=".85"/><rect x="20.5" y="7" width="5" height="18" rx="1.6" fill="#fff" fill-opacity=".7"/></svg><span>Канбан проектов</span></div><button class="home-nav" id="homeNav" data-view="home"><span aria-hidden="true">⌂</span> Главная</button><button class="sidebar-inbox" id="standaloneNav" data-view="inbox" hidden style="display:none">Задачи без проектов <span id="standaloneCount"></span></button><button class="sidebar-inbox" id="myTasksNav" data-view="mytasks">Мои задачи <span id="myTasksCount"></span></button><div class="sidehead"><span>ПРОЕКТЫ</span><div class="side-actions"><button id="newProject" title="Создать проект" aria-label="Создать проект">＋</button><button id="exportBtn" title="Экспорт данных">↥</button><button id="importBtn" title="Импорт задач из JSON">↧</button><input id="importFile" type="file" accept=".json,application/json" hidden><button id="projectToTask" title="Преобразовать выбранный проект в задачу">⇢</button><button id="deleteProject" title="Удалить выбранный проект" aria-label="Удалить выбранный проект"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 10v6M14 10v6"/></svg></button></div></div><div class="sidebar-transform-hint">Преобразовать проект в задачу</div><div id="projects"></div></aside>
@@ -1738,6 +1756,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.10.26-13',date:'26.10.2026',title:'Мобильная версия: ревизия',items:['Кнопки в карточке задачи на телефоне — компактной сеткой, «Готово» сверху','Активная вкладка проекта (например, «Релизы») подсвечивается и прокручивается в видимую часть','Мелкие кнопки (правка/удаление комментария, закрепление, галочки) стали удобнее для пальца','Короткая подсказка в поле быстрых заметок']},
  {v:'2026.10.26-12',date:'26.10.2026',title:'Кнопка «Завершить»',items:['В карточке задачи появилась кнопка «Завершить»: задача уходит в «Готово» и находится в фильтре «Завершённые»','Для завершённой задачи кнопка превращается в «Вернуть в работу»; действие можно отменить']},
  {v:'2026.10.26-11',date:'26.10.2026',title:'Telegram: картинка в задаче, выбор проекта, голосовые',items:['Скриншот или фото из Telegram теперь прикладывается к задаче — его видно в панели задачи','Бот спрашивает кнопками, в какой проект положить задачу; без ответа через 10 минут она попадёт в «Мои задачи»','Голосовые сообщения бот расшифровывает и делает из них задачу, запись тоже прикладывается','Вложения видят только вы и участники проекта, где лежит задача']},
  {v:'2026.10.26-10',date:'26.10.2026',title:'Быстрые заметки',items:['На «Главной» и в «Мои задачи» появились быстрые заметки — дела на пару часов: запишите одной строкой и Enter','Отметьте галочкой, когда сделано; выполненные сами уберутся через сутки','Заметку можно превратить в задачу без проекта кнопкой «→ в задачу»']},
@@ -2193,7 +2212,7 @@ function prune(){const before=quickNotes.length;quickNotes=quickNotes.filter(n=>
 function panel(where){
   const open=quickNotes.filter(n=>!n.done),done=quickNotes.filter(n=>n.done);
   const item=n=>`<li class="qn-item${n.done?' qn-done':''}${!n.done&&Date.now()-n.created>DAY?' qn-old':''}" data-qn="${esc(n.id)}"><label class="qn-check"><input type="checkbox" data-qn-toggle="${esc(n.id)}"${n.done?' checked':''} aria-label="Готово"></label>${editId===n.id?`<input class="qn-edit" data-qn-editing="${esc(n.id)}" value="${esc(n.text)}" maxlength="300" aria-label="Текст заметки">`:`<button type="button" class="qn-text" data-qn-edit="${esc(n.id)}" title="Нажмите, чтобы изменить">${esc(n.text)}</button>`}<span class="qn-age">${esc(ago(n.created))}</span>${n.done?'':`<button type="button" class="qn-act" data-qn-task="${esc(n.id)}" title="Сделать задачей без проекта">→ в задачу</button>`}<button type="button" class="qn-act qn-del" data-qn-del="${esc(n.id)}" title="Удалить" aria-label="Удалить заметку">×</button></li>`;
-  return`<section class="qn-panel" data-qn-where="${where}"><div class="qn-head"><h3>Быстрые заметки</h3><span class="mini">дела на пару часов · ${open.length?open.length+' открыто':'пусто'}</span>${done.length?`<button type="button" class="qn-clear" data-qn-clear="1">Убрать выполненные (${done.length})</button>`:''}</div><form class="qn-add" data-qn-form="1"><input class="qn-input" placeholder="Например: перезвонить Азату после обеда · Enter" maxlength="300" autocomplete="off" aria-label="Новая заметка"><button class="btn" type="submit">＋</button></form>${quickNotes.length?`<ul class="qn-list">${open.map(item).join('')}${done.map(item).join('')}</ul>`:''}</section>`;
+  return`<section class="qn-panel" data-qn-where="${where}"><div class="qn-head"><h3>Быстрые заметки</h3><span class="mini">дела на пару часов · ${open.length?open.length+' открыто':'пусто'}</span>${done.length?`<button type="button" class="qn-clear" data-qn-clear="1">Убрать выполненные (${done.length})</button>`:''}</div><form class="qn-add" data-qn-form="1"><input class="qn-input" placeholder="${matchMedia('(max-width:700px)').matches?'Быстрая заметка · Enter':'Например: перезвонить Азату после обеда · Enter'}" maxlength="300" autocomplete="off" aria-label="Новая заметка"><button class="btn" type="submit">＋</button></form>${quickNotes.length?`<ul class="qn-list">${open.map(item).join('')}${done.map(item).join('')}</ul>`:''}</section>`;
 }
 function inject(viewId,where){
   const v=$(viewId);if(!v||v.hidden&&where!=='my')return;
@@ -2312,5 +2331,12 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')hide()});
     undoToast(next==='Готово'?'Задача завершена — ищите в «Завершённые»':'Задача возвращена в работу',()=>set(prev))});
   ['openTask','openStandaloneTask'].forEach(n=>{const o=window[n];if(typeof o!=='function')return;window[n]=function(){const r=o.apply(this,arguments);try{syncCompleteButton()}catch(e){}return r}});
   $('dStatus')?.addEventListener('change',()=>{try{syncCompleteButton()}catch(e){}});
+})();
+
+/* ===== Мобильная версия: активная вкладка проекта всегда видна ===== */
+(function tabsIntoView(){
+  const reveal=()=>{const t=document.querySelector('#tabs .tab.active');if(t&&t.scrollIntoView)try{t.scrollIntoView({inline:'center',block:'nearest'})}catch(e){}};
+  const o=window.switchView;if(typeof o!=='function')return;
+  window.switchView=function(){const r=o.apply(this,arguments);setTimeout(reveal,0);return r};
 })();
 </script></body></html>
