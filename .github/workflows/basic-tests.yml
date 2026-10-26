@@ -53,6 +53,9 @@ jobs:
       - name: Run mobile comfort browser test
         run: node tests/mobile-comfort.mjs
 
+      - name: Run comments browser test
+        run: node tests/comment-add.mjs
+
       - name: Run My tasks focus browser test
         run: node tests/my-tasks-focus.mjs
 
