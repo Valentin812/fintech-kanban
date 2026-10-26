@@ -59,6 +59,9 @@ jobs:
       - name: Run My tasks focus browser test
         run: node tests/my-tasks-focus.mjs
 
+      - name: Run Releases tab browser test
+        run: node tests/releases-tab.mjs
+
       - name: Run drawer fixes browser test
         run: node tests/drawer-fixes.mjs
 
