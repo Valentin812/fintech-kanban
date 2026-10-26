@@ -65,6 +65,8 @@ jobs:
       - name: Run drawer fixes browser test
         run: node tests/drawer-fixes.mjs
 
+      - name: Run quick notes browser test
+        run: node tests/quick-notes.mjs
       - name: Run hover card and save/cancel browser test
         run: node tests/hover-save.mjs
 
