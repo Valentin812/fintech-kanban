@@ -150,6 +150,17 @@ try {
   assert(await page.evaluate(() => activeView) === 'mytasks', 'Navigation works from the open «Ещё» menu');
   await page.locator('#mobileBar [data-mb="tasks"]').click();
 
+  // Review: active project tab stays visible, drawer actions form a compact grid, touch targets are big enough.
+  await page.evaluate(() => switchView('releases'));
+  await page.waitForTimeout(150);
+  const tabBox = await page.locator('#tabs .tab.active').boundingBox();
+  assert(tabBox && tabBox.x >= 0 && tabBox.x + tabBox.width <= 391, `Active tab is visible: ${JSON.stringify(tabBox)}`);
+  await page.evaluate(() => { switchView('tasks'); openTask(1); });
+  const save = await page.locator('#saveTask').boundingBox();
+  const pin = await page.locator('#pinTask').boundingBox();
+  assert(save.width > 300 && pin.width < save.width * 0.7, `Drawer actions use a 2-column grid: save ${save.width}, pin ${pin.width}`);
+  assert(pin.height >= 40, `Drawer buttons are tall enough: ${pin.height}`);
+  await page.evaluate(() => closeDrawer());
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'No horizontal page scroll on a phone');
   assert(!phone.unexpected.length, `Unexpected requests: ${phone.unexpected.join('; ')}`);
   assert(!phone.errors.length, `Page errors: ${phone.errors.join('; ')}`);
