@@ -131,8 +131,33 @@ try {
   await page.setViewportSize({ width: 390, height: 800 });
   const wide = await page.evaluate(() => document.querySelector('#homeView .qn-panel').scrollWidth > document.querySelector('#homeView .qn-panel').clientWidth + 1);
   if (wide) throw new Error('Notes panel overflows on phone');
+  // «⚡ Заметка» in the top bar works from any view (here: the project board).
+  await page.setViewportSize({ width: 1300, height: 800 });
+  await page.evaluate(() => { switchView('tasks'); });
+  await page.locator('#qnTopButton').click();
+  await page.locator('#qnPop .qn-input').fill('Из верхней панели');
+  await page.locator('#qnPop .qn-input').press('Enter');
+  await page.locator('#qnPop .qn-text', { hasText: 'Из верхней панели' }).waitFor();
+  if (!(await page.locator('#qnTopButton').textContent()).includes('Заметки')) throw new Error('Top button shows the number of open notes');
+  await page.keyboard.press('Escape');
+  if (!(await page.locator('#qnPop').isHidden())) throw new Error('Escape closes the popover');
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.locator('#qnFab').click();
+  const box = await page.locator('#qnPop').boundingBox();
+  if (box.x < 0 || box.x + box.width > 391) throw new Error('Popover stays inside the phone screen: ' + JSON.stringify(box));
+  await page.locator('#qnFab').click();
+  // A note sent from Telegram (project_hint "__note__") lands in the notes, not in tasks.
+  await page.evaluate(async () => {
+    const orig = cloudRequest;
+    const row = { id: 777, title: 'Заметка из бота', description: '', due: '', project_hint: '__note__', created_at: new Date().toISOString(), attachment: null, status: 'ready' };
+    globalThis.cloudRequest = async (path, opts) => (String(path).includes('telegram_inbox?select') ? [row] : (opts && opts.method === 'PATCH' ? [{}] : orig(path, opts)));
+    await importTelegramInbox();
+    globalThis.cloudRequest = orig;
+  });
+  const botNote = await page.evaluate(() => ({ note: quickNotes.some((n) => n.text === 'Заметка из бота'), task: standaloneTasks.some((t) => t.title === 'Заметка из бота') }));
+  if (!botNote.note || botNote.task) throw new Error('Bot note must become a quick note only: ' + JSON.stringify(botNote));
   if (pageErrors.length) throw new Error(`Browser page errors: ${pageErrors.join('; ')}`);
-  console.log('Quick notes OK: add, edit (Esc/Enter/outside), done + prune, to task, delete + undo, saved, home + phone');
+  console.log('Quick notes OK: add, edit (Esc/Enter/outside), done + prune, to task, delete + undo, saved, home + phone, top-bar popover, note from Telegram');
 } finally {
   await browser.close();
   server.close();

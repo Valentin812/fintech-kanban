@@ -56,6 +56,7 @@ const HELP_TEXT =
   "• Просто отправь текст. Название — короткая суть, подробности уйдут в описание. Делится по новой строке, точке, «:», « — », словам «тема такая», «чтобы», «узнать…» или явному «Описание: …».\n" +
   "• Срок: «до 25.10», «до 25.10.2026», «сегодня», «завтра» или «послезавтра».\n" +
   "• Проект: добавь #название, например #Автооплата.\n" +
+  "• Быстрая заметка (дело на пару часов): /заметка текст или «заметка: текст».\n" +
   "• Скриншот или фото: Джарвис распознает текст на картинке и сделает задачу (лучше отправлять как обычное фото, не файлом). Подпись к картинке — твой заголовок, #проект и срок тоже работают.\n" +
   "• Голосовое: Джарвис расшифрует его и сделает задачу, запись приложится к задаче.\n" +
   "• После картинки или голосового Джарвис спросит, в какой проект положить задачу.\n" +
@@ -142,6 +143,17 @@ export function splitOneLine(line: string): { title: string; description: string
     return { title: (space > 40 ? cut.slice(0, space) : cut).replace(/[\s,;:—-]+$/u, "") + "…", description: text };
   }
   return { title: text, description: "" };
+}
+
+// «/заметка текст», «/note текст» or «заметка: текст» is a quick note, not a task.
+// Returns null for ordinary messages and "" when the text after the command is empty.
+export function parseNoteCommand(raw: string): string | null {
+  const text = String(raw ?? "").trim();
+  const cmd = text.match(/^\/(?:заметка|заметки|note|n)(?:@\w+)?(?:\s+([\s\S]*))?$/i);
+  if (cmd) return (cmd[1] ?? "").replace(/\s+/g, " ").trim().slice(0, 300);
+  const word = text.match(/^(?:быстрая\s+заметка|заметка|note)\s*[:：—-]\s*([\s\S]+)$/i);
+  if (word) return word[1].replace(/\s+/g, " ").trim().slice(0, 300);
+  return null;
 }
 
 export function parseTaskText(raw: string): ParsedTask {
@@ -679,6 +691,25 @@ async function saveTask(
 async function handleTaskMessage(chatId: number, providerUserId: string, text: string) {
   if (/^\/help(?:@\w+)?$/i.test(text)) {
     await sendMessage(chatId, HELP_TEXT);
+    return;
+  }
+  const noteText = parseNoteCommand(text);
+  if (noteText !== null) {
+    const noteUser = await authorize(chatId, providerUserId);
+    if (!noteUser) return;
+    if (!noteText) {
+      await sendMessage(chatId, "Напиши заметку после команды, например:\n/заметка перезвонить Азату после обеда");
+      return;
+    }
+    const { error: noteError } = await db.from("telegram_inbox").insert({
+      user_id: noteUser, title: noteText, description: "", due: "", project_hint: "__note__", attachment: null, status: "ready",
+    });
+    if (noteError) {
+      console.error("Note insert failed:", noteError.message);
+      await sendMessage(chatId, "Не удалось сохранить заметку. Попробуй ещё раз позже.");
+      return;
+    }
+    await sendMessage(chatId, `📝 Заметка: ${noteText}\n\nПоявится в «Быстрых заметках», как только приложение будет открыто.`);
     return;
   }
   if (text.startsWith("/")) {
