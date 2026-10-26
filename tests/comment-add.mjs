@@ -72,10 +72,31 @@ try {
   assert(text.includes('Первый комментарий') && text.includes('Второй комментарий') && !text.includes('\\n'), `History shows both comments: ${text}`);
   const entries = await page.evaluate(() => commentEntries(active().tasks.find((t) => t.id === 1).comment));
   assert(entries.length === 2 && entries.every((e) => /^\d{2}\.\d{2}\.\d{4}.* — /.test(e)), `Two separate dated entries expected: ${JSON.stringify(entries)}`);
+  // Edit keeps the date stamp; links are clickable; delete asks twice; empty edit is refused.
+  await page.locator('#dComment [data-cm-edit]').first().click();
+  await page.locator('#dComment .cm-edit').fill('Смотри https://example.com/doc, ок <b>x</b>');
+  await page.locator('#dComment [data-cm-save]').click();
+  const link = page.locator('#dComment a[href="https://example.com/doc"]');
+  assert(await link.count() === 1 && await link.getAttribute('target') === '_blank' && (await link.getAttribute('rel')).includes('noopener'), 'URL in a comment becomes a safe link without the trailing comma');
+  assert(await page.locator('#dComment b').count() === 0, 'HTML in comments is escaped');
+  const edited = await page.evaluate(() => commentEntries(active().tasks.find((t) => t.id === 1).comment));
+  assert(edited.length === 2 && /^\d{2}\.\d{2}\.\d{4}.* — Смотри https:\/\/example\.com\/doc/.test(edited[0]), `Edited entry keeps its date: ${JSON.stringify(edited)}`);
+  await page.locator('#dComment [data-cm-edit]').first().click();
+  await page.locator('#dComment .cm-edit').fill('   ');
+  await page.locator('#dComment [data-cm-save]').click();
+  assert(await page.locator('#dComment .cm-edit').count() === 1, 'Empty comment is not saved');
+  await page.locator('#dComment [data-cm-cancel]').click();
+  await page.locator('#dComment [data-cm-ask]').first().click();
+  assert((await page.evaluate(() => commentEntries(active().tasks.find((t) => t.id === 1).comment))).length === 2, 'First click on delete only asks');
+  await page.locator('#dComment [data-cm-delete]').click();
+  const after = await page.evaluate(() => commentEntries(active().tasks.find((t) => t.id === 1).comment));
+  assert(after.length === 1 && after[0].includes('Второй комментарий'), `Entry deleted: ${JSON.stringify(after)}`);
+  await page.locator('#newComment').fill('Третий');
+  await page.keyboard.press('Enter');
   await page.keyboard.press('Escape');
   await page.waitForFunction(() => !document.querySelector('#drawer').classList.contains('open'));
   const badge = page.locator('#myTasksView .mytask-row', { hasText: 'Без комментариев' }).locator('.mytask-comments');
-  assert((await badge.textContent()).includes('2'), 'The «Мои задачи» list shows the new comment count right after closing');
+  assert((await badge.textContent()).includes('2'), 'The «Мои задачи» list shows the comment count right after closing');
 
   // Same for a task without a project; typed text left in the field is saved when the drawer closes through «Готово».
   await page.locator('#myTasksView .mytask-row', { hasText: 'Быстрая без проекта' }).click();
