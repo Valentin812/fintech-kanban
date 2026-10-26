@@ -80,32 +80,37 @@ try {
   s5 = await T(5);
   assert(s5.status === 'Очередь' && !s5.archived && !s5.completedAt && (await onBoard(5)) === 1, 'Undo restores the task: ' + JSON.stringify(s5));
 
-  // The «Завершённые» chip shows archived cards again; «Вернуть в работу» reopens.
+  // Archived tasks never sit on the board; they live in the «Завершённые» tab with a count.
   await page.evaluate(() => openTask(5)); await page.locator('#completeTask').click();
-  assert((await page.locator('#archivedChip').textContent()).includes('1'), 'Chip counts archived tasks');
-  await page.locator('#archivedChip').click();
-  assert((await onBoard(5)) === 1, 'Chip brings archived cards back to the board');
-  assert(await page.locator('article.task[data-id="5"] .done-date').count() === 1, 'Card shows the completion date');
-  await page.evaluate(() => openTask(5));
+  assert((await page.locator('#tabs [data-view="completed"]').textContent()).includes('1'), 'Tab counts archived tasks');
+  assert((await onBoard(5)) === 0, 'Archived card is not on the board');
+  await page.locator('#tabs [data-view="completed"]').click();
+  assert((await page.locator('#completedView .cp-row').count()) === 1 && (await page.locator('#completedView').textContent()).includes('завершено'), 'Tab lists the task with its completion date');
+  await page.locator('#cpSearch').fill('нет такой');
+  assert((await page.locator('#completedView .cp-row').count()) === 0, 'Search filters the list');
+  await page.locator('#cpSearch').fill('');
+  await page.locator('[data-cp-open="5"]').click();
   assert(await page.locator('#completeTask').textContent() === '↩ Вернуть в работу', 'Archived task offers to reopen');
   assert((await page.locator('#dCompleted').textContent()).startsWith('Завершено: '), 'Drawer shows the completion date');
-  await page.locator('#completeTask').click();
+  await page.keyboard.press('Escape');
+  await page.locator('[data-cp-restore="5"]').click();
   s5 = await T(5);
-  assert(s5.status === 'Очередь' && !s5.archived && !s5.completedAt, 'Reopen clears archive and date: ' + JSON.stringify(s5));
-  await page.locator('#archivedChip').click();
+  assert(s5.status === 'Очередь' && !s5.archived && !s5.completedAt && (await page.locator('#completedView .cp-row').count()) === 0, 'Restore from the tab clears archive and date: ' + JSON.stringify(s5));
+  await page.locator('#tabs [data-view="tasks"]').click();
 
-  // Task already in the «Готово» column: per-card button, then «all at once».
+  // Task already in the «Готово» column: calm per-card link, then the column strip.
   assert((await T(6)).status === 'Готово' && !(await T(6)).archived && (await onBoard(6)) === 1, 'Done task stays on the board until archived');
+  assert(await page.locator('article.task[data-id="6"] .done-date').count() === 1 || !(await T(6)).completedAt, 'Dated done cards show the date');
   await page.locator('article.task[data-id="6"] [data-archive-task]').click();
   assert((await onBoard(6)) === 0 && (await T(6)).archived, 'Card moved to «Завершённые» from the Done column');
   await page.locator('#undoToast button').click();
   assert((await onBoard(6)) === 1, 'Undo returns the card');
   await page.evaluate(() => { active().tasks.push({ id: 7, title: 'Ещё готовая', status: 'Готово', owner: '', end: '', description: '', comment: '' }); renderAll(); });
-  await page.locator('[data-archive-all]').click();
-  assert((await onBoard(6)) === 0 && (await onBoard(7)) === 0, 'The column button archives all done cards');
+  assert((await page.locator('.col-sweep').textContent()).includes('2'), 'Column strip counts done cards');
+  await page.locator('.col-sweep').click();
+  assert((await onBoard(6)) === 0 && (await onBoard(7)) === 0, 'The column strip archives all done cards');
 
   // Delete forever asks for confirmation.
-  await page.locator('#archivedChip').click();
   await page.evaluate(() => openTask(7));
   assert(await page.locator('#deleteForever').isVisible(), 'Delete forever is offered for done tasks');
   await page.locator('#deleteForever').click();
@@ -115,6 +120,11 @@ try {
   await page.locator('.confirm-modal [data-yes]').click();
   await page.waitForFunction(() => !active().tasks.some((t) => t.id === 7));
   assert(await page.locator('#undoToast').count() === 0, 'No undo after deleting forever');
+  await page.evaluate(() => { active().tasks.push({ id: 8, title: 'Удалить из вкладки', status: 'Готово', archived: true, completedAt: new Date().toISOString(), owner: '', end: '', description: '', comment: '' }); switchView('completed'); });
+  await page.locator('[data-cp-del="8"]').click();
+  await page.locator('.confirm-modal [data-yes]').click();
+  await page.waitForFunction(() => !active().tasks.some((t) => t.id === 8));
+  await page.evaluate(() => switchView('tasks'));
   await page.evaluate(() => openTask(1));
   assert(await page.locator('#deleteForever').isHidden(), 'Open tasks do not offer delete forever');
   await page.keyboard.press('Escape');
@@ -122,6 +132,8 @@ try {
   // Standalone task + «Мои задачи»: finished list shows the date.
   await page.evaluate(() => openStandaloneTask(50));
   await page.locator('#completeTask').click();
+  await page.evaluate(() => { window.myTasksFilter = 'noproject'; switchView('mytasks'); });
+  assert(!(await page.locator('#myTasksView').textContent()).includes('Быстрая без проекта'), 'Completed standalone task leaves «Без проекта»');
   await page.evaluate(() => { window.myTasksFilter = 'done'; switchView('mytasks'); });
   const text = await page.locator('#myTasksView').textContent();
   assert(text.includes('Быстрая без проекта') && /завершено \d\d\.\d\d\.\d{4}/.test(text), 'My finished tasks show the completion date');
