@@ -986,6 +986,26 @@ body[data-theme="cappuccino"] .project.active{border-color:#8a6240}body[data-the
 .draweractions{flex-wrap:wrap}
 .draweractions .autosave-note{flex:1 1 100%;order:9}
 .draweractions .btn{flex:0 1 auto}
+
+/* Quick notes */
+.qn-panel{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:0 0 16px;background:rgba(255,214,102,.10)}
+.qn-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.qn-head h3{margin:0;font-size:15px}
+.qn-clear{margin-left:auto;border:0;background:none;color:var(--muted);font:inherit;font-size:12px;cursor:pointer;text-decoration:underline}
+.qn-add{display:flex;gap:8px;margin:8px 0 4px}
+.qn-input,.qn-edit{flex:1;min-width:0;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;color:inherit;background:var(--card,#fff);box-sizing:border-box}
+.qn-add .btn{min-width:42px}
+.qn-list{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:2px}
+.qn-item{display:flex;align-items:center;gap:8px;padding:4px 2px;border-radius:8px;min-width:0}
+.qn-item:hover{background:rgba(127,127,127,.07)}
+.qn-check input{width:16px;height:16px;margin:0;cursor:pointer}
+.qn-text{flex:1;min-width:0;text-align:left;border:0;background:none;font:inherit;color:inherit;padding:3px 0;cursor:text;overflow-wrap:anywhere}
+.qn-done .qn-text{text-decoration:line-through;opacity:.55}
+.qn-old .qn-age{color:#c2410c}
+.qn-age{font-size:11px;color:var(--muted);white-space:nowrap}
+.qn-act{border:0;background:none;color:var(--blue);font:inherit;font-size:12px;cursor:pointer;white-space:nowrap;padding:3px 4px}
+.qn-del{color:var(--muted);font-size:16px;line-height:1}
+@media(max-width:700px){.qn-age{display:none}.qn-panel{padding:10px 12px}.qn-input,.qn-edit{font-size:16px}}
 </style></head><body>
 <div class="auth-screen show" id="authScreen"><div class="auth-card"><div class="auth-brand">FinTech Kanban<span>Центр управления проектами и задачами</span></div><div class="auth-tabs"><button class="auth-tab active" id="authLoginTab" type="button">Вход</button><button class="auth-tab" id="authSignupTab" type="button">Регистрация</button></div><h2 id="authHeading">С возвращением</h2><p class="auth-description" id="authDescription">Войди, чтобы открыть свои проекты и задачи.</p><div class="field"><label for="authEmail">Email</label><input id="authEmail" type="email" autocomplete="username" placeholder="name@example.com"></div><div class="field"><label for="authPassword">Пароль</label><input id="authPassword" type="password" autocomplete="current-password" placeholder="Не менее 8 символов, буквы и цифры"></div><button class="btn primary auth-submit" id="authSubmit" type="button">Войти</button><button class="btn auth-submit" id="authReset" type="button" style="margin-top:10px">Забыли пароль?</button><div class="auth-status" id="authStatus" role="status" aria-live="polite"></div><div class="auth-foot">Ваши данные доступны только в вашей учётной записи.</div></div></div>
 <div class="app" hidden><nav id="mobileBar" aria-label="Основная навигация"><button type="button" data-mb="home"><span class="mb-icon" aria-hidden="true">⌂</span>Главная</button><button type="button" data-mb="tasks"><span class="mb-icon" aria-hidden="true">▦</span>Доска</button><button type="button" class="mb-add" data-mb="add" aria-label="Новая задача"><span class="mb-icon" aria-hidden="true">+</span></button><button type="button" data-mb="mytasks"><span class="mb-icon" aria-hidden="true">☰</span>Мои задачи<span class="mb-count" id="mbCount"></span></button><button type="button" data-mb="more" aria-expanded="false"><span class="mb-icon" aria-hidden="true">⋯</span>Ещё<span class="mb-count mb-dot" id="mbDot" hidden></span></button></nav><aside class="sidebar"><div class="brand">Канбан проектов</div><button class="home-nav" id="homeNav" data-view="home"><span aria-hidden="true">⌂</span> Главная</button><button class="sidebar-inbox" id="standaloneNav" data-view="inbox" hidden style="display:none">Задачи без проектов <span id="standaloneCount"></span></button><button class="sidebar-inbox" id="myTasksNav" data-view="mytasks">Мои задачи <span id="myTasksCount"></span></button><div class="sidehead"><span>ПРОЕКТЫ</span><div class="side-actions"><button id="newProject" title="Создать проект" aria-label="Создать проект">＋</button><button id="exportBtn" title="Экспорт данных">↥</button><button id="importBtn" title="Импорт задач из JSON">↧</button><input id="importFile" type="file" accept=".json,application/json" hidden><button id="projectToTask" title="Преобразовать выбранный проект в задачу">⇢</button><button id="deleteProject" title="Удалить выбранный проект" aria-label="Удалить выбранный проект"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 10v6M14 10v6"/></svg></button></div></div><div class="sidebar-transform-hint">Преобразовать проект в задачу</div><div id="projects"></div></aside>
@@ -1005,7 +1025,7 @@ const original=[{"name": "Автооплата ГП", "tasks": [{"id": 33, "titl
 const projects=original.map(p=>p.name);
 let data=JSON.parse(JSON.stringify(original)),activeProject='Автооплата ГП',selectedId=null,dragId=null,activeView='tasks';
 let projectMeta={};
-let standaloneTasks=[];let pinnedTasks=[];
+let standaloneTasks=[];let pinnedTasks=[],quickNotes=[];
 const pinKey=(project,id)=>`${project}\u0001${id}`;const isPinned=(project,id)=>pinnedTasks.includes(pinKey(project,id));
 function togglePin(project,id){const k=pinKey(project,id),i=pinnedTasks.indexOf(k);if(i>=0)pinnedTasks.splice(i,1);else pinnedTasks.push(k);save();return i<0}
 let members=[];
@@ -1308,7 +1328,7 @@ function openNew(st='Очередь'){const ns=projectStatuses();$('newStatus').
 function closeNew(){$('modal').classList.remove('show')}
 function getMeta(){if(!projectMeta[activeProject])projectMeta[activeProject]={milestones:[],docs:[],links:[]};let m=projectMeta[activeProject];if(!Array.isArray(m.milestones))m.milestones=[];if(!Array.isArray(m.docs))m.docs=[];if(!Array.isArray(m.links))m.links=[];for(const k of ['projectDescription','projectEssence','expectedResult','keyMetrics','currentFocus'])if(typeof m[k]!=='string')m[k]='';return m}
 function renderOverview(){const m=getMeta();const fields=[['projectDescription','Описание проекта','Что делаем, для кого и в каком контуре?'],['projectEssence','Суть и цель','Какую проблему решаем и зачем?'],['expectedResult','Ожидаемый результат','Что должно измениться после реализации?'],['keyMetrics','Ключевые показатели','Например: выручка, количество операций, охват сети, конверсия, затраты.'],['currentFocus','Текущий фокус','На чём команда сосредоточена сейчас?']];$('overviewView').innerHTML=`<div class="overview-head"><div><h3>Обзор проекта</h3><div class="mini">Паспорт проекта «${esc(activeProject)}». Заполни ключевую информацию — она сохранится в этом браузере.</div></div><button class="btn primary" id="saveProjectOverview">Сохранить обзор</button></div><div class="overview-grid">${fields.map(([key,label,placeholder])=>`<label class="overview-field"><span>${label}</span><textarea data-overview-field="${key}" placeholder="${placeholder}">${esc(m[key])}</textarea></label>`).join('')}</div><div class="overview-note">Задачи, сроки и материалы остаются в своих разделах. Здесь хранится общий контекст проекта.</div>`;$('saveProjectOverview').onclick=()=>{const meta=getMeta();document.querySelectorAll('[data-overview-field]').forEach(el=>meta[el.dataset.overviewField]=el.value.trim());save();renderOverview();toast('Обзор проекта сохранён')}}
-function save(){try{localStorage.setItem('fintech-kanban-v6',JSON.stringify({data:personalProjects(),projectMeta:personalMeta(),standaloneTasks,pins:pinnedTasks}))}catch(e){};scheduleCloudSave();try{scheduleSharedPush()}catch(e){}try{renderNotifBadge()}catch(e){}}
+function save(){try{localStorage.setItem('fintech-kanban-v6',JSON.stringify({data:personalProjects(),projectMeta:personalMeta(),standaloneTasks,pins:pinnedTasks,quickNotes}))}catch(e){};scheduleCloudSave();try{scheduleSharedPush()}catch(e){}try{renderNotifBadge()}catch(e){}}
 const CLOUD_URL='https://vdlfdnhfiiltdyrucdtn.supabase.co';
 const CLOUD_KEY='sb_publishable_uXYluucSC1Grq-Tub20S6Q_rvDJj7HH';
 let cloudSession=null,cloudSaveTimer=null,cloudBusy=false;
@@ -1333,7 +1353,7 @@ $('adminClose').addEventListener('click',closeAdminUsers);
 $('adminModal').addEventListener('click',e=>{if(e.target===$('adminModal'))closeAdminUsers()});
 $('adminUsersList').addEventListener('click',e=>{const button=e.target.closest('[data-admin-action]');if(button)adminSetBan(button.dataset.userId,button.dataset.adminAction)});
 
-function currentCloudState(){return {data:personalProjects(),projectMeta:personalMeta(),standaloneTasks,pins:pinnedTasks,members,backups:projectBackups||[]}}
+function currentCloudState(){return {data:personalProjects(),projectMeta:personalMeta(),standaloneTasks,pins:pinnedTasks,quickNotes,members,backups:projectBackups||[]}}
 async function cloudRequest(path,options={}){const response=await fetch(CLOUD_URL+path,{...options,headers:cloudHeaders(options.headers||{})});const body=await response.text();let parsed=null;try{parsed=body?JSON.parse(body):null}catch(e){}if(!response.ok)throw new Error(parsed?.msg||parsed?.message||parsed?.error_description||(typeof parsed?.error==='string'?parsed.error:'')||body||('HTTP '+response.status));return parsed}
 async function cloudAuth(mode){const email=($('authEmail')?.value||$('cloudEmail').value).trim(),password=$('authPassword')?.value||$('cloudPassword').value;if(!email||!password){authMessage('Укажи email и пароль.');return}if(mode==='signup'&&!passwordMeetsPolicy(password)){authMessage('Пароль должен быть не короче 8 символов и содержать буквы и цифры.');return}
  authMessage(mode==='signup'?'Создаём аккаунт…':'Входим…');
@@ -1344,7 +1364,7 @@ async function cloudAuth(mode){const email=($('authEmail')?.value||$('cloudEmail
   document.querySelector('.app').hidden=false;$('authScreen').classList.remove('show');try{await cloudSyncOnLogin();$('cloudLogout').hidden=false;toast('Ты вошёл в свой Kanban')}catch(syncErr){console.error('Cloud sync failed',syncErr);document.querySelector('.app').hidden=true;$('authScreen').classList.add('show');authMessage('Вход выполнен, но не удалось синхронизировать данные: '+syncErr.message)}
  }catch(err){authMessage('Не удалось войти: '+err.message)}
 }
-async function cloudAutoRestore(){if(!cloudSession?.access_token||!cloudSession?.user?.id)return false;try{await cloudRequest('/auth/v1/user',{method:'GET'});const userId=cloudSession.user.id;const rows=await cloudRequest('/rest/v1/kanban_state?select=state&user_id=eq.'+encodeURIComponent(userId),{method:'GET'});if(rows&&rows.length&&rows[0].state){const s=rows[0].state;if(Array.isArray(s.data)&&s.data.length)data=s.data;projectMeta=s.projectMeta||{};standaloneTasks=s.standaloneTasks||[];pinnedTasks=Array.isArray(s.pins)?s.pins:[];members=Array.isArray(s.members)?s.members:[];projectBackups=Array.isArray(s.backups)?s.backups:[];if(!data.some(p=>p.name===activeProject))activeProject=data[0]?.name||'Мой Kanban';localStorage.setItem('fintech-kanban-v6',JSON.stringify(currentCloudState()));renderAll();}else{data=[{name:'Мой Kanban',tasks:[]}];activeProject='Мой Kanban';projectMeta={};standaloneTasks=[];members=[];renderAll();await cloudWriteNow()}await loadRegisteredParticipants().catch(err=>console.warn('Participants unavailable',err));cloudStateReady=true;setTimeout(importTelegramInbox,300);return true}catch(err){console.error('Cloud restore failed',err);await clearLocalCloudSession('Сессия не подтверждена. Войди в аккаунт.');return false}}
+async function cloudAutoRestore(){if(!cloudSession?.access_token||!cloudSession?.user?.id)return false;try{await cloudRequest('/auth/v1/user',{method:'GET'});const userId=cloudSession.user.id;const rows=await cloudRequest('/rest/v1/kanban_state?select=state&user_id=eq.'+encodeURIComponent(userId),{method:'GET'});if(rows&&rows.length&&rows[0].state){const s=rows[0].state;if(Array.isArray(s.data)&&s.data.length)data=s.data;projectMeta=s.projectMeta||{};standaloneTasks=s.standaloneTasks||[];pinnedTasks=Array.isArray(s.pins)?s.pins:[];quickNotes=Array.isArray(s.quickNotes)?s.quickNotes:[];members=Array.isArray(s.members)?s.members:[];projectBackups=Array.isArray(s.backups)?s.backups:[];if(!data.some(p=>p.name===activeProject))activeProject=data[0]?.name||'Мой Kanban';localStorage.setItem('fintech-kanban-v6',JSON.stringify(currentCloudState()));renderAll();}else{data=[{name:'Мой Kanban',tasks:[]}];activeProject='Мой Kanban';projectMeta={};standaloneTasks=[];members=[];renderAll();await cloudWriteNow()}await loadRegisteredParticipants().catch(err=>console.warn('Participants unavailable',err));cloudStateReady=true;setTimeout(importTelegramInbox,300);return true}catch(err){console.error('Cloud restore failed',err);await clearLocalCloudSession('Сессия не подтверждена. Войди в аккаунт.');return false}}
 function cloudChooseVersion(hasRemote=true){return new Promise(resolve=>{const modal=$('cloudChoiceModal');$('cloudChoiceTitle').textContent=hasRemote?'Данные уже есть в облаке':'С чего начнём?';$('cloudChoiceDescription').textContent=hasRemote?'Выбери, какую версию проектов и задач использовать.':'Это твой личный Kanban. Можно начать с пустой доски или перенести данные из этого браузера.';$('cloudUseRemote').hidden=!hasRemote;$('cloudStartClean').hidden=hasRemote;const finish=value=>{modal.classList.remove('show');$('cloudUseRemote').onclick=null;$('cloudUseLocal').onclick=null;$('cloudStartClean').onclick=null;$('cloudChoiceCancel').onclick=null;resolve(value)};$('cloudUseRemote').onclick=()=>finish('remote');$('cloudUseLocal').onclick=()=>finish('local');$('cloudStartClean').onclick=()=>finish('clean');$('cloudChoiceCancel').onclick=()=>finish('cancel');modal.classList.add('show')})}
 async function cloudSyncOnLogin(){
  const userId=cloudSession.user?.id;if(!userId)throw new Error('Не удалось определить пользователя.');
@@ -1354,7 +1374,7 @@ async function cloudSyncOnLogin(){
   const s=rows[0].state;
   if(Array.isArray(s.data)&&s.data.length)data=s.data;
   projectMeta=s.projectMeta||{};
-  standaloneTasks=s.standaloneTasks||[];pinnedTasks=Array.isArray(s.pins)?s.pins:[];
+  standaloneTasks=s.standaloneTasks||[];pinnedTasks=Array.isArray(s.pins)?s.pins:[];quickNotes=Array.isArray(s.quickNotes)?s.quickNotes:[];
   members=Array.isArray(s.members)?s.members:[];projectBackups=Array.isArray(s.backups)?s.backups:[];
   await loadRegisteredParticipants().catch(err=>console.warn('Participants unavailable',err));
   if(!data.some(p=>p.name===activeProject))activeProject=data[0]?.name||'Мой Kanban';
@@ -1635,7 +1655,7 @@ try{
  if(saved){
   const candidate=Array.isArray(saved)?saved:saved.data;
   if(Array.isArray(candidate)&&candidate.length>0)data=candidate;
-  if(!Array.isArray(saved)){projectMeta=saved.projectMeta||{};standaloneTasks=saved.standaloneTasks||[];pinnedTasks=Array.isArray(saved.pins)?saved.pins:[];members=Array.isArray(saved.members)?saved.members:[];}
+  if(!Array.isArray(saved)){projectMeta=saved.projectMeta||{};standaloneTasks=saved.standaloneTasks||[];pinnedTasks=Array.isArray(saved.pins)?saved.pins:[];quickNotes=Array.isArray(saved.quickNotes)?saved.quickNotes:[];members=Array.isArray(saved.members)?saved.members:[];}
  }
 }catch(e){}
 if(!Array.isArray(data)||data.length===0)data=JSON.parse(JSON.stringify(original));
@@ -1664,6 +1684,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.10.26-10',date:'26.10.2026',title:'Быстрые заметки',items:['На «Главной» и в «Мои задачи» появились быстрые заметки — дела на пару часов: запишите одной строкой и Enter','Отметьте галочкой, когда сделано; выполненные сами уберутся через сутки','Заметку можно превратить в задачу без проекта кнопкой «→ в задачу»']},
  {v:'2026.10.26-7',date:'26.10.2026',title:'Комментарии: правка, удаление, ссылки',items:['Комментарий можно изменить или удалить прямо в панели задачи','Ссылки в комментариях стали кликабельными']},
  {v:'2026.10.26-6',date:'26.10.2026',title:'Релизы по проектам',items:['Новая вкладка «Релизы»: загрузите презентацию (.pptx), документ (.docx) или текст — карточка заполнится сама','Поиск по словам, версии, тегам и по дате: «октябрь 2026», 15.10.2026, 2026','Файл хранится в облаке, релизы видят все участники проекта']},
  {v:'2026.10.26-5',date:'26.10.2026',title:'Задачи: ответственный, название, панель',items:['При создании задачи работает выбор ответственного из списка','Название задачи в панели можно править: нажмите на него, Enter сохраняет, Esc отменяет','Кнопки панели задачи переносятся на новую строку, панель больше не уезжает вправо']},
@@ -2075,5 +2096,63 @@ window.switchView=function(view){
 const origRenderAll=window.renderAll;
 window.renderAll=function(){const r=origRenderAll.apply(this,arguments);if(activeView==='releases'&&root()&&RL.loadedFor&&!RL.all&&RL.loadedFor.split('|')[0]!==activeProject)loadReleases(false);return r};
 window.__releasesApi={buildCard,parseQuery,extractText,matchesDate,visibleItems};
+})();
+/* ===== Быстрые заметки: дела на пару часов ===== */
+(function(){
+const DAY=24*3600*1000;
+let editId=null;
+const ago=ts=>{const m=Math.max(0,Math.round((Date.now()-ts)/60000));if(m<1)return'только что';if(m<60)return m+' мин назад';const h=Math.round(m/60);if(h<24)return h+' ч назад';const d=Math.round(h/24);return d+' дн назад'};
+function prune(){const before=quickNotes.length;quickNotes=quickNotes.filter(n=>!(n.done&&n.doneAt&&Date.now()-n.doneAt>DAY));return before!==quickNotes.length}
+function panel(where){
+  const open=quickNotes.filter(n=>!n.done),done=quickNotes.filter(n=>n.done);
+  const item=n=>`<li class="qn-item${n.done?' qn-done':''}${!n.done&&Date.now()-n.created>DAY?' qn-old':''}" data-qn="${esc(n.id)}"><label class="qn-check"><input type="checkbox" data-qn-toggle="${esc(n.id)}"${n.done?' checked':''} aria-label="Готово"></label>${editId===n.id?`<input class="qn-edit" data-qn-editing="${esc(n.id)}" value="${esc(n.text)}" maxlength="300" aria-label="Текст заметки">`:`<button type="button" class="qn-text" data-qn-edit="${esc(n.id)}" title="Нажмите, чтобы изменить">${esc(n.text)}</button>`}<span class="qn-age">${esc(ago(n.created))}</span>${n.done?'':`<button type="button" class="qn-act" data-qn-task="${esc(n.id)}" title="Сделать задачей без проекта">→ в задачу</button>`}<button type="button" class="qn-act qn-del" data-qn-del="${esc(n.id)}" title="Удалить" aria-label="Удалить заметку">×</button></li>`;
+  return`<section class="qn-panel" data-qn-where="${where}"><div class="qn-head"><h3>Быстрые заметки</h3><span class="mini">дела на пару часов · ${open.length?open.length+' открыто':'пусто'}</span>${done.length?`<button type="button" class="qn-clear" data-qn-clear="1">Убрать выполненные (${done.length})</button>`:''}</div><form class="qn-add" data-qn-form="1"><input class="qn-input" placeholder="Например: перезвонить Азату после обеда · Enter" maxlength="300" autocomplete="off" aria-label="Новая заметка"><button class="btn" type="submit">＋</button></form>${quickNotes.length?`<ul class="qn-list">${open.map(item).join('')}${done.map(item).join('')}</ul>`:''}</section>`;
+}
+function inject(viewId,where){
+  const v=$(viewId);if(!v||v.hidden&&where!=='my')return;
+  v.querySelector('.qn-panel')?.remove();
+  const wrap=document.createElement('div');wrap.innerHTML=panel(where);
+  const p=wrap.firstElementChild;
+  const anchor=where==='home'?v.firstElementChild:v.querySelector('.mytasks-head,.viewhead')||null;
+  if(anchor&&anchor.nextSibling)v.insertBefore(p,anchor.nextSibling);else v.prepend(p);
+}
+function renderNotes(focusWhere){
+  if(prune())save();
+  inject('myTasksView','my');inject('homeView','home');
+  if(focusWhere)document.querySelector(`.qn-panel[data-qn-where="${focusWhere}"] .qn-input`)?.focus();
+  const ed=document.querySelector('.qn-edit');if(ed){ed.focus();ed.setSelectionRange(ed.value.length,ed.value.length)}
+}
+window.renderQuickNotes=renderNotes;
+['renderMyTasks','renderHomeDashboard'].forEach(name=>{const o=window[name];if(typeof o!=='function')return;window[name]=function(){const r=o.apply(this,arguments);try{renderNotes()}catch(e){console.warn('Quick notes render failed',e)}return r}});
+const find=id=>quickNotes.find(n=>String(n.id)===String(id));
+function commitEdit(cancel){
+  const ed=document.querySelector('.qn-edit');if(!ed){editId=null;return}
+  const n=find(ed.dataset.qnEditing);const v=ed.value.replace(/\s+/g,' ').trim();
+  editId=null;if(!cancel&&n&&v&&v!==n.text){n.text=v;save()}renderNotes();
+}
+document.addEventListener('submit',e=>{
+  const f=e.target.closest?.('[data-qn-form]');if(!f)return;e.preventDefault();
+  const input=f.querySelector('.qn-input');const text=input.value.replace(/\s+/g,' ').trim();if(!text){input.focus();return}
+  quickNotes.unshift({id:'n'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),text,created:Date.now(),done:false});
+  save();renderNotes(f.closest('.qn-panel')?.dataset.qnWhere);
+});
+document.addEventListener('change',e=>{
+  const id=e.target?.dataset?.qnToggle;if(id===undefined)return;const n=find(id);if(!n)return;
+  n.done=e.target.checked;n.doneAt=n.done?Date.now():null;save();renderNotes();
+});
+document.addEventListener('click',e=>{
+  const b=e.target.closest?.('.qn-panel button');if(!b)return;const d=b.dataset;
+  if(d.qnEdit!==undefined){editId=find(d.qnEdit)?.id??null;renderNotes()}
+  else if(d.qnDel!==undefined){const i=quickNotes.findIndex(n=>String(n.id)===String(d.qnDel));if(i<0)return;const [gone]=quickNotes.splice(i,1);save();renderNotes();undoToast('Заметка удалена',()=>{quickNotes.splice(i,0,gone);save();renderNotes()})}
+  else if(d.qnClear!==undefined){const gone=quickNotes.filter(n=>n.done);quickNotes=quickNotes.filter(n=>!n.done);save();renderNotes();undoToast('Выполненные убраны',()=>{quickNotes.push(...gone);save();renderNotes()})}
+  else if(d.qnTask!==undefined){const n=find(d.qnTask);if(!n)return;standaloneTasks.push({id:Date.now(),title:n.text.slice(0,200),start:'',end:'',status:'Очередь',owner:'',description:'',comment:'',documents:[],extraLinks:[]});quickNotes=quickNotes.filter(x=>x!==n);save();try{renderInbox();renderProjects()}catch(e){}if(activeView==='mytasks')renderMyTasks();else renderNotes();toast('Задача создана в «Мои задачи» · без проекта')}
+});
+document.addEventListener('keydown',e=>{
+  if(!e.target?.classList?.contains('qn-edit'))return;
+  if(e.key==='Enter'){e.preventDefault();commitEdit(false)}
+  else if(e.key==='Escape'){e.preventDefault();e.stopPropagation();commitEdit(true)}
+},true);
+document.addEventListener('pointerdown',e=>{const ed=document.querySelector('.qn-edit');if(ed&&e.target!==ed)commitEdit(false)},true);
+setInterval(()=>{if(document.hidden||document.querySelector('.qn-edit')||document.activeElement?.classList?.contains('qn-input'))return;if(['mytasks','home'].includes(activeView))renderNotes()},60000);
 })();
 </script></body></html>
