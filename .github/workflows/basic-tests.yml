@@ -73,5 +73,8 @@ jobs:
       - name: Run complete button browser test
         run: node tests/complete-button.mjs
 
+      - name: Run compact cards browser test
+        run: node tests/compact-cards.mjs
+
       - name: Run Telegram message parser test
         run: node --experimental-strip-types tests/telegram-parse.mjs
