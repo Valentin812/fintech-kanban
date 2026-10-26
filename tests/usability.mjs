@@ -160,7 +160,10 @@ try {
   // My tasks: grouped list, active by default, rows open the task.
   await page.evaluate(() => switchView('mytasks'));
   const groupTitles = await page.locator('#myTasksView .mytask-group h4').allTextContents();
-  assert(groupTitles[0].startsWith('Просрочено') && !groupTitles.some((g) => g.startsWith('Завершённые')), `Active view should start with overdue and hide finished: ${groupTitles}`);
+  assert(groupTitles[0].startsWith('Горят и просрочены') && !groupTitles.some((g) => g.startsWith('Завершённые')), `Default «Главное» view should start with hot/overdue (no standalone or pinned tasks here) and hide finished: ${groupTitles}`);
+  await page.locator('[data-my-filter="active"]').click();
+  const activeTitles = await page.locator('#myTasksView .mytask-group h4').allTextContents();
+  assert(activeTitles[0].startsWith('Просрочено') && !activeTitles.some((g) => g.startsWith('Завершённые')), `Active filter should start with overdue and hide finished: ${activeTitles}`);
   await page.locator('[data-my-filter="done"]').click();
   assert(await page.locator('#myTasksView .mytask-row.is-done').count() === 1, 'Finished filter should show my finished task');
   await page.locator('[data-my-filter="active"]').click();
