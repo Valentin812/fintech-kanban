@@ -933,13 +933,45 @@ body[data-theme="cappuccino"] .project.active{border-color:#8a6240}body[data-the
 .mytask-group-noproject .mytask-list{border-left:4px solid var(--blue)}
 .mytask-group-pinned>h4{color:#a06a00}
 .mytask-group-hot>h4{color:#c2362f}
+
+/* Releases tab */
+#releasesView{max-width:980px}
+.rl-add{margin:6px 0 14px}
+.rl-form{border:1px solid var(--line);border-radius:12px;padding:14px;margin:6px 0 16px;background:rgba(127,127,127,.05)}
+.rl-form h4{margin:0 0 6px}
+.rl-form label{display:block;font-size:12px;color:var(--muted);min-width:0}
+.rl-form input:not([type=checkbox]),.rl-form textarea{display:block;width:100%;box-sizing:border-box;margin-top:4px;border:1px solid var(--line);border-radius:8px;padding:9px;font:inherit;font-size:14px;color:inherit;background:var(--card,#fff)}
+.rl-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:10px 0}
+.rl-wide{margin-top:10px}
+.rl-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.rl-error{color:#c24141;font-size:13px;margin:8px 0}
+.rl-search{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:6px 0 14px}
+.rl-search input[type=search]{flex:1 1 280px;min-width:0;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;color:inherit;background:var(--card,#fff)}
+.rl-all{font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center;white-space:nowrap}
+.rl-list{display:grid;gap:10px}
+.rl-card{display:flex;gap:14px;border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--card,#fff);min-width:0}
+.rl-edit{display:block}.rl-edit .rl-form{border:0;padding:0;margin:0;background:none}
+.rl-date{flex:0 0 74px;text-align:center;display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--muted)}
+.rl-date b{font-size:13px;color:inherit}
+.rl-body{flex:1;min-width:0}
+.rl-titlerow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.rl-titlerow h4{margin:0;font-size:16px;overflow-wrap:anywhere}
+.rl-chip{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:2px 8px;color:var(--muted);white-space:nowrap}
+.rl-hit{background:#fff4d6;border-color:#e8c46a;color:#6b4a00}
+.rl-summary{margin:6px 0;font-size:14px;line-height:1.45;overflow-wrap:anywhere}
+.rl-tags{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.rl-tag,.rl-more{border:0;background:none;color:var(--blue);cursor:pointer;font:inherit;font-size:12px;padding:2px 0}
+.rl-more{font-size:13px;margin-top:2px}
+.rl-changes{margin:8px 0 0;padding-left:18px;font-size:14px;line-height:1.5}
+.rl-count{margin-top:10px}
+@media(max-width:700px){.rl-grid{grid-template-columns:minmax(0,1fr)}.rl-card{flex-direction:column;gap:6px}.rl-date{flex:none;flex-direction:row;gap:8px;text-align:left;align-items:baseline}}
 </style></head><body>
 <div class="auth-screen show" id="authScreen"><div class="auth-card"><div class="auth-brand">FinTech Kanban<span>Центр управления проектами и задачами</span></div><div class="auth-tabs"><button class="auth-tab active" id="authLoginTab" type="button">Вход</button><button class="auth-tab" id="authSignupTab" type="button">Регистрация</button></div><h2 id="authHeading">С возвращением</h2><p class="auth-description" id="authDescription">Войди, чтобы открыть свои проекты и задачи.</p><div class="field"><label for="authEmail">Email</label><input id="authEmail" type="email" autocomplete="username" placeholder="name@example.com"></div><div class="field"><label for="authPassword">Пароль</label><input id="authPassword" type="password" autocomplete="current-password" placeholder="Не менее 8 символов, буквы и цифры"></div><button class="btn primary auth-submit" id="authSubmit" type="button">Войти</button><button class="btn auth-submit" id="authReset" type="button" style="margin-top:10px">Забыли пароль?</button><div class="auth-status" id="authStatus" role="status" aria-live="polite"></div><div class="auth-foot">Ваши данные доступны только в вашей учётной записи.</div></div></div>
 <div class="app" hidden><nav id="mobileBar" aria-label="Основная навигация"><button type="button" data-mb="home"><span class="mb-icon" aria-hidden="true">⌂</span>Главная</button><button type="button" data-mb="tasks"><span class="mb-icon" aria-hidden="true">▦</span>Доска</button><button type="button" class="mb-add" data-mb="add" aria-label="Новая задача"><span class="mb-icon" aria-hidden="true">+</span></button><button type="button" data-mb="mytasks"><span class="mb-icon" aria-hidden="true">☰</span>Мои задачи<span class="mb-count" id="mbCount"></span></button><button type="button" data-mb="more" aria-expanded="false"><span class="mb-icon" aria-hidden="true">⋯</span>Ещё<span class="mb-count mb-dot" id="mbDot" hidden></span></button></nav><aside class="sidebar"><div class="brand">Канбан проектов</div><button class="home-nav" id="homeNav" data-view="home"><span aria-hidden="true">⌂</span> Главная</button><button class="sidebar-inbox" id="standaloneNav" data-view="inbox" hidden style="display:none">Задачи без проектов <span id="standaloneCount"></span></button><button class="sidebar-inbox" id="myTasksNav" data-view="mytasks">Мои задачи <span id="myTasksCount"></span></button><div class="sidehead"><span>ПРОЕКТЫ</span><div class="side-actions"><button id="newProject" title="Создать проект" aria-label="Создать проект">＋</button><button id="exportBtn" title="Экспорт данных">↥</button><button id="importBtn" title="Импорт задач из JSON">↧</button><input id="importFile" type="file" accept=".json,application/json" hidden><button id="projectToTask" title="Преобразовать выбранный проект в задачу">⇢</button><button id="deleteProject" title="Удалить выбранный проект" aria-label="Удалить выбранный проект"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 10v6M14 10v6"/></svg></button></div></div><div class="sidebar-transform-hint">Преобразовать проект в задачу</div><div id="projects"></div></aside>
 <main class="main"><div class="top"><div class="crumb">Проекты　›　<span id="crumbName">Автооплата ГП</span></div><div class="global-search-wrap"><input id="globalSearch" class="topsearch" placeholder="Поиск по всем проектам…"><div id="globalSearchResults" class="global-search-results" hidden></div></div><button class="btn" id="teamTopButton" type="button" title="Участники Kanban">♙ Участники</button><select class="btn theme-toggle" id="themeToggle" aria-label="Тема оформления" title="Тема оформления"><option value="light">Классика</option><option value="dark">Тёмная</option><option value="win95">Windows 95</option><option value="lamp">Ламповая</option><option value="pixel">Пиксель-арт</option><option value="latte">Латте</option><option value="cappuccino">Капучино</option></select><button class="btn notif-bell" id="notifButton" type="button" aria-label="Уведомления" aria-haspopup="dialog" aria-expanded="false" hidden><span aria-hidden="true">🔔</span><span class="notif-badge" id="notifBadge" hidden></span></button><button class="account-chip" id="cloudButton" type="button" aria-label="Аккаунт"><span class="account-avatar" id="accountAvatar">V</span><span class="account-chip-label"><strong id="accountName">Аккаунт</strong><small id="accountSub">Войти</small></span></button></div>
-<header class="projecthead" id="projectHeader"><div class="headrow"><div><div class="projecttitle" id="projectName">Автооплата ГП</div><div class="subtitle" id="subtitle">Задачи проекта из исходной таблицы</div></div><div class="projectstats" id="stats"></div></div><nav class="tabs" id="tabs"><button class="tab active" data-view="tasks">Задачи</button><button class="tab" data-view="overview">Обзор проекта</button><button class="tab" data-view="roadmap">Дорожная карта</button><button class="tab" data-view="documents">Документы</button><button class="tab" data-view="links">Ссылки</button></nav></header>
+<header class="projecthead" id="projectHeader"><div class="headrow"><div><div class="projecttitle" id="projectName">Автооплата ГП</div><div class="subtitle" id="subtitle">Задачи проекта из исходной таблицы</div></div><div class="projectstats" id="stats"></div></div><nav class="tabs" id="tabs"><button class="tab active" data-view="tasks">Задачи</button><button class="tab" data-view="overview">Обзор проекта</button><button class="tab" data-view="roadmap">Дорожная карта</button><button class="tab" data-view="documents">Документы</button><button class="tab" data-view="links">Ссылки</button><button class="tab" data-view="releases">Релизы</button></nav></header>
 <div class="toolbar" id="taskToolbar"><input id="taskSearch" placeholder="⌕  Поиск в текущем проекте…"><button class="btn toolbar-toggle" id="toolbarToggle" type="button" aria-expanded="false" aria-controls="taskToolbar">⚙ Фильтры</button><select id="ownerFilter"><option value="">Все ответственные</option></select><select id="sortFilter"><option value="source">Мой порядок</option><option value="date">Сначала ближайший срок</option><option value="owner">По ответственному</option><option value="title">По названию</option></select><div class="quick-filters" role="group" aria-label="Быстрые фильтры"><button class="btn quick-filter" type="button" data-quick-filter="mine" aria-pressed="false">Только мои</button><button class="btn quick-filter" type="button" data-quick-filter="overdue" aria-pressed="false">Просроченные</button></div><span class="hint" id="summary"></span></div>
-<div id="statusStrip" role="tablist" aria-label="Колонки" hidden></div><section class="board viewpanel" id="board"></section><section class="viewpanel extra-view home-view" id="homeView" hidden></section><section class="viewpanel extra-view" id="overviewView" hidden></section><section class="viewpanel extra-view" id="inboxView" hidden></section><section class="viewpanel extra-view" id="myTasksView" hidden></section><section class="viewpanel extra-view" id="roadmapView" hidden></section><section class="viewpanel extra-view" id="documentsView" hidden></section><section class="viewpanel extra-view" id="linksView" hidden></section><section class="viewpanel extra-view" id="peopleView" hidden></section><div class="footer" id="viewFooter">Перетаскивай карточки между колонками · нажми на задачу, чтобы открыть подробности</div></main></div>
+<div id="statusStrip" role="tablist" aria-label="Колонки" hidden></div><section class="board viewpanel" id="board"></section><section class="viewpanel extra-view home-view" id="homeView" hidden></section><section class="viewpanel extra-view" id="overviewView" hidden></section><section class="viewpanel extra-view" id="inboxView" hidden></section><section class="viewpanel extra-view" id="myTasksView" hidden></section><section class="viewpanel extra-view" id="roadmapView" hidden></section><section class="viewpanel extra-view" id="documentsView" hidden></section><section class="viewpanel extra-view" id="linksView" hidden></section><section class="viewpanel extra-view" id="peopleView" hidden></section><section class="viewpanel extra-view" id="releasesView" hidden></section><div class="footer" id="viewFooter">Перетаскивай карточки между колонками · нажми на задачу, чтобы открыть подробности</div></main></div>
 <div class="modal" id="cloudChoiceModal"><div class="modalcard" role="dialog" aria-modal="true" aria-labelledby="cloudChoiceTitle"><h3 id="cloudChoiceTitle">Данные уже есть в облаке</h3><p id="cloudChoiceDescription" class="mini" style="margin:0 0 16px;line-height:1.6">Выбери, какую версию проектов и задач использовать. Это заменит данные только на выбранной стороне.</p><div style="display:grid;gap:10px"><button class="btn primary" id="cloudUseRemote" style="padding:12px;text-align:left">Загрузить из облака <span style="display:block;font-size:12px;font-weight:400;opacity:.85;margin-top:4px">Открыть облачную версию на этом устройстве</span></button><button class="btn" id="cloudUseLocal" style="padding:12px;text-align:left">Сохранить текущие данные в облако <span style="display:block;font-size:12px;color:#788397;margin-top:4px">Заменить облачную версию данными этого браузера</span></button><button class="btn" id="cloudStartClean" hidden style="padding:12px;text-align:left">Начать с чистого Kanban <span style="display:block;font-size:12px;color:#788397;margin-top:4px">Создать пустую доску без демонстрационных задач</span></button><button class="btn" id="cloudChoiceCancel">Не сейчас</button></div></div></div><div class="modal" id="cloudModal"><div class="modalcard" role="dialog" aria-modal="true" aria-labelledby="cloudTitle"><h3 id="cloudTitle">Аккаунт</h3><div id="cloudAccountSummary" class="cloud-account-summary" hidden></div><p id="cloudIntro" class="mini">Войди в аккаунт, чтобы открыть свою доску на любом устройстве. Изменения синхронизируются автоматически.</p><div class="field" id="cloudEmailField"><label for="cloudEmail">Email</label><input id="cloudEmail" type="email" autocomplete="username" placeholder="you@example.com"></div><div class="field" id="cloudPasswordField"><label for="cloudPassword">Пароль</label><input id="cloudPassword" type="password" autocomplete="current-password" placeholder="Не менее 8 символов, буквы и цифры"></div><div id="cloudStatus" class="mini" style="min-height:20px;margin:8px 0;color:#64748b"></div><div class="cloud-actions"><button class="btn primary" id="cloudLogin">Войти</button><button class="btn" id="cloudSignup">Создать аккаунт</button></div><div class="cloud-extra-actions"><section class="cloud-action-group" id="cloudIntegrationGroup"><div class="cloud-group-title">Интеграции</div><button class="btn" id="telegramLinkButton" hidden>Подключить Telegram</button></section><section class="cloud-action-group cloud-security-group" id="cloudSecurityGroup"><div class="cloud-group-title">Безопасность и сеансы</div><button class="btn" id="cloudLogout" hidden>Выйти на этом устройстве</button><button class="btn danger" id="cloudLogoutAll" hidden>Завершить сеансы на других устройствах</button></section><section class="cloud-action-group" id="cloudAdminGroup" hidden><div class="cloud-group-title">Администрирование</div><button class="btn" id="adminUsersButton">Пользователи</button></section></div><div id="telegramLinkStatus" class="mini" style="margin-top:10px;overflow-wrap:anywhere"></div></div></div><div class="modal" id="adminModal"><div class="modalcard admin-card" role="dialog" aria-modal="true" aria-labelledby="adminTitle"><div class="admin-head"><h3 id="adminTitle">Пользователи</h3><button class="close" id="adminClose" aria-label="Закрыть">×</button></div><p class="mini admin-note">Заблокированный пользователь не сможет войти и отправлять уведомления. Его доска сохраняется, разблокировать можно в любой момент. Назначать и снимать администраторов может только владелец.</p><div id="adminStatus" class="mini admin-status"></div><div id="adminUsersList" class="admin-users"></div></div></div><div class="overlay" id="overlay"></div><aside class="drawer" id="drawer"><div class="drawerhead"><div style="flex:1"><div class="crumb" id="dProject"></div><h2 id="dTitle"></h2></div><button class="close" id="closeDrawer">×</button></div>
 <div class="twocol"><div class="field"><label>Колонка</label><select id="dStatus"><option>Очередь</option><option>В работе</option><option>На анализе</option><option>Готово</option></select></div><div class="field owner-field"><label>Ответственный</label><input id="dOwner" placeholder="ФИО"><div id="dOwnerSuggestions" class="mention-menu" hidden></div><div class="mention-help">Начни вводить имя и выбери участника из списка. Можно указать несколько человек через запятую; @ тоже работает.</div></div></div>
 <div class="twocol"><div class="field"><label>Дата начала</label><input id="dStart" placeholder="дд.мм.гггг"></div><div class="field"><label>Срок</label><input id="dEnd" placeholder="дд.мм.гггг"></div></div>
@@ -1602,6 +1634,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.10.26-6',date:'26.10.2026',title:'Релизы по проектам',items:['Новая вкладка «Релизы»: загрузите презентацию (.pptx), документ (.docx) или текст — карточка заполнится сама','Поиск по словам, версии, тегам и по дате: «октябрь 2026», 15.10.2026, 2026','Файл хранится в облаке, релизы видят все участники проекта']},
  {v:'2026.10.26-4',date:'26.10.2026',title:'«Мои задачи» как рабочий стол: закрепления и горящее',items:['Вкладка «Главное» показывает по порядку: задачи без проекта (с акцентом), закреплённые, горящие и просроченные, остальные активные','«Без проекта» вынесено в начало списка фильтров и выделено цветом','Закрепляйте задачи проектов кнопкой 📌 на карточке или в задаче: они появятся в «Моих задачах», даже если вы не ответственный; закрепления хранятся в вашем аккаунте и видны на всех устройствах','Пометка 🔥 «Важная» в окне задачи: такая задача попадает в «Горят и просрочены» вместе с просроченными и со сроком на сегодня-завтра','Исправлено: форма добавления подзадачи на карточке теперь закрывается кнопкой × и работает по Enter']},
  {v:'2026.10.26-3',date:'26.10.2026',title:'Исправлено добавление комментариев',items:['Новый комментарий теперь всегда отдельная запись с датой и временем: раньше при добавлении по Enter он склеивался с предыдущим и не считался в значке 💬','Значок комментариев и предпросмотр обновляются сразу после закрытия задачи, в том числе в «Моих задачах»','Старые склеенные комментарии автоматически разделены на записи']},
  {v:'2026.10.26-1',date:'26.10.2026',title:'Предпросмотр комментариев в «Моих задачах»',items:['В списке «Мои задачи» значок комментариев снова показывает предпросмотр при наведении (и по нажатию на телефоне): работает для задач проектов и задач без проекта']},
@@ -1682,5 +1715,292 @@ async function removeAvatar(){const id=cloudSession?.user?.id;if(!id)return;try{
   $('pinTask')?.addEventListener('click',()=>{const {standalone,t}=drawerInfo();if(standalone||!t)return;const on=togglePin(activeProject,t.id);toast(on?'Закреплено в «Моих задачах»':'Откреплено');syncDrawerFlags()});
   $('importantTask')?.addEventListener('click',()=>{const {t}=drawerInfo();if(!t)return;if(t.important)delete t.important;else t.important=true;save();syncDrawerFlags();try{renderBoard()}catch(e){}if(activeView==='mytasks')renderMyTasks()});
   ['openTask','openStandaloneTask'].forEach(n=>{const o=window[n];if(typeof o!=='function')return;window[n]=function(){const r=o.apply(this,arguments);try{syncDrawerFlags()}catch(e){}return r}});
+})();
+
+/* ===== Релизы по проектам ===== */
+(function(){
+const RL={items:[],extra:new Set(),loading:false,error:'',q:'',all:false,draft:null,openId:null,editId:null,confirmDel:null,seq:0,loadedFor:'',busy:false};
+window.__releases=RL;
+const MONTHS=[/^январ[ьяе]$/,/^феврал[ьяе]$/,/^март[ае]?$/,/^апрел[ьяе]$/,/^ма[йяе]$/,/^июн[ьяе]$/,/^июл[ьяе]$/,/^август[ае]?$/,/^сентябр[ьяе]$/,/^октябр[ьяе]$/,/^ноябр[ьяе]$/,/^декабр[ьяе]$/];
+const MONTH_NAMES=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+const STOP=new Set('который которая которые также этого этому этой этих было были будет будут чтобы после перед через когда если только между более менее очень можно нужно проект релиз версия версии добавлена добавлено добавлен исправлено исправлена изменено сделано работы работа данные данных которых своих всего всех'.split(' '));
+const pad=n=>String(n).padStart(2,'0');
+const isoDate=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const ruDate=iso=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(iso||'');return m?`${m[3]}.${m[2]}.${m[1]}`:''};
+const longDate=iso=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(iso||'');return m?`${Number(m[3])} ${MONTH_NAMES[Number(m[2])-1]} ${m[1]}`:''};
+const bytesLabel=n=>n>=1048576?(n/1048576).toFixed(1)+' МБ':n>=1024?Math.round(n/1024)+' КБ':(n||0)+' Б';
+const decodeXml=s=>s.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/&#x([0-9a-f]+);/gi,(_,n)=>String.fromCodePoint(parseInt(n,16))).replace(/&amp;/g,'&');
+
+/* ---- Чтение docx/pptx без библиотек: минимальный разбор ZIP ---- */
+async function unzip(buffer){
+  const dv=new DataView(buffer),u8=new Uint8Array(buffer);let eocd=-1;
+  for(let i=u8.length-22;i>=Math.max(0,u8.length-65558);i--){if(dv.getUint32(i,true)===0x06054b50){eocd=i;break}}
+  if(eocd<0)throw new Error('Не удалось прочитать файл: это не docx/pptx');
+  const count=dv.getUint16(eocd+10,true);let p=dv.getUint32(eocd+16,true);const files={};
+  for(let n=0;n<count;n++){
+    if(dv.getUint32(p,true)!==0x02014b50)break;
+    const method=dv.getUint16(p+10,true),csize=dv.getUint32(p+20,true),nameLen=dv.getUint16(p+28,true),extraLen=dv.getUint16(p+30,true),comLen=dv.getUint16(p+32,true),off=dv.getUint32(p+42,true);
+    const name=new TextDecoder().decode(u8.subarray(p+46,p+46+nameLen));
+    files[name]={method,csize,off};p+=46+nameLen+extraLen+comLen;
+  }
+  const read=async name=>{
+    const f=files[name];if(!f)return null;
+    const lh=f.off,start=lh+30+dv.getUint16(lh+26,true)+dv.getUint16(lh+28,true),raw=u8.subarray(start,start+f.csize);
+    if(f.method===0)return new TextDecoder().decode(raw);
+    if(f.method!==8)throw new Error('Неподдерживаемое сжатие в файле');
+    const stream=new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    return new TextDecoder().decode(await new Response(stream).arrayBuffer());
+  };
+  return{names:Object.keys(files),read};
+}
+function xmlParagraphs(xml,para,text){
+  const out=[];const re=new RegExp('<'+para+'[ >][\\s\\S]*?</'+para+'>','g');let m;
+  while((m=re.exec(xml))){let line='';const tre=new RegExp('<'+text+'(?: [^>]*)?>([\\s\\S]*?)</'+text+'>|<(?:a:br|w:br|w:tab)\\b[^>]*/>','g');let t;while((t=tre.exec(m[0]))){line+=t[1]!==undefined?decodeXml(t[1]):' '}line=line.replace(/\s+/g,' ').trim();if(line)out.push(line)}
+  return out;
+}
+async function extractText(file){
+  const name=file.name.toLowerCase();
+  if(/\.(txt|md|markdown|csv|log)$/.test(name)||file.type.startsWith('text/'))return{text:(await file.text()).replace(/\r\n?/g,'\n').trim()};
+  if(/\.(docx|pptx)$/.test(name)){
+    const zip=await unzip(await file.arrayBuffer());
+    if(name.endsWith('.docx')){const xml=await zip.read('word/document.xml');if(!xml)throw new Error('В файле нет текста документа');return{text:xmlParagraphs(xml,'w:p','w:t').join('\n')}}
+    const slides=zip.names.filter(n=>/^ppt\/slides\/slide\d+\.xml$/.test(n)).sort((a,b)=>parseInt(a.match(/(\d+)\.xml$/)[1])-parseInt(b.match(/(\d+)\.xml$/)[1]));
+    if(!slides.length)throw new Error('В презентации не найдены слайды');
+    const parts=[];for(const s of slides){parts.push(xmlParagraphs(await zip.read(s),'a:p','a:t').join('\n'))}
+    return{text:parts.filter(Boolean).join('\n\n')};
+  }
+  if(/\.pdf$/.test(name))return{text:'',note:'Текст из PDF автоматически не извлекается: файл сохранится, а описание и текст для поиска вставьте ниже.'};
+  throw new Error('Поддерживаются файлы .pptx, .docx, .txt, .md (PDF сохраняется без текста)');
+}
+
+/* ---- Автоматическая карточка ---- */
+function findDate(text){
+  const t=text.slice(0,6000);let m;
+  if((m=/\b(\d{1,2})\.(\d{1,2})\.(20\d{2})\b/.exec(t))){const d=+m[1],mo=+m[2];if(d>=1&&d<=31&&mo>=1&&mo<=12)return`${m[3]}-${pad(mo)}-${pad(d)}`}
+  if((m=/\b(20\d{2})-(\d{2})-(\d{2})\b/.exec(t)))return m[0];
+  if((m=/\b(\d{1,2})\s+(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)\s+(20\d{2})/i.exec(t)))return`${m[3]}-${pad(MONTH_NAMES.indexOf(m[2].toLowerCase())+1)}-${pad(+m[1])}`;
+  return'';
+}
+function buildCard(text,fileName,fileTime){
+  const lines=String(text||'').split('\n').map(s=>s.trim()).filter(Boolean);
+  const base=String(fileName||'').replace(/\.[^.]+$/,'').replace(/[_]+/g,' ').trim();
+  let title=(lines[0]||base||'Релиз').replace(/^[#\s*•\-–—]+/,'').slice(0,160);
+  if(title.length<4&&base)title=base;
+  const vm=/(?:\bv|версия|релиз|release)\s*[:№#]?\s*(\d+(?:\.\d+){1,3})/i.exec(text||'')||/\bv(\d+(?:\.\d+){1,3})\b/i.exec(fileName||'');
+  const version=vm?vm[1]:'';
+  const date=findDate(text||'')||(fileTime?isoDate(new Date(fileTime)):isoDate(new Date()));
+  const rest=lines.slice(1);
+  const bullet=/^([•\-–—*·▪●]|\d{1,2}[.)])\s+/;
+  const changes=rest.filter(l=>bullet.test(l)).map(l=>l.replace(bullet,'').trim()).filter(l=>l.length>3).slice(0,12).map(s=>s.slice(0,240));
+  const prose=rest.filter(l=>!bullet.test(l)).join(' ');
+  const sentences=prose.match(/[^.!?]+[.!?]+/g)||(prose?[prose]:[]);
+  let summary='';for(const s of sentences){if((summary+s).length>420)break;summary+=(summary?' ':'')+s.trim()}
+  if(!summary&&changes.length)summary=changes.slice(0,3).join('; ').slice(0,420);
+  const freq=new Map();(String(text||'').toLowerCase().match(/[a-zа-яё][a-zа-яё0-9-]{3,}/g)||[]).forEach(w=>{if(!STOP.has(w)&&w.length>=5)freq.set(w,(freq.get(w)||0)+1)});
+  const tags=[...freq.entries()].filter(([,n])=>n>=2).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([w])=>w);
+  return{title,version,date,summary,changes,tags};
+}
+
+/* ---- Поиск, в том числе по дате ---- */
+function parseQuery(q){
+  const out={words:[],day:'',month:0,year:0,iso:''};
+  String(q||'').trim().toLowerCase().split(/\s+/).filter(Boolean).forEach(w=>{
+    let m;
+    if((m=/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(w))){out.day=pad(+m[1]);out.month=+m[2];out.year=+m[3];return}
+    if((m=/^(\d{1,2})\.(\d{4})$/.exec(w))){out.month=+m[1];out.year=+m[2];return}
+    if((m=/^(\d{4})-(\d{2})(?:-(\d{2}))?$/.exec(w))){out.year=+m[1];out.month=+m[2];if(m[3])out.day=m[3];return}
+    if(/^(19|20)\d{2}$/.test(w)){out.year=+w;return}
+    const mi=MONTHS.findIndex(r=>r.test(w));if(mi>=0){out.month=mi+1;return}
+    out.words.push(w.replace(/ё/g,'е'));
+  });
+  return out;
+}
+function matchesDate(item,p){
+  const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(item.released_on||'');if(!m)return!(p.year||p.month||p.day);
+  if(p.year&&+m[1]!==p.year)return false;if(p.month&&+m[2]!==p.month)return false;if(p.day&&m[3]!==p.day)return false;return true;
+}
+function haystack(it){return[it.title,it.version,it.summary,(it.tags||[]).join(' '),(it.changes||[]).map(c=>typeof c==='string'?c:c.text||'').join(' '),it.project_name,it.file_name,ruDate(it.released_on),longDate(it.released_on)].join(' ').toLowerCase().replace(/ё/g,'е')}
+function visibleItems(){
+  const p=parseQuery(RL.q);
+  return RL.items.filter(it=>{
+    if(!matchesDate(it,p))return false;
+    if(!p.words.length)return true;
+    const h=haystack(it);
+    return p.words.every(w=>h.includes(w))||RL.extra.has(it.id);
+  });
+}
+
+/* ---- Облако ---- */
+const SEL='id,owner_id,shared_project_id,project_name,title,version,released_on,summary,changes,tags,file_path,file_name,file_type,file_size,created_at';
+const signedIn=()=>!!cloudSession?.access_token;
+const uid=()=>cloudSession?.user?.id||'';
+function scopeQuery(){
+  if(RL.all)return'';const p=active();if(!p)return'';
+  return p.shared?.id?`&shared_project_id=eq.${encodeURIComponent(p.shared.id)}`:`&shared_project_id=is.null&project_name=eq.${encodeURIComponent(p.name)}&owner_id=eq.${encodeURIComponent(uid())}`;
+}
+async function loadReleases(force){
+  if(!signedIn()){RL.items=[];render();return}
+  const key=(RL.all?'*':activeProject)+'|'+uid();
+  if(!force&&RL.loadedFor===key&&!RL.error)return;
+  RL.loading=true;RL.error='';render();const seq=++RL.seq;
+  try{
+    const rows=await cloudRequest(`/rest/v1/project_releases?select=${SEL}&order=released_on.desc,created_at.desc&limit=500${scopeQuery()}`);
+    if(seq!==RL.seq)return;RL.items=rows||[];RL.loadedFor=key;
+  }catch(e){if(seq!==RL.seq)return;RL.error='Не удалось загрузить релизы: '+e.message}
+  RL.loading=false;render();
+}
+let searchTimer=null;
+function serverSearch(){
+  clearTimeout(searchTimer);
+  const p=parseQuery(RL.q);
+  if(!signedIn()||!p.words.join(' ').trim()||p.words.join('').length<3){if(RL.extra.size){RL.extra=new Set();render()}return}
+  searchTimer=setTimeout(async()=>{
+    const q=p.words.join(' '),seq=++RL.seq;
+    try{
+      const rows=await cloudRequest(`/rest/v1/project_releases?select=id&search=wfts(russian).${encodeURIComponent(q)}&limit=200${scopeQuery()}`);
+      if(seq!==RL.seq)return;RL.extra=new Set((rows||[]).map(r=>r.id));render(true);
+    }catch(e){console.warn('Release text search failed',e)}
+  },350);
+}
+const safeName=n=>String(n||'file').normalize('NFKD').replace(/[^A-Za-z0-9._-]+/g,'_').replace(/^_+|_+$/g,'').slice(-80)||'file';
+async function uploadFile(file){
+  const path=`${uid()}/${Math.random().toString(36).slice(2,10)}${Date.now().toString(36)}/${safeName(file.name)}`;
+  const res=await fetch(`${CLOUD_URL}/storage/v1/object/project-releases/${path.split('/').map(encodeURIComponent).join('/')}`,{method:'POST',headers:cloudHeaders({'Content-Type':file.type||'application/octet-stream','x-upsert':'false'}),body:file});
+  if(!res.ok){let m='';try{m=(await res.json()).message}catch(e){}throw new Error(m||'Не удалось загрузить файл ('+res.status+')')}
+  return path;
+}
+async function removeFile(path){if(!path)return;try{await fetch(`${CLOUD_URL}/storage/v1/object/project-releases/${path.split('/').map(encodeURIComponent).join('/')}`,{method:'DELETE',headers:cloudHeaders()})}catch(e){console.warn('File delete failed',e)}}
+async function signedUrl(path){
+  const r=await cloudRequest(`/storage/v1/object/sign/project-releases/${path.split('/').map(encodeURIComponent).join('/')}`,{method:'POST',body:JSON.stringify({expiresIn:300})});
+  const u=r?.signedURL||r?.signedUrl;if(!u)throw new Error('Нет ссылки на файл');
+  return CLOUD_URL+'/storage/v1'+(u.startsWith('/')?u:'/'+u);
+}
+
+/* ---- Отображение ---- */
+const root=()=>document.getElementById('releasesView');
+const changesList=c=>(c||[]).map(x=>typeof x==='string'?x:x.text||'').filter(Boolean);
+function cardHtml(it){
+  const open=RL.openId===it.id,ch=changesList(it.changes),proj=RL.all?`<span class="rl-chip rl-proj">${esc(it.project_name)}</span>`:'';
+  const hit=RL.extra.has(it.id)&&!haystack(it).includes(parseQuery(RL.q).words[0]||'\u0000')?'<span class="rl-chip rl-hit">найдено в тексте</span>':'';
+  if(RL.editId===it.id)return editHtml(it);
+  return`<article class="rl-card" data-rl-id="${esc(it.id)}"><div class="rl-date"><b>${esc(ruDate(it.released_on))}</b><span>${esc(longDate(it.released_on).replace(/^\d+ /,'').replace(/ \d{4}$/,''))}</span></div><div class="rl-body"><div class="rl-titlerow"><h4>${esc(it.title)}</h4>${it.version?`<span class="rl-chip">v${esc(it.version)}</span>`:''}${proj}${hit}</div>${it.summary?`<p class="rl-summary">${esc(it.summary)}</p>`:''}${(it.tags||[]).length?`<div class="rl-tags">${it.tags.map(t=>`<button type="button" class="rl-tag" data-rl-tag="${esc(t)}">#${esc(t)}</button>`).join('')}</div>`:''}${open?`${ch.length?`<ul class="rl-changes">${ch.map(c=>`<li>${esc(c)}</li>`).join('')}</ul>`:''}<div class="rl-actions">${it.file_path?`<button type="button" class="btn" data-rl-download="${esc(it.id)}">⬇ ${esc(it.file_name||'Файл')} <small>${esc(bytesLabel(it.file_size))}</small></button>`:''}<button type="button" class="btn" data-rl-edit="${esc(it.id)}">Править</button>${RL.confirmDel===it.id?`<button type="button" class="btn danger" data-rl-delete="${esc(it.id)}">Точно удалить?</button><button type="button" class="btn" data-rl-nodel="1">Отмена</button>`:`<button type="button" class="btn danger" data-rl-askdel="${esc(it.id)}">Удалить</button>`}</div>`:`<button type="button" class="rl-more" data-rl-open="${esc(it.id)}">${ch.length?`Изменения (${ch.length}) ▾`:'Подробнее ▾'}</button>`}</div></article>`;
+}
+function fieldsHtml(f,prefix){
+  return`<div class="rl-grid"><label>Название<input id="${prefix}Title" value="${esc(f.title)}" maxlength="300"></label><label>Дата релиза<input id="${prefix}Date" type="date" value="${esc(f.date)}"></label><label>Версия<input id="${prefix}Version" value="${esc(f.version)}" maxlength="60" placeholder="например 2.4.1"></label><label>Теги через запятую<input id="${prefix}Tags" value="${esc((f.tags||[]).join(', '))}"></label></div><label class="rl-wide">Краткое описание<textarea id="${prefix}Summary" rows="3" maxlength="4000">${esc(f.summary)}</textarea></label><label class="rl-wide">Что изменилось (каждый пункт с новой строки)<textarea id="${prefix}Changes" rows="5">${esc((f.changes||[]).join('\n'))}</textarea></label>`;
+}
+function readFields(prefix){
+  const v=id=>document.getElementById(prefix+id)?.value||'';
+  return{title:v('Title').trim(),released_on:v('Date')||isoDate(new Date()),version:v('Version').trim(),summary:v('Summary').trim(),changes:v('Changes').split('\n').map(s=>s.trim()).filter(Boolean).slice(0,60),tags:[...new Set(v('Tags').split(/[,;\n]/).map(s=>s.trim().replace(/^#/,'')).filter(Boolean))].slice(0,30)};
+}
+function editHtml(it){
+  return`<article class="rl-card rl-edit" data-rl-id="${esc(it.id)}"><div class="rl-form">${fieldsHtml({title:it.title,date:it.released_on,version:it.version,summary:it.summary,changes:changesList(it.changes),tags:it.tags},'rlE')}<div class="rl-actions"><button type="button" class="btn primary" data-rl-saveedit="${esc(it.id)}">Сохранить</button><button type="button" class="btn" data-rl-canceledit="1">Отмена</button></div></div></article>`;
+}
+function draftHtml(){
+  const d=RL.draft;
+  if(!d)return`<div class="rl-add"><button type="button" class="btn primary" data-rl-new="1">＋ Добавить релиз</button></div>`;
+  if(!d.analyzed)return`<div class="rl-form rl-new"><h4>Новый релиз</h4><p class="mini">Загрузите презентацию (.pptx), документ (.docx), текстовый файл или вставьте текст — карточка заполнится сама, перед сохранением её можно поправить.</p><label class="rl-file">Файл<input id="rlFile" type="file" accept=".pptx,.docx,.txt,.md,.pdf"></label><div class="rl-fname mini">${d.file?esc(d.file.name)+' · '+esc(bytesLabel(d.file.size)):''}</div><label class="rl-wide">Или вставьте текст<textarea id="rlPaste" rows="5" placeholder="Текст релиза, заметки, описание">${esc(d.text||'')}</textarea></label>${d.error?`<div class="rl-error">${esc(d.error)}</div>`:''}<div class="rl-actions"><button type="button" class="btn primary" data-rl-analyze="1"${RL.busy?' disabled':''}>${RL.busy?'Разбираем…':'Заполнить карточку'}</button><button type="button" class="btn" data-rl-cancel="1">Отмена</button></div></div>`;
+  return`<div class="rl-form rl-new"><h4>Карточка релиза</h4>${d.note?`<p class="mini">${esc(d.note)}</p>`:''}${d.file?`<div class="mini">Файл: ${esc(d.file.name)} · ${esc(bytesLabel(d.file.size))}</div>`:''}${fieldsHtml(d.fields,'rlN')}${d.error?`<div class="rl-error">${esc(d.error)}</div>`:''}<div class="rl-actions"><button type="button" class="btn primary" data-rl-save="1"${RL.busy?' disabled':''}>${RL.busy?'Сохраняем…':'Сохранить релиз'}</button><button type="button" class="btn" data-rl-cancel="1">Отмена</button></div></div>`;
+}
+function render(keepFocus){
+  const el=root();if(!el)return;
+  const focusId=keepFocus&&document.activeElement?.id==='rlSearch'?'rlSearch':'';const selStart=focusId?document.activeElement.selectionStart:0;
+  const p=active();
+  if(!signedIn()){el.innerHTML=`<div class="viewhead"><div><h3>Релизы проекта</h3></div></div><p class="mini">Релизы хранятся в облаке. Войдите в аккаунт, чтобы загружать презентации и тексты и искать по ним.</p>`;return}
+  const list=visibleItems();
+  el.innerHTML=`<div class="viewhead"><div><h3>Релизы ${RL.all?'всех проектов':'проекта'}</h3><div class="mini">${RL.all?'Все доступные вам проекты':`Проект «${esc(p?.name||'')}»${p?.shared?' · видят все участники':''}`}. Загрузите презентацию или текст — карточка и поиск по дате появятся сами.</div></div></div>${draftHtml()}<div class="rl-search"><input id="rlSearch" type="search" placeholder="Поиск: слова, «октябрь 2026», 15.10.2026, версия, тег" value="${esc(RL.q)}" autocomplete="off"><label class="rl-all"><input id="rlAll" type="checkbox"${RL.all?' checked':''}> по всем проектам</label></div>${RL.error?`<div class="rl-error">${esc(RL.error)} <button type="button" class="btn" data-rl-reload="1">Повторить</button></div>`:''}${RL.loading?'<p class="mini">Загружаем…</p>':list.length?`<div class="rl-list">${list.map(cardHtml).join('')}</div><p class="mini rl-count">Показано ${list.length} из ${RL.items.length}</p>`:`<p class="mini rl-empty">${RL.items.length?'Ничего не найдено. Попробуйте другие слова или дату.':'Релизов пока нет — добавьте первый.'}</p>`}`;
+  if(focusId){const s=document.getElementById('rlSearch');s.focus();try{s.setSelectionRange(selStart,selStart)}catch(e){}}
+}
+
+/* ---- Действия ---- */
+async function analyze(){
+  const d=RL.draft;if(!d||RL.busy)return;
+  const pasted=(document.getElementById('rlPaste')?.value||'').trim();d.text=pasted;
+  if(!d.file&&!pasted){d.error='Выберите файл или вставьте текст';render();return}
+  RL.busy=true;d.error='';render();
+  try{
+    let text=pasted,note='';
+    if(d.file){const r=await extractText(d.file);if(r.note)note=r.note;text=[r.text,pasted].filter(Boolean).join('\n\n')}
+    if(text.length>400000){text=text.slice(0,400000);note=(note?note+' ':'')+'Текст очень длинный: для поиска сохранены первые 400 000 символов.'}
+    const card=buildCard(text,d.file?.name,d.file?.lastModified);
+    d.text=text;d.note=note;d.fields={title:card.title,date:card.date,version:card.version,summary:card.summary,changes:card.changes,tags:card.tags};d.analyzed=true;
+  }catch(e){d.error=e.message||String(e)}
+  RL.busy=false;render();
+}
+async function saveDraft(){
+  const d=RL.draft;if(!d||RL.busy)return;
+  const f=readFields('rlN');if(!f.title){d.error='Введите название';d.fields={...d.fields,...f,date:f.released_on};render();return}
+  RL.busy=true;d.error='';d.fields={title:f.title,date:f.released_on,version:f.version,summary:f.summary,changes:f.changes,tags:f.tags};render();
+  let path=null;
+  try{
+    if(d.file)path=await uploadFile(d.file);
+    const p=active();
+    const row={...f,content:d.text||'',project_name:p.name,shared_project_id:p.shared?.id||null};
+    if(d.file){row.file_path=path;row.file_name=d.file.name.slice(0,300);row.file_type=(d.file.type||'').slice(0,120)||null;row.file_size=d.file.size}
+    const res=await cloudRequest('/rest/v1/project_releases?select='+SEL,{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(row)});
+    const saved=Array.isArray(res)?res[0]:res;
+    if(saved)RL.items=[saved,...RL.items].sort((a,b)=>String(b.released_on).localeCompare(String(a.released_on)));
+    RL.draft=null;RL.openId=saved?.id||null;toast('Релиз сохранён');
+  }catch(e){if(path)removeFile(path);d.error='Не удалось сохранить: '+e.message}
+  RL.busy=false;render();
+}
+async function saveEdit(id){
+  const f=readFields('rlE');if(!f.title){toast('Введите название');return}
+  try{
+    const res=await cloudRequest('/rest/v1/project_releases?id=eq.'+encodeURIComponent(id)+'&select='+SEL,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify(f)});
+    const row=Array.isArray(res)?res[0]:res;if(!row)throw new Error('нет прав или релиз удалён');
+    RL.items=RL.items.map(x=>x.id===id?row:x).sort((a,b)=>String(b.released_on).localeCompare(String(a.released_on)));RL.editId=null;toast('Изменения сохранены');
+  }catch(e){toast('Не удалось сохранить: '+e.message)}
+  render();
+}
+async function deleteRelease(id){
+  const it=RL.items.find(x=>x.id===id);if(!it)return;
+  try{
+    const res=await cloudRequest('/rest/v1/project_releases?id=eq.'+encodeURIComponent(id)+'&select=id',{method:'DELETE',headers:{Prefer:'return=representation'}});
+    if(Array.isArray(res)&&!res.length)throw new Error('нет прав');
+    await removeFile(it.file_path);RL.items=RL.items.filter(x=>x.id!==id);RL.confirmDel=null;RL.openId=null;toast('Релиз удалён');
+  }catch(e){toast('Не удалось удалить: '+e.message)}
+  render();
+}
+async function download(id){
+  const it=RL.items.find(x=>x.id===id);if(!it?.file_path)return;
+  try{const url=await signedUrl(it.file_path);const a=document.createElement('a');a.href=url;a.download=it.file_name||'';a.rel='noopener';document.body.appendChild(a);a.click();a.remove()}catch(e){toast('Не удалось получить файл: '+e.message)}
+}
+document.addEventListener('click',e=>{
+  const el=root();if(!el||!el.contains(e.target))return;
+  const t=e.target.closest('button');if(!t)return;const ds=t.dataset;
+  if('rlNew' in ds){RL.draft={file:null,text:'',analyzed:false};render()}
+  else if('rlCancel' in ds){RL.draft=null;render()}
+  else if('rlAnalyze' in ds)analyze();
+  else if('rlSave' in ds)saveDraft();
+  else if('rlOpen' in ds){RL.openId=ds.rlOpen;render()}
+  else if('rlEdit' in ds){RL.editId=ds.rlEdit;render()}
+  else if('rlCanceledit' in ds){RL.editId=null;render()}
+  else if('rlSaveedit' in ds)saveEdit(ds.rlSaveedit);
+  else if('rlAskdel' in ds){RL.confirmDel=ds.rlAskdel;render()}
+  else if('rlNodel' in ds){RL.confirmDel=null;render()}
+  else if('rlDelete' in ds)deleteRelease(ds.rlDelete);
+  else if('rlDownload' in ds)download(ds.rlDownload);
+  else if('rlReload' in ds)loadReleases(true);
+  else if('rlTag' in ds){RL.q=ds.rlTag;render();serverSearch()}
+});
+document.addEventListener('input',e=>{
+  if(e.target?.id==='rlSearch'){RL.q=e.target.value;render(true);serverSearch()}
+});
+document.addEventListener('change',e=>{
+  if(e.target?.id==='rlAll'){RL.all=e.target.checked;RL.openId=null;loadReleases(true)}
+  else if(e.target?.id==='rlFile'&&RL.draft){RL.draft.file=e.target.files[0]||null;RL.draft.text=document.getElementById('rlPaste')?.value||'';RL.draft.error='';render()}
+});
+/* ---- Подключение к навигации ---- */
+const origSwitch=window.switchView;
+window.switchView=function(view){
+  const r=origSwitch.apply(this,arguments);
+  const el=root();if(!el)return r;
+  const on=activeView==='releases';el.hidden=!on;
+  if(on){$('viewFooter').textContent='Презентации и тексты релизов · карточка заполняется сама · поиск по словам и датам';$('projectHeader').hidden=false;render();loadReleases(false)}
+  return r;
+};
+const origRenderAll=window.renderAll;
+window.renderAll=function(){const r=origRenderAll.apply(this,arguments);if(activeView==='releases'&&root()&&RL.loadedFor&&!RL.all&&RL.loadedFor.split('|')[0]!==activeProject)loadReleases(false);return r};
+window.__releasesApi={buildCard,parseQuery,extractText,matchesDate,visibleItems};
 })();
 </script></body></html>
