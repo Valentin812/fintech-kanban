@@ -986,6 +986,18 @@ body[data-theme="cappuccino"] .project.active{border-color:#8a6240}body[data-the
 .draweractions{flex-wrap:wrap}
 .draweractions .autosave-note{flex:1 1 100%;order:9}
 .draweractions .btn{flex:0 1 auto}
+
+/* Task attachments */
+.attach-box{margin:10px 0}
+.attach-box>label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+.attach-list{display:grid;gap:10px}
+.attach-item{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;min-width:0}
+.attach-thumb{display:block;border:1px solid var(--line);border-radius:10px;overflow:hidden;max-width:220px;background:rgba(127,127,127,.06)}
+.attach-thumb img{display:block;max-width:220px;max-height:160px;object-fit:contain}
+.attach-audio{display:grid;gap:4px;min-width:0;flex:1 1 260px}
+.attach-audio audio{width:100%;max-width:360px}
+.attach-meta{display:flex;flex-direction:column;gap:2px;min-width:0}
+.attach-meta .mini{overflow-wrap:anywhere}
 </style></head><body>
 <div class="auth-screen show" id="authScreen"><div class="auth-card"><div class="auth-brand">FinTech Kanban<span>Центр управления проектами и задачами</span></div><div class="auth-tabs"><button class="auth-tab active" id="authLoginTab" type="button">Вход</button><button class="auth-tab" id="authSignupTab" type="button">Регистрация</button></div><h2 id="authHeading">С возвращением</h2><p class="auth-description" id="authDescription">Войди, чтобы открыть свои проекты и задачи.</p><div class="field"><label for="authEmail">Email</label><input id="authEmail" type="email" autocomplete="username" placeholder="name@example.com"></div><div class="field"><label for="authPassword">Пароль</label><input id="authPassword" type="password" autocomplete="current-password" placeholder="Не менее 8 символов, буквы и цифры"></div><button class="btn primary auth-submit" id="authSubmit" type="button">Войти</button><button class="btn auth-submit" id="authReset" type="button" style="margin-top:10px">Забыли пароль?</button><div class="auth-status" id="authStatus" role="status" aria-live="polite"></div><div class="auth-foot">Ваши данные доступны только в вашей учётной записи.</div></div></div>
 <div class="app" hidden><nav id="mobileBar" aria-label="Основная навигация"><button type="button" data-mb="home"><span class="mb-icon" aria-hidden="true">⌂</span>Главная</button><button type="button" data-mb="tasks"><span class="mb-icon" aria-hidden="true">▦</span>Доска</button><button type="button" class="mb-add" data-mb="add" aria-label="Новая задача"><span class="mb-icon" aria-hidden="true">+</span></button><button type="button" data-mb="mytasks"><span class="mb-icon" aria-hidden="true">☰</span>Мои задачи<span class="mb-count" id="mbCount"></span></button><button type="button" data-mb="more" aria-expanded="false"><span class="mb-icon" aria-hidden="true">⋯</span>Ещё<span class="mb-count mb-dot" id="mbDot" hidden></span></button></nav><aside class="sidebar"><div class="brand">Канбан проектов</div><button class="home-nav" id="homeNav" data-view="home"><span aria-hidden="true">⌂</span> Главная</button><button class="sidebar-inbox" id="standaloneNav" data-view="inbox" hidden style="display:none">Задачи без проектов <span id="standaloneCount"></span></button><button class="sidebar-inbox" id="myTasksNav" data-view="mytasks">Мои задачи <span id="myTasksCount"></span></button><div class="sidehead"><span>ПРОЕКТЫ</span><div class="side-actions"><button id="newProject" title="Создать проект" aria-label="Создать проект">＋</button><button id="exportBtn" title="Экспорт данных">↥</button><button id="importBtn" title="Импорт задач из JSON">↧</button><input id="importFile" type="file" accept=".json,application/json" hidden><button id="projectToTask" title="Преобразовать выбранный проект в задачу">⇢</button><button id="deleteProject" title="Удалить выбранный проект" aria-label="Удалить выбранный проект"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 10v6M14 10v6"/></svg></button></div></div><div class="sidebar-transform-hint">Преобразовать проект в задачу</div><div id="projects"></div></aside>
@@ -1206,10 +1218,10 @@ function normProjectName(v){return String(v||'').toLocaleLowerCase('ru').replace
 function matchProjectName(hint,names){const h=normProjectName(hint);if(!h)return null;const unique=[...new Set(names)];const exact=unique.filter(n=>normProjectName(n)===h);if(exact.length===1)return exact[0];for(const test of [n=>normProjectName(n).startsWith(h),n=>normProjectName(n).includes(h)]){const found=unique.filter(test);if(found.length===1)return found[0];if(found.length>1)return null}return null}
 function freshTaskId(){const used=new Set([...data.flatMap(p=>(p.tasks||[]).map(t=>Number(t.id))),...(standaloneTasks||[]).map(t=>Number(t.id))]);let id=Date.now();while(used.has(id))id++;return id}
 async function importTelegramInbox(){if(telegramImporting||!cloudSession?.access_token||!cloudStateReady)return;telegramImporting=true;try{
- const rows=await cloudRequest('/rest/v1/telegram_inbox?select=id,title,description,due,project_hint,created_at&consumed_at=is.null&order=created_at.asc&limit=50',{method:'GET'});if(!Array.isArray(rows)||!rows.length)return;
+ const holdUntil=new Date(Date.now()-10*60000).toISOString();const rows=await cloudRequest(`/rest/v1/telegram_inbox?select=id,title,description,due,project_hint,created_at,attachment,status&consumed_at=is.null&or=(status.eq.ready,created_at.lt.${encodeURIComponent(holdUntil)})&order=created_at.asc&limit=50`,{method:'GET'});if(!Array.isArray(rows)||!rows.length)return;
  const owner=myDisplayName();const added=[];
  for(const row of rows){let claimed;try{claimed=await cloudRequest(`/rest/v1/telegram_inbox?id=eq.${encodeURIComponent(row.id)}&consumed_at=is.null`,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({consumed_at:new Date().toISOString()})})}catch(err){console.warn('Telegram inbox claim failed',err);continue}if(!Array.isArray(claimed)||!claimed.length)continue;
-  const when=new Date(row.created_at||Date.now()).toLocaleString('ru-RU');const task={id:freshTaskId(),title:String(row.title||'Задача из Telegram'),start:'',end:row.due?normalizeDateText(row.due):'',status:'Очередь',owner,description:String(row.description||''),comment:`${when} — Создано из Telegram`,link:'',mt:'',documents:[],extraLinks:[],source:'telegram'};
+  const when=new Date(row.created_at||Date.now()).toLocaleString('ru-RU');const task={id:freshTaskId(),title:String(row.title||'Задача из Telegram'),start:'',end:row.due?normalizeDateText(row.due):'',status:'Очередь',owner,description:String(row.description||''),comment:`${when} — Создано из Telegram`,link:'',mt:'',documents:[],extraLinks:[],source:'telegram'};if(row.attachment&&typeof row.attachment==='object'&&row.attachment.path)task.attachments=[{path:String(row.attachment.path),name:String(row.attachment.name||''),type:String(row.attachment.type||''),size:Number(row.attachment.size)||0,kind:row.attachment.kind==='voice'?'voice':'image'}];
   const projectName=row.project_hint?matchProjectName(row.project_hint,data.map(p=>p.name)):null;const project=projectName?data.find(p=>p.name===projectName):null;
   if(project){const meta=projectMeta[project.name]||{};const all=[...defaultStatuses(),...(meta.extraStatuses||[])];const order=Array.isArray(meta.statusOrder)?meta.statusOrder.filter(x=>all.includes(x)):[];task.status=[...order,...all.filter(x=>!order.includes(x))][0]||'Очередь';project.tasks.push(task)}else standaloneTasks.push(task);
   added.push({title:task.title,where:project?project.name:'Мои задачи'})}
@@ -1664,6 +1676,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.10.26-11',date:'26.10.2026',title:'Telegram: картинка в задаче, выбор проекта, голосовые',items:['Скриншот или фото из Telegram теперь прикладывается к задаче — его видно в панели задачи','Бот спрашивает кнопками, в какой проект положить задачу; без ответа через 10 минут она попадёт в «Мои задачи»','Голосовые сообщения бот расшифровывает и делает из них задачу, запись тоже прикладывается','Вложения видят только вы и участники проекта, где лежит задача']},
  {v:'2026.10.26-7',date:'26.10.2026',title:'Комментарии: правка, удаление, ссылки',items:['Комментарий можно изменить или удалить прямо в панели задачи','Ссылки в комментариях стали кликабельными']},
  {v:'2026.10.26-6',date:'26.10.2026',title:'Релизы по проектам',items:['Новая вкладка «Релизы»: загрузите презентацию (.pptx), документ (.docx) или текст — карточка заполнится сама','Поиск по словам, версии, тегам и по дате: «октябрь 2026», 15.10.2026, 2026','Файл хранится в облаке, релизы видят все участники проекта']},
  {v:'2026.10.26-5',date:'26.10.2026',title:'Задачи: ответственный, название, панель',items:['При создании задачи работает выбор ответственного из списка','Название задачи в панели можно править: нажмите на него, Enter сохраняет, Esc отменяет','Кнопки панели задачи переносятся на новую строку, панель больше не уезжает вправо']},
@@ -2075,5 +2088,34 @@ window.switchView=function(view){
 const origRenderAll=window.renderAll;
 window.renderAll=function(){const r=origRenderAll.apply(this,arguments);if(activeView==='releases'&&root()&&RL.loadedFor&&!RL.all&&RL.loadedFor.split('|')[0]!==activeProject)loadReleases(false);return r};
 window.__releasesApi={buildCard,parseQuery,extractText,matchesDate,visibleItems};
+})();
+/* ===== Вложения задач (картинки и голосовые из Telegram) ===== */
+(function(){
+const urlCache=new Map();
+const objPath=p=>String(p).split('/').map(encodeURIComponent).join('/');
+async function signed(path){
+  const hit=urlCache.get(path);if(hit&&hit.until>Date.now())return hit.url;
+  const r=await cloudRequest(`/storage/v1/object/sign/task-files/${objPath(path)}`,{method:'POST',body:JSON.stringify({expiresIn:3600})});
+  const u=r?.signedURL||r?.signedUrl;if(!u)throw new Error('нет доступа к файлу');
+  const url=CLOUD_URL+'/storage/v1'+(u.startsWith('/')?u:'/'+u);urlCache.set(path,{url,until:Date.now()+50*60000});return url;
+}
+const host=()=>{let el=$('dAttachments');if(!el){const desc=$('dDescription')?.closest('.field');if(!desc)return null;el=document.createElement('div');el.id='dAttachments';el.className='attach-box';desc.after(el)}return el};
+function render(){
+  const el=host();if(!el)return;const t=currentDrawerTask();const list=(t&&Array.isArray(t.attachments))?t.attachments.filter(a=>a&&a.path):[];
+  if(!list.length){el.hidden=true;el.innerHTML='';return}
+  el.hidden=false;
+  el.innerHTML=`<label>Вложения</label><div class="attach-list">${list.map((a,i)=>`<div class="attach-item" data-att="${i}">${a.kind==='voice'||String(a.type).startsWith('audio/')?`<div class="attach-audio"><span>🎙 ${esc(a.name||'Голосовое')}</span><audio controls preload="none" data-att-src="${i}"></audio></div>`:`<a class="attach-thumb" data-att-open="${i}" href="#" title="Открыть в полном размере"><img alt="${esc(a.name||'Картинка')}" data-att-src="${i}"></a>`}<div class="attach-meta"><span class="mini">${esc(a.name||'')}</span><button type="button" class="cm-btn" data-att-download="${i}">Скачать</button><button type="button" class="cm-btn" data-att-remove="${i}">Убрать из задачи</button></div></div>`).join('')}</div><div class="mini attach-note" hidden></div>`;
+  if(!cloudSession?.access_token){el.querySelector('.attach-note').hidden=false;el.querySelector('.attach-note').textContent='Войдите в аккаунт, чтобы увидеть вложения.';return}
+  list.forEach((a,i)=>{const node=el.querySelector(`[data-att-src="${i}"]`);signed(a.path).then(u=>{if(node.isConnected)node.src=u}).catch(err=>{const n=el.querySelector('.attach-note');if(n){n.hidden=false;n.textContent='Не удалось открыть вложение: '+err.message}})});
+}
+window.renderTaskAttachments=render;
+['openTask','openStandaloneTask'].forEach(name=>{const o=window[name];if(typeof o!=='function')return;window[name]=function(){const r=o.apply(this,arguments);try{render()}catch(e){console.warn('Attachments render failed',e)}return r}});
+document.addEventListener('click',async e=>{
+  const b=e.target.closest?.('#dAttachments [data-att-open],#dAttachments [data-att-download],#dAttachments [data-att-remove]');if(!b)return;e.preventDefault();
+  const t=currentDrawerTask();if(!t||!Array.isArray(t.attachments))return;
+  const i=Number(b.dataset.attOpen??b.dataset.attDownload??b.dataset.attRemove);const a=t.attachments[i];if(!a)return;
+  if(b.dataset.attRemove!==undefined){const [gone]=t.attachments.splice(i,1);if(!t.attachments.length)delete t.attachments;save();render();refreshAfterTaskChange();undoToast('Вложение убрано из задачи',()=>{t.attachments=t.attachments||[];t.attachments.splice(i,0,gone);save();render();refreshAfterTaskChange()});return}
+  try{const u=await signed(a.path);if(b.dataset.attOpen!==undefined){window.open(u,'_blank','noopener')}else{const l=document.createElement('a');l.href=u+(u.includes('?')?'&':'?')+'download='+encodeURIComponent(a.name||'file');l.rel='noopener';document.body.appendChild(l);l.click();l.remove()}}catch(err){toast('Не удалось открыть файл: '+err.message)}
+});
 })();
 </script></body></html>
