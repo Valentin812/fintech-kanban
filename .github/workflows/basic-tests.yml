@@ -67,6 +67,8 @@ jobs:
 
       - name: Run quick notes browser test
         run: node tests/quick-notes.mjs
+      - name: Run hover card and save/cancel browser test
+        run: node tests/hover-save.mjs
 
       - name: Run Telegram message parser test
         run: node --experimental-strip-types tests/telegram-parse.mjs
