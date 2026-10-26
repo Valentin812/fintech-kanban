@@ -125,10 +125,30 @@ try {
   await page.locator('[data-quick-filter="mine"]').click();
   await page.locator('#toolbarToggle').click();
 
-  // Typing hides the bar so it never covers the keyboard.
+  // Stability: a focused select must never hide the bar; only a real on-screen keyboard does.
+  await page.locator('#toolbarToggle').click();
+  await page.locator('#sortFilter').selectOption('date');
+  await page.locator('#sortFilter').focus();
+  assert(await page.locator('#mobileBar').isVisible(), 'A focused select must not hide the bottom bar');
+  await page.locator('#toolbarToggle').click();
   await page.locator('#taskSearch').focus();
-  assert(await page.locator('#mobileBar').isHidden(), 'Bar should hide while typing');
+  assert(await page.locator('#mobileBar').isVisible(), 'Focus alone (no keyboard) must not hide the bottom bar');
+  await page.setViewportSize({ width: 390, height: 440 });
+  await page.waitForFunction(() => document.documentElement.classList.contains('kb-open'));
+  assert(await page.locator('#mobileBar').isHidden(), 'Bar should hide while the keyboard is open');
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.locator('#taskSearch').blur();
+  await page.waitForFunction(() => !document.documentElement.classList.contains('kb-open'));
+  assert(await page.locator('#mobileBar').isVisible(), 'Bar returns when the keyboard closes');
+
+  // The «Ещё» menu never traps the user: navigation closes it and the bar stays usable.
+  await page.locator('#mobileBar [data-mb="more"]').click();
+  await page.locator('#globalSearch').waitFor({ state: 'visible' });
+  assert(await page.locator('#mobileBar').isVisible(), 'Bar stays visible while «Ещё» is open');
+  await page.locator('#mobileBar [data-mb="mytasks"]').click();
+  await page.locator('#globalSearch').waitFor({ state: 'hidden' });
+  assert(await page.evaluate(() => activeView) === 'mytasks', 'Navigation works from the open «Ещё» menu');
+  await page.locator('#mobileBar [data-mb="tasks"]').click();
 
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'No horizontal page scroll on a phone');
   assert(!phone.unexpected.length, `Unexpected requests: ${phone.unexpected.join('; ')}`);
