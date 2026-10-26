@@ -691,7 +691,7 @@ async function handleTaskMessage(chatId: number, providerUserId: string, text: s
   }
   const userId = await authorize(chatId, providerUserId);
   if (!userId) return;
-  await saveTask(chatId, userId, parseTaskText(text), "✅ Задача");
+  await saveTask(chatId, userId, parseTaskText(text), "✅ Задача", { askProject: true });
 }
 
 async function handleImageMessage(chatId: number, providerUserId: string, fileId: string, caption: string) {
