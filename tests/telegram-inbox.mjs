@@ -47,7 +47,12 @@ let inbox = [
   { id: 2, title: 'Отчёт по тарифам', description: '', due: '30.10', project_hint: 'автооплата', created_at: new Date().toISOString(), consumed_at: null },
   { id: 3, title: 'Неоднозначный проект', description: '', due: '', project_hint: 'мобильн', created_at: new Date().toISOString(), consumed_at: null },
   { id: 4, title: 'Уже забрана другой вкладкой', description: '', due: '', project_hint: '', created_at: new Date().toISOString(), consumed_at: null, claimedElsewhere: true },
+  { id: 5, title: 'Ждёт выбора проекта', description: '', due: '', project_hint: '', created_at: new Date().toISOString(), consumed_at: null, status: 'pending' },
+  { id: 6, title: 'Давно ждёт выбора', description: '', due: '', project_hint: '', created_at: new Date(Date.now() - 11 * 60000).toISOString(), consumed_at: null, status: 'pending' },
+  { id: 7, title: 'Скриншот счёта', description: 'Текст', due: '', project_hint: '', created_at: new Date().toISOString(), consumed_at: null, status: 'ready', attachment: { path: '00000000-0000-4000-8000-000000000001/abc/screenshot-1.jpg', name: 'screenshot-1.jpg', type: 'image/jpeg', size: 1200, kind: 'image' } },
+  { id: 8, title: 'Голосовое', description: 'Расшифровка', due: '', project_hint: '', created_at: new Date().toISOString(), consumed_at: null, status: 'ready', attachment: { path: '00000000-0000-4000-8000-000000000001/def/voice-1.oga', name: 'voice-1.oga', type: 'audio/ogg', size: 4000, kind: 'voice' } },
 ];
+const signed = [];
 
 try {
   const page = await browser.newPage({ viewport: { width: 1300, height: 900 } });
@@ -71,7 +76,10 @@ try {
       return route.fulfill({ status: 201, body: '' });
     }
     if (url.pathname === '/rest/v1/telegram_inbox' && request.method() === 'GET') {
-      return ok(inbox.filter((r) => !r.consumed_at).map(({ claimedElsewhere, consumed_at, ...r }) => r));
+      const or = url.searchParams.get('or') || '';
+      const hold = (or.match(/created_at\.lt\.([^)]+)\)/) || [])[1];
+      assert(or.startsWith('(status.eq.ready,') && hold, 'Pending rows must be held back: ' + or);
+      return ok(inbox.filter((r) => !r.consumed_at && ((r.status || 'ready') === 'ready' || r.created_at < hold)).map(({ claimedElsewhere, consumed_at, ...r }) => r));
     }
     if (url.pathname === '/rest/v1/telegram_inbox' && request.method() === 'PATCH') {
       const id = Number(url.searchParams.get('id').replace('eq.', ''));
@@ -84,6 +92,11 @@ try {
       row.consumed_at = request.postDataJSON().consumed_at;
       return ok([row]);
     }
+    if (url.pathname.startsWith('/storage/v1/object/sign/task-files/')) {
+      signed.push(decodeURIComponent(url.pathname.split('/task-files/')[1]));
+      return ok({ signedURL: '/object/sign/task-files/x?token=t' });
+    }
+    if (url.pathname.startsWith('/storage/v1/object/sign/task-files/x')) return route.fulfill({ status: 200, contentType: 'image/png', body: Buffer.from('89504e470d0a1a0a', 'hex') });
     if (['/rest/v1/notifications', '/rest/v1/kanban_profiles', '/rest/v1/messenger_accounts', '/rest/v1/shared_projects', '/rest/v1/kanban_avatars'].includes(url.pathname)) return ok([]);
     unexpected.push(`${request.method()} ${url.pathname}`);
     return ok({ error: 'Unexpected mocked request' }, 501);
@@ -91,7 +104,7 @@ try {
   await page.addInitScript((saved) => localStorage.setItem('fintech-kanban-session', JSON.stringify(saved)), session);
   await page.goto(`${origin}/`);
   await page.locator('.app').waitFor({ state: 'visible' });
-  await page.waitForFunction(() => standaloneTasks.length >= 2, null, { timeout: 8000 });
+  await page.waitForFunction(() => standaloneTasks.some((t) => t.title === 'Голосовое') && standaloneTasks.some((t) => t.title === 'Давно ждёт выбора'), null, { timeout: 8000 });
 
   const result = await page.evaluate(() => ({
     standalone: standaloneTasks.map((t) => ({ title: t.title, owner: t.owner, end: t.end, description: t.description, source: t.source, comment: t.comment })),
@@ -106,7 +119,25 @@ try {
     `#hint should place the task into the matching project, first column: ${JSON.stringify(report)}`);
   assert(result.standalone.some((t) => t.title === 'Неоднозначный проект'), 'An ambiguous #hint falls back to «Мои задачи»');
   assert(!JSON.stringify(result).includes('Уже забрана другой вкладкой'), 'A row claimed by another tab must not be imported twice');
-  assert(inbox.every((r) => r.consumed_at), 'All rows should be consumed');
+  assert(inbox.filter((r) => r.id !== 5).every((r) => r.consumed_at), 'All ready rows should be consumed: ' + JSON.stringify(inbox.filter((r) => r.id !== 5 && !r.consumed_at).map((r) => r.id)));
+  assert(!inbox.find((r) => r.id === 5).consumed_at && !JSON.stringify(result).includes('Ждёт выбора проекта'), 'A fresh pending row waits for the project choice');
+  assert(result.standalone.some((t) => t.title === 'Давно ждёт выбора'), 'A pending row older than 10 minutes is imported anyway');
+  // Attachments come with the task and are shown in the drawer.
+  const shot = await page.evaluate(() => standaloneTasks.find((t) => t.title === 'Скриншот счёта'));
+  assert(shot.attachments?.[0]?.path?.endsWith('screenshot-1.jpg') && shot.attachments[0].kind === 'image', 'Image attachment is kept on the task: ' + JSON.stringify(shot.attachments));
+  await page.evaluate((id) => openStandaloneTask(id), shot.id);
+  await page.locator('#dAttachments img[src*="token=t"]').waitFor({ timeout: 4000 });
+  assert(signed.includes('00000000-0000-4000-8000-000000000001/abc/screenshot-1.jpg'), 'The file is opened through a signed link');
+  const voice = await page.evaluate(() => standaloneTasks.find((t) => t.title === 'Голосовое'));
+  await page.evaluate((id) => openStandaloneTask(id), voice.id);
+  await page.locator('#dAttachments audio[src*="token=t"]').waitFor({ timeout: 4000 });
+  await page.locator('#dAttachments [data-att-remove]').click();
+  assert(!(await page.evaluate((id) => standaloneTasks.find((t) => t.id === id).attachments?.length, voice.id)), 'Attachment can be removed from the task');
+  await page.locator('#undoToast button').click();
+  assert((await page.evaluate((id) => standaloneTasks.find((t) => t.id === id).attachments?.length, voice.id)) === 1, 'Undo brings the attachment back');
+  await page.evaluate(() => openStandaloneTask(standaloneTasks.find((t) => t.title === 'Позвонить в банк').id));
+  assert(await page.locator('#dAttachments').isHidden(), 'Tasks without files show no attachments block');
+  await page.evaluate(() => closeDrawer());
 
   await page.waitForTimeout(1200);
   const saved = writes.at(-1)?.state;
