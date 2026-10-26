@@ -67,6 +67,8 @@ try {
   assert(headerBottom.y < 170, `Header should be compact, toolbar starts at ${headerBottom.y}px`);
 
   const strip = page.locator('#statusStrip button');
+  const stripBox = await page.locator('#statusStrip').boundingBox(), firstBtn = await strip.first().boundingBox();
+  assert(stripBox.height >= firstBtn.height, `Column switcher must not be squeezed: ${stripBox.height} < ${firstBtn.height}`);
   assert(await strip.count() >= 3, 'Column switcher should list the columns');
   assert((await strip.first().textContent()).includes('1'), 'Column switcher shows task counts');
   const colWidth = (await page.locator('.column').first().boundingBox()).width;
