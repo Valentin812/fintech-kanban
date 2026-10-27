@@ -57,6 +57,7 @@ const HELP_TEXT =
   "• Срок: «до 25.10», «до 25.10.2026», «сегодня», «завтра» или «послезавтра».\n" +
   "• Проект: добавь #название, например #Автооплата.\n" +
   "• Быстрая заметка (дело на пару часов): /заметка текст или «заметка: текст».\n" +
+  "• Нумерованный список («1. … 2. … 3. …») — каждая строка станет отдельной задачей. С заголовком «Быстрые заметки» — отдельными заметками.\n" +
   "• Скриншот или фото: Джарвис распознает текст на картинке и сделает задачу (лучше отправлять как обычное фото, не файлом). Подпись к картинке — твой заголовок, #проект и срок тоже работают.\n" +
   "• Голосовое: Джарвис расшифрует его и сделает задачу, запись приложится к задаче.\n" +
   "• После картинки или голосового Джарвис спросит, в какой проект положить задачу.\n" +
@@ -545,6 +546,25 @@ async function describeImage(image: { data: string; mime: string }, caption: str
   return text ? parseImageReply(text) : null;
 }
 
+// A numbered list in one message ("1. … 2. … 3. …") is several items, not one task.
+// A heading «Быстрые заметки» / «Заметки» before the list makes them quick notes.
+export function parseListMessage(raw: string): { kind: "tasks" | "notes"; items: string[] } | null {
+  const lines = String(raw ?? "").replace(/\r\n?/g, "\n").split("\n");
+  const ITEM = /^\s*\d{1,2}[.)]\s+(\S.*)$/;
+  const first = lines.findIndex((l) => ITEM.test(l));
+  if (first < 0) return null;
+  const heading = lines.slice(0, first).join(" ").replace(/\s+/g, " ").trim();
+  const items: string[] = [];
+  for (const line of lines.slice(first)) {
+    const m = line.match(ITEM);
+    if (m) items.push(m[1].trim());
+    else if (line.trim() && items.length) items[items.length - 1] += " " + line.trim();
+  }
+  if (items.length < 2) return null;
+  const notes = /^(?:быстрые?\s+)?заметк[аи]\s*[:：—-]?$/i.test(heading);
+  return { kind: notes ? "notes" : "tasks", items: items.slice(0, 20) };
+}
+
 function normName(v: string) {
   return String(v ?? "").toLocaleLowerCase("ru").replace(/ё/g, "е").replace(/[^\p{L}\p{N}]+/gu, "");
 }
@@ -720,9 +740,69 @@ async function handleTaskMessage(chatId: number, providerUserId: string, text: s
       : "Сначала подключи аккаунт: в Kanban открой меню аккаунта → «Подключить Telegram» и отправь сюда код.");
     return;
   }
+  const list = parseListMessage(text);
+  if (list) {
+    await handleListMessage(chatId, providerUserId, list);
+    return;
+  }
   const userId = await authorize(chatId, providerUserId);
   if (!userId) return;
   await saveTask(chatId, userId, parseTaskText(text), "✅ Задача", { askProject: true });
+}
+
+async function handleListMessage(chatId: number, providerUserId: string, list: { kind: "tasks" | "notes"; items: string[] }) {
+  const userId = await authorize(chatId, providerUserId);
+  if (!userId) return;
+  if (list.kind === "notes") {
+    const rows = list.items.map((item) => ({
+      user_id: userId, title: item.replace(/\s+/g, " ").trim().slice(0, 300), description: "", due: "", project_hint: "__note__", attachment: null, status: "ready",
+    }));
+    const { error } = await db.from("telegram_inbox").insert(rows);
+    if (error) {
+      console.error("Notes insert failed:", error.message);
+      await sendMessage(chatId, "Не удалось сохранить заметки. Попробуй ещё раз позже.");
+      return;
+    }
+    await sendMessage(chatId, `📝 Заметок добавлено: ${rows.length}\n` + rows.map((r, i) => `${i + 1}. ${r.title}`).join("\n") + "\n\nПоявятся в «Быстрых заметках», как только приложение будет открыто.");
+    return;
+  }
+  const tasks = list.items.map((item) => parseTaskText(item));
+  const names = await projectNamesFor(userId);
+  const choices = [...new Set(names)].slice(0, MAX_PROJECT_BUTTONS);
+  const toRow = (t: typeof tasks[number], pending: boolean) => ({
+    user_id: userId, title: t.title, description: t.description, due: t.due, project_hint: t.projectHint, attachment: null,
+    ...(pending ? { status: "pending", choices, project_hint: "" } : {}),
+  });
+  const decided = tasks.filter((t) => t.projectHint || !choices.length);
+  const undecided = tasks.filter((t) => !t.projectHint && choices.length);
+  // Rows of one insert share created_at: that is how the button answer finds the whole list.
+  if (decided.length) {
+    const { error } = await db.from("telegram_inbox").insert(decided.map((t) => toRow(t, false)));
+    if (error) { console.error("List insert failed:", error.message); await sendMessage(chatId, "Не удалось создать задачи. Попробуй ещё раз позже."); return; }
+  }
+  let firstId: number | null = null;
+  if (undecided.length) {
+    const { data, error } = await db.from("telegram_inbox").insert(undecided.map((t) => toRow(t, true))).select("id").order("id", { ascending: true });
+    if (error || !data?.length) { console.error("List insert failed:", error?.message); await sendMessage(chatId, "Не удалось создать задачи. Попробуй ещё раз позже."); return; }
+    firstId = data[0].id;
+  }
+  const lines = tasks.map((t, i) => {
+    const hint = t.projectHint ? matchProject(t.projectHint, names).name : "";
+    return `${i + 1}. ${t.title}` + (t.due ? ` · срок ${t.due}` : "") + (hint ? ` → ${hint}` : "");
+  });
+  let text = `✅ Задач создано: ${tasks.length}\n` + lines.join("\n");
+  const extra: Record<string, unknown> = {};
+  if (firstId !== null) {
+    const buttons = choices.map((name, i) => ({ text: name.length > 40 ? name.slice(0, 39) + "…" : name, callback_data: `b:${firstId}:${i}` }));
+    const rows: { text: string; callback_data: string }[][] = [];
+    for (let i = 0; i < buttons.length; i += 2) rows.push(buttons.slice(i, i + 2));
+    rows.push([{ text: "📥 Оставить в «Мои задачи»", callback_data: `b:${firstId}:m` }]);
+    extra.reply_markup = { inline_keyboard: rows };
+    text += `\n\nВ какой проект добавить${decided.length ? " задачи без #проекта" : " их"}? Если не выбрать за 10 минут, они попадут в «Мои задачи».`;
+  } else {
+    text += "\n\nПоявятся в Kanban, как только приложение будет открыто.";
+  }
+  await sendMessage(chatId, text, extra);
 }
 
 async function handleImageMessage(chatId: number, providerUserId: string, fileId: string, caption: string) {
@@ -812,10 +892,10 @@ async function answerCallback(id: string, text: string) {
   }).catch(() => {});
 }
 
-export function parseProjectCallback(data: string): { inboxId: number; choice: number | "mine" } | null {
-  const m = String(data ?? "").match(/^p:(\d{1,18}):(m|\d{1,2})$/);
+export function parseProjectCallback(data: string): { inboxId: number; choice: number | "mine"; batch: boolean } | null {
+  const m = String(data ?? "").match(/^([pb]):(\d{1,18}):(m|\d{1,2})$/);
   if (!m) return null;
-  return { inboxId: Number(m[1]), choice: m[2] === "m" ? "mine" : Number(m[2]) };
+  return { inboxId: Number(m[2]), choice: m[3] === "m" ? "mine" : Number(m[3]), batch: m[1] === "b" };
 }
 
 async function handleProjectChoice(query: any) {
@@ -827,7 +907,7 @@ async function handleProjectChoice(query: any) {
   }
   const { data: account } = await db.from("messenger_accounts").select("user_id")
     .eq("provider", "telegram").eq("provider_user_id", String(query.from.id)).maybeSingle();
-  const { data: row } = await db.from("telegram_inbox").select("id,user_id,title,status,consumed_at,choices")
+  const { data: row } = await db.from("telegram_inbox").select("id,user_id,title,status,consumed_at,choices,created_at")
     .eq("id", parsed.inboxId).maybeSingle();
   if (!account || !row || row.user_id !== account.user_id) {
     await answerCallback(query.id, "Эта задача не найдена.");
@@ -840,7 +920,13 @@ async function handleProjectChoice(query: any) {
   }
   const where = name ? `проект «${name}»` : "«Мои задачи»";
   let text: string;
-  if (row.consumed_at || row.status !== "pending") {
+  if (parsed.batch) {
+    const { data: updated } = await db.from("telegram_inbox").update({ project_hint: name, status: "ready" })
+      .eq("user_id", row.user_id).eq("created_at", row.created_at).eq("status", "pending").is("consumed_at", null).select("id");
+    text = updated?.length
+      ? `Готово: задач ${updated.length} → ${where}.\n\nПоявятся в Kanban, как только приложение будет открыто.`
+      : "Эти задачи уже в Kanban (в «Мои задачи»). Перенеси их в нужный проект в приложении.";
+  } else if (row.consumed_at || row.status !== "pending") {
     text = `Задача «${row.title}» уже в Kanban (в «Мои задачи»). Перенеси её в нужный проект в приложении.`;
   } else {
     const { data: updated } = await db.from("telegram_inbox").update({ project_hint: name, status: "ready" })

@@ -12,7 +12,7 @@ assert.ok(start > 0 && end > start, 'parseTaskText section not found in the bot 
 const dir = await mkdtemp(join(tmpdir(), 'bot-parse-'));
 const file = join(dir, 'parse.ts');
 await writeFile(file, source.slice(start, end));
-const { parseTaskText: p, parseImageReply: img, ocrTextToTask: ocr, parseNoteCommand: note } = await import(pathToFileURL(file).href);
+const { parseTaskText: p, parseImageReply: img, ocrTextToTask: ocr, parseNoteCommand: note, parseListMessage: listMsg } = await import(pathToFileURL(file).href);
 const td = (s) => { const r = p(s); return [r.title, r.description, r.due]; };
 
 // The message that started it: dictated, no punctuation.
@@ -69,3 +69,19 @@ assert.equal(note('Заметки по встрече завтра'), null);
 assert.equal(note('Позвонить в банк'), null);
 assert.equal(note('/help'), null);
 console.log('Telegram note command OK');
+
+// A numbered list is several items; the heading «Быстрые заметки» makes them notes.
+const l1 = listMsg('Быстрые заметки\n1. Процентное проникновение задатка дата завтра отв Я\n2. Связаться с ипотекой до завтра\n3. Конкурс сделать для Артамонова');
+assert.equal(l1.kind, 'notes');
+assert.equal(l1.items.length, 3);
+assert.equal(l1.items[1], 'Связаться с ипотекой до завтра');
+const l2 = listMsg('1) Позвонить в банк до 30.10 #Автооплата\n2) Подготовить отчёт\nпродолжение второй строки\n3. Купить кофе');
+assert.equal(l2.kind, 'tasks');
+assert.deepEqual(l2.items, ['Позвонить в банк до 30.10 #Автооплата', 'Подготовить отчёт продолжение второй строки', 'Купить кофе']);
+assert.equal(listMsg('Заметки:\n1. Один\n2. Два').kind, 'notes');
+assert.equal(listMsg('Задачи на неделю\n1. Один\n2. Два').kind, 'tasks');
+assert.equal(listMsg('1. Только одна строка'), null, 'one item is an ordinary task');
+assert.equal(listMsg('Позвонить в банк. Версия 2.0 готова'), null);
+assert.equal(listMsg('Купить 2 кофе и 3 булки'), null);
+assert.equal(listMsg(Array.from({ length: 30 }, (_, i) => `${(i % 9) + 1}. пункт ${i}`).join('\n')).items.length, 20, 'at most 20 items');
+console.log('Telegram list message OK');
