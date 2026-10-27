@@ -1055,7 +1055,7 @@ body[data-theme="cappuccino"] .home-progress>span,body[data-theme="cappuccino"] 
   #drawer .draweractions{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:stretch}
   #drawer .draweractions .btn{width:100%;min-height:42px;padding:8px 6px;font-size:13px;line-height:1.2;white-space:normal}
   #drawer .draweractions .btn[hidden]{display:none}
-  #drawer .draweractions #saveTask{grid-column:1/-1;order:-1;min-height:46px;font-size:15px}
+  #drawer .draweractions #completeTask{grid-column:1/-1;order:-1;min-height:46px;font-size:15px}
   #drawer .draweractions .autosave-note{grid-column:1/-1;order:9}
   #drawer .draweractions #completeTask{grid-column:1/-1}
   #drawer .drawer-completed{margin:0 0 6px}
@@ -1123,7 +1123,7 @@ html[data-layout="rows"] .board .cards>.task:hover{background:rgba(120,140,170,.
 html[data-layout="rows"] .board #addStatus{order:-1;align-self:flex-start;flex:0 0 auto;width:auto;min-width:200px;max-width:none;height:auto;min-height:0;padding:8px 14px;margin:0 0 4px}
 html[data-layout="rows"] .board .column>.add{margin-top:4px}
 }
-@media(min-width:701px){#saveTask{display:none!important}}
+#saveTask{display:none!important}
 
 
 .qn-top{display:inline-flex}
@@ -1923,6 +1923,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.10.27-22',date:'27.10.2026',title:'Карточка задачи на телефоне',items:['Описание и комментарий растут вместе с текстом (до 60% высоты экрана), длинные тексты удобно читать.','Убрана кнопка «Сохранить» — изменения и так сохраняются автоматически; остаётся «Завершить».']},
  {v:'2026.10.27-21',date:'27.10.2026',title:'Подзадачи: срок и ответственный',items:['У подзадачи на доске показываются ответственный и срок, если они указаны (просроченный срок — красным).']},
  {v:'2026.10.27-20',date:'27.10.2026',title:'Полосы: строка задачи',items:['В режиме «Полосами» под названием слева — «＋ подзадача» и комментарии, справа — ответственный, срок и закреп.']},
  {v:'2026.10.27-19',date:'27.10.2026',title:'Вторая подзадача',items:['В режиме «Полосами» можно добавить вторую и следующие подзадачи: невидимый блок перетаскивания больше не перекрывает кнопку «＋ подзадача».']},
@@ -2967,6 +2968,17 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
   window.__listWidth={set:setW,get:()=>w};
 })();
 
+/* ===== Поля описания и комментария растут вместе с текстом ===== */
+(function autoGrowTextareas(){
+  const fields=['dDescription','newComment'];
+  const fit=el=>{if(!el||!el.offsetParent)return;el.style.height='auto';const max=Math.round(innerHeight*.6);el.style.height=Math.min(Math.max(el.scrollHeight+2,el.offsetHeight>0?95:0),max)+'px';el.style.overflowY=el.scrollHeight+2>max?'auto':'hidden'};
+  const fitAll=()=>fields.forEach(id=>fit($(id)));
+  fields.forEach(id=>{const el=$(id);if(el)el.addEventListener('input',()=>fit(el))});
+  const drawer=$('drawer');
+  if(drawer)new MutationObserver(()=>{if(drawer.classList.contains('open'))setTimeout(fitAll,30)}).observe(drawer,{attributes:true,attributeFilter:['class']});
+  window.addEventListener('resize',fitAll);
+  window.__fitTextareas=fitAll;
+})();
 /* ===== Мобильная версия: активная вкладка проекта всегда видна ===== */
 (function tabsIntoView(){
   const reveal=()=>{const t=document.querySelector('#tabs .tab.active');if(t&&t.scrollIntoView)try{t.scrollIntoView({inline:'center',block:'nearest'})}catch(e){}};
