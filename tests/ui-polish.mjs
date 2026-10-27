@@ -104,6 +104,10 @@ try {
   const sides = await page.locator('#board article.task').first().evaluate((e) => { const R = (s) => e.querySelector(s)?.getBoundingClientRect(); const c = e.getBoundingClientRect(), add = R('.subtask-add'), com = R('.comment-peek-btn'), pin = R('.pin-btn'), date = R('.date'), owner = [...e.querySelectorAll('.meta span')].find((x) => !x.classList.contains('date') && !x.classList.contains('owner')).getBoundingClientRect(); return { addLeft: add.left - c.left, comLeft: com.left - c.left, ownerRightHalf: owner.left > com.right, dateRightHalf: date.left > com.right, pinRightEdge: c.right - pin.right, sameLine: Math.abs(add.top - pin.top) < 14 && Math.abs(add.top - owner.top) < 14 && Math.abs(add.top - com.top) < 14 }; });
   assert(sides.addLeft < 200 && sides.comLeft < 300 && sides.ownerRightHalf && sides.dateRightHalf && sides.pinRightEdge < 40 && sides.sameLine, 'Subtask and comments on the left, owner/date/pin on the right: ' + JSON.stringify(sides));
   await page.evaluate(() => closeDrawer());
+  // Subtask shows its own owner and due date
+  await page.evaluate(() => { const c = active().tasks.find((x) => x.id === 987654); c.owner = 'Другой О.'; c.end = '31.10.2026'; renderAll(); });
+  const subMeta = await page.locator('#board article.task').first().locator('.subtask-link').first().innerText();
+  assert(/Другой О\./.test(subMeta) && /до 31\.10\.26/.test(subMeta), 'Subtask shows owner and due date: ' + subMeta);
   // A second subtask can be added by clicking «＋ подзадача» (the drag handle must not cover it)
   await page.locator('#board article.task').first().locator('.subtask-add').click({ timeout: 5000 });
   await page.keyboard.type('Вторая подзадача');
