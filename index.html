@@ -1127,13 +1127,17 @@ html[data-layout="rows"] .board .column>.add{margin-top:4px}
 .qn-pop .qn-panel{margin:0;border:0;border-radius:12px}
 @media(max-width:700px){.qn-pop{left:8px;right:8px;top:12px;width:auto;max-height:calc(100vh - 150px)}.qn-top-label{display:none}.qn-top .btn{padding:8px 10px}#qnFab{display:grid;place-items:center;position:fixed;right:14px;bottom:78px;z-index:45;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--mb-bg,#fff);color:var(--ink);font-size:20px;box-shadow:0 6px 18px rgba(20,30,50,.25);cursor:pointer}body.mb-top-open #qnFab{display:none}}
 
+.rl-projects{border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:10px 0}
+.rl-projects legend{font-size:13px;font-weight:600;padding:0 6px}
+.rl-projpick{display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer}
+.rl-projpick input{width:18px;height:18px}
 #projects .project[draggable="true"]{cursor:grab}
 #projects .project.dragging{opacity:.4}
 #projects .project.drop-before{box-shadow:0 -3px 0 0 var(--blue,#2878f0)}
 #projects .project.drop-after{box-shadow:0 3px 0 0 var(--blue,#2878f0)}
 </style></head><body>
 <div class="auth-screen show" id="authScreen"><div class="auth-card"><div class="auth-brand">FinTech Kanban<span>Центр управления проектами и задачами</span></div><div class="auth-tabs"><button class="auth-tab active" id="authLoginTab" type="button">Вход</button><button class="auth-tab" id="authSignupTab" type="button">Регистрация</button></div><h2 id="authHeading">С возвращением</h2><p class="auth-description" id="authDescription">Войди, чтобы открыть свои проекты и задачи.</p><div class="field"><label for="authEmail">Email</label><input id="authEmail" type="email" autocomplete="username" placeholder="name@example.com"></div><div class="field"><label for="authPassword">Пароль</label><input id="authPassword" type="password" autocomplete="current-password" placeholder="Не менее 8 символов, буквы и цифры"></div><button class="btn primary auth-submit" id="authSubmit" type="button">Войти</button><button class="btn auth-submit" id="authReset" type="button" style="margin-top:10px">Забыли пароль?</button><div class="auth-status" id="authStatus" role="status" aria-live="polite"></div><div class="auth-foot">Ваши данные доступны только в вашей учётной записи.</div></div></div>
-<div id="qnPop" class="qn-pop" hidden></div><div class="app" hidden><nav id="mobileBar" aria-label="Основная навигация"><button type="button" data-mb="home"><span class="mb-icon" aria-hidden="true">⌂</span>Главная</button><button type="button" data-mb="tasks"><span class="mb-icon" aria-hidden="true">▦</span>Доска</button><button type="button" class="mb-add" data-mb="add" aria-label="Новая задача"><span class="mb-icon" aria-hidden="true">+</span></button><button type="button" data-mb="mytasks"><span class="mb-icon" aria-hidden="true">☰</span>Мои задачи<span class="mb-count" id="mbCount"></span></button><button type="button" data-mb="more" aria-expanded="false"><span class="mb-icon" aria-hidden="true">⋯</span>Ещё<span class="mb-count mb-dot" id="mbDot" hidden></span></button></nav><button type="button" id="qnFab" aria-label="Быстрая заметка" title="Быстрая заметка">⚡</button><aside class="sidebar"><div class="brand"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#2878f0"/><rect x="6.5" y="7" width="5" height="13" rx="1.6" fill="#fff"/><rect x="13.5" y="7" width="5" height="8" rx="1.6" fill="#fff" fill-opacity=".85"/><rect x="20.5" y="7" width="5" height="18" rx="1.6" fill="#fff" fill-opacity=".7"/></svg><span>Канбан проектов</span></div><button class="home-nav" id="homeNav" data-view="home"><span aria-hidden="true">⌂</span> Главная</button><button class="sidebar-inbox" id="standaloneNav" data-view="inbox" hidden style="display:none">Задачи без проектов <span id="standaloneCount"></span></button><button class="sidebar-inbox" id="myTasksNav" data-view="mytasks">Мои задачи <span id="myTasksCount"></span></button><div class="sidehead"><span>ПРОЕКТЫ</span><div class="side-actions"><button id="newProject" title="Создать проект" aria-label="Создать проект">＋</button><button id="exportBtn" title="Экспорт данных">↥</button><button id="importBtn" title="Импорт задач из JSON">↧</button><input id="importFile" type="file" accept=".json,application/json" hidden><button id="projectToTask" title="Преобразовать выбранный проект в задачу">⇢</button><button id="deleteProject" title="Удалить выбранный проект" aria-label="Удалить выбранный проект"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 10v6M14 10v6"/></svg></button></div></div><div class="sidebar-transform-hint">Преобразовать проект в задачу</div><div id="projects"></div></aside>
+<div id="qnPop" class="qn-pop" hidden></div><div class="app" hidden><nav id="mobileBar" aria-label="Основная навигация"><button type="button" data-mb="home"><span class="mb-icon" aria-hidden="true">⌂</span>Главная</button><button type="button" data-mb="tasks"><span class="mb-icon" aria-hidden="true">▦</span>Доска</button><button type="button" class="mb-add" data-mb="add" aria-label="Новая задача"><span class="mb-icon" aria-hidden="true">+</span></button><button type="button" data-mb="mytasks"><span class="mb-icon" aria-hidden="true">☰</span>Мои задачи<span class="mb-count" id="mbCount"></span></button><button type="button" data-mb="more" aria-expanded="false"><span class="mb-icon" aria-hidden="true">⋯</span>Ещё<span class="mb-count mb-dot" id="mbDot" hidden></span></button></nav><button type="button" id="qnFab" aria-label="Быстрая заметка" title="Быстрая заметка">⚡</button><aside class="sidebar"><div class="brand"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#2878f0"/><rect x="6.5" y="7" width="5" height="13" rx="1.6" fill="#fff"/><rect x="13.5" y="7" width="5" height="8" rx="1.6" fill="#fff" fill-opacity=".85"/><rect x="20.5" y="7" width="5" height="18" rx="1.6" fill="#fff" fill-opacity=".7"/></svg><span>Канбан проектов</span></div><button class="home-nav" id="homeNav" data-view="home"><span aria-hidden="true">⌂</span> Главная</button><button class="sidebar-inbox" id="standaloneNav" data-view="inbox" hidden style="display:none">Задачи без проектов <span id="standaloneCount"></span></button><button class="sidebar-inbox" id="myTasksNav" data-view="mytasks">Мои задачи <span id="myTasksCount"></span></button><button class="sidebar-inbox" id="releasesNav" type="button">Релизы</button><div class="sidehead"><span>ПРОЕКТЫ</span><div class="side-actions"><button id="newProject" title="Создать проект" aria-label="Создать проект">＋</button><button id="exportBtn" title="Экспорт данных">↥</button><button id="importBtn" title="Импорт задач из JSON">↧</button><input id="importFile" type="file" accept=".json,application/json" hidden><button id="projectToTask" title="Преобразовать выбранный проект в задачу">⇢</button><button id="deleteProject" title="Удалить выбранный проект" aria-label="Удалить выбранный проект"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 10v6M14 10v6"/></svg></button></div></div><div class="sidebar-transform-hint">Преобразовать проект в задачу</div><div id="projects"></div></aside>
 <main class="main"><div class="top"><div class="crumb">Проекты　›　<span id="crumbName">Автооплата ГП</span></div><div class="global-search-wrap"><input id="globalSearch" class="topsearch" placeholder="Поиск по всем проектам…"><div id="globalSearchResults" class="global-search-results" hidden></div></div><span class="qn-top"><button class="btn" id="qnTopButton" type="button" aria-expanded="false" aria-controls="qnPop" title="Быстрая заметка">⚡ <span class="qn-top-label">Заметка</span></button></span><button class="btn" id="teamTopButton" type="button" title="Участники Kanban">♙ Участники</button><select class="btn theme-toggle" id="themeToggle" aria-label="Тема оформления" title="Тема оформления"><option value="light">Классика</option><option value="dark">Тёмная</option><option value="win95">Windows 95</option><option value="lamp">Ламповая</option><option value="pixel">Пиксель-арт</option><option value="latte">Латте</option><option value="cappuccino">Капучино</option></select><button class="btn notif-bell" id="notifButton" type="button" aria-label="Уведомления" aria-haspopup="dialog" aria-expanded="false" hidden><span aria-hidden="true">🔔</span><span class="notif-badge" id="notifBadge" hidden></span></button><button class="account-chip" id="cloudButton" type="button" aria-label="Аккаунт"><span class="account-avatar" id="accountAvatar">V</span><span class="account-chip-label"><strong id="accountName">Аккаунт</strong><small id="accountSub">Войти</small></span></button></div>
 <header class="projecthead" id="projectHeader"><div class="headrow"><div><div class="projecttitle" id="projectName">Автооплата ГП</div><div class="subtitle" id="subtitle">Задачи проекта из исходной таблицы</div></div><div class="projectstats" id="stats"></div></div><nav class="tabs" id="tabs"><button class="tab active" data-view="tasks">Задачи</button><button class="tab" data-view="overview">Обзор проекта</button><button class="tab" data-view="roadmap">Дорожная карта</button><button class="tab" data-view="documents">Документы</button><button class="tab" data-view="links">Ссылки</button><button class="tab" data-view="releases">Релизы</button><button class="tab" data-view="completed">Завершённые</button></nav></header>
 <div class="toolbar" id="taskToolbar"><input id="taskSearch" placeholder="⌕  Поиск в текущем проекте…"><button class="btn toolbar-toggle" id="toolbarToggle" type="button" aria-expanded="false" aria-controls="taskToolbar">⚙ Фильтры</button><select id="ownerFilter"><option value="">Все ответственные</option></select><select id="sortFilter"><option value="source">Мой порядок</option><option value="date">Сначала ближайший срок</option><option value="owner">По ответственному</option><option value="title">По названию</option></select><div class="quick-filters" role="group" aria-label="Быстрые фильтры"><button class="btn quick-filter" type="button" data-quick-filter="mine" aria-pressed="false">Только мои</button><button class="btn quick-filter" type="button" data-quick-filter="overdue" aria-pressed="false">Просроченные</button><button class="btn quick-filter" type="button" id="densityToggle" aria-pressed="false" title="Сжать карточки, чтобы на экран влезало больше">▤ Компактно</button><button class="btn quick-filter" type="button" id="layoutToggle" aria-pressed="false" title="Статусы полосами, задачи строками">☰ Полосами</button></div><span class="hint" id="summary"></span></div>
@@ -1851,6 +1855,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.10.27-07',date:'27.10.2026',title:'Релизы: общий раздел и несколько проектов',items:['В меню слева появился раздел «Релизы» — релизы всех проектов в одном месте.','При добавлении релиза можно отметить несколько проектов: он появится во вкладке «Релизы» каждого из них, с пометкой «также: …». Правка и удаление применяются сразу ко всем проектам релиза.']},
  {v:'2026.10.27-06',date:'27.10.2026',title:'Участники: переименование',items:['В «Участниках» у каждого есть кнопка «Переименовать»: новое имя подставится у ответственных во всех задачах.','При открытии «Участников» сверху больше не остаётся шапка проекта с вкладками.']},
  {v:'2026.10.27-05',date:'27.10.2026',title:'Порядок проектов',items:['Проекты в списке слева можно перетаскивать мышью и менять местами — приоритетные ставь вверх. Порядок сохраняется в аккаунте. С клавиатуры: Alt+↑ / Alt+↓.']},
  {v:'2026.10.27-04',date:'27.10.2026',title:'Полосы строками, кнопка «колонка» сверху',items:['В режиме «Полосами» задачи идут строками, как в «Моих задачах»: название, ответственный, срок, закрепление.','Кнопка «＋ Добавить колонку» в этом режиме стоит сверху.','На компьютере из карточки задачи убрана кнопка «Готово»: изменения сохраняются автоматически, а нажатие на свободное место закрывает карточку. На телефоне кнопка осталась.']},
@@ -1995,7 +2000,7 @@ document.addEventListener('keydown',e=>{if(e.target?.classList?.contains('cm-edi
 (function(){const o=window.openTask;if(typeof o==='function')window.openTask=function(){commentEditIndex=-1;commentDeleteIndex=-1;return o.apply(this,arguments)}})();
 /* ===== Релизы по проектам ===== */
 (function(){
-const RL={items:[],extra:new Set(),loading:false,error:'',q:'',all:false,draft:null,openId:null,editId:null,confirmDel:null,seq:0,loadedFor:'',busy:false};
+const RL={items:[],extra:new Set(),loading:false,error:'',q:'',all:false,global:false,draft:null,openId:null,editId:null,confirmDel:null,seq:0,loadedFor:'',busy:false};
 window.__releases=RL;
 const MONTHS=[/^январ[ьяе]$/,/^феврал[ьяе]$/,/^март[ае]?$/,/^апрел[ьяе]$/,/^ма[йяе]$/,/^июн[ьяе]$/,/^июл[ьяе]$/,/^август[ае]?$/,/^сентябр[ьяе]$/,/^октябр[ьяе]$/,/^ноябр[ьяе]$/,/^декабр[ьяе]$/];
 const MONTH_NAMES=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
@@ -2095,10 +2100,15 @@ function matchesDate(item,p){
   const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(item.released_on||'');if(!m)return!(p.year||p.month||p.day);
   if(p.year&&+m[1]!==p.year)return false;if(p.month&&+m[2]!==p.month)return false;if(p.day&&m[3]!==p.day)return false;return true;
 }
-function haystack(it){return[it.title,it.version,it.summary,(it.tags||[]).join(' '),(it.changes||[]).map(c=>typeof c==='string'?c:c.text||'').join(' '),it.project_name,it.file_name,ruDate(it.released_on),longDate(it.released_on)].join(' ').toLowerCase().replace(/ё/g,'е')}
+const grpOf=it=>{const t=(it.tags||[]).find(x=>/^grp:/.test(x));return t?t.slice(4):''};
+const userTags=it=>(it.tags||[]).filter(x=>!/^(grp|prj):/.test(x));
+const sysTags=it=>(it.tags||[]).filter(x=>/^(grp|prj):/.test(x));
+const projTags=it=>(it.tags||[]).filter(x=>/^prj:/.test(x)).map(x=>x.slice(4));
+function haystack(it){return[it.title,it.version,it.summary,userTags(it).join(' '),projTags(it).join(' '),(it.changes||[]).map(c=>typeof c==='string'?c:c.text||'').join(' '),it.project_name,it.file_name,ruDate(it.released_on),longDate(it.released_on)].join(' ').toLowerCase().replace(/ё/g,'е')}
 function visibleItems(){
-  const p=parseQuery(RL.q);
+  const p=parseQuery(RL.q),seenGrp=new Set();
   return RL.items.filter(it=>{
+    const g=grpOf(it);if(g&&RL.all){if(seenGrp.has(g))return false;seenGrp.add(g)}
     if(!matchesDate(it,p))return false;
     if(!p.words.length)return true;
     const h=haystack(it);
@@ -2156,10 +2166,10 @@ async function signedUrl(path){
 const root=()=>document.getElementById('releasesView');
 const changesList=c=>(c||[]).map(x=>typeof x==='string'?x:x.text||'').filter(Boolean);
 function cardHtml(it){
-  const open=RL.openId===it.id,ch=changesList(it.changes),proj=RL.all?`<span class="rl-chip rl-proj">${esc(it.project_name)}</span>`:'';
+  const open=RL.openId===it.id,ch=changesList(it.changes),pn=projTags(it),proj=pn.length>1?(RL.all?pn:pn.filter(n=>n!==it.project_name)).map((n,i)=>`<span class="rl-chip rl-proj">${!RL.all&&i===0?'также: ':''}${esc(n)}</span>`).join(''):(RL.all?`<span class="rl-chip rl-proj">${esc(it.project_name)}</span>`:'');
   const hit=RL.extra.has(it.id)&&!haystack(it).includes(parseQuery(RL.q).words[0]||'\u0000')?'<span class="rl-chip rl-hit">найдено в тексте</span>':'';
   if(RL.editId===it.id)return editHtml(it);
-  return`<article class="rl-card" data-rl-id="${esc(it.id)}"><div class="rl-date"><b>${esc(ruDate(it.released_on))}</b><span>${esc(longDate(it.released_on).replace(/^\d+ /,'').replace(/ \d{4}$/,''))}</span></div><div class="rl-body"><div class="rl-titlerow"><h4>${esc(it.title)}</h4>${it.version?`<span class="rl-chip">v${esc(it.version)}</span>`:''}${proj}${hit}</div>${it.summary?`<p class="rl-summary">${esc(it.summary)}</p>`:''}${(it.tags||[]).length?`<div class="rl-tags">${it.tags.map(t=>`<button type="button" class="rl-tag" data-rl-tag="${esc(t)}">#${esc(t)}</button>`).join('')}</div>`:''}${open?`${ch.length?`<ul class="rl-changes">${ch.map(c=>`<li>${esc(c)}</li>`).join('')}</ul>`:''}<div class="rl-actions">${it.file_path?`<button type="button" class="btn" data-rl-download="${esc(it.id)}">⬇ ${esc(it.file_name||'Файл')} <small>${esc(bytesLabel(it.file_size))}</small></button>`:''}<button type="button" class="btn" data-rl-edit="${esc(it.id)}">Править</button>${RL.confirmDel===it.id?`<button type="button" class="btn danger" data-rl-delete="${esc(it.id)}">Точно удалить?</button><button type="button" class="btn" data-rl-nodel="1">Отмена</button>`:`<button type="button" class="btn danger" data-rl-askdel="${esc(it.id)}">Удалить</button>`}</div>`:`<button type="button" class="rl-more" data-rl-open="${esc(it.id)}">${ch.length?`Изменения (${ch.length}) ▾`:'Подробнее ▾'}</button>`}</div></article>`;
+  return`<article class="rl-card" data-rl-id="${esc(it.id)}"><div class="rl-date"><b>${esc(ruDate(it.released_on))}</b><span>${esc(longDate(it.released_on).replace(/^\d+ /,'').replace(/ \d{4}$/,''))}</span></div><div class="rl-body"><div class="rl-titlerow"><h4>${esc(it.title)}</h4>${it.version?`<span class="rl-chip">v${esc(it.version)}</span>`:''}${proj}${hit}</div>${it.summary?`<p class="rl-summary">${esc(it.summary)}</p>`:''}${userTags(it).length?`<div class="rl-tags">${userTags(it).map(t=>`<button type="button" class="rl-tag" data-rl-tag="${esc(t)}">#${esc(t)}</button>`).join('')}</div>`:''}${open?`${ch.length?`<ul class="rl-changes">${ch.map(c=>`<li>${esc(c)}</li>`).join('')}</ul>`:''}<div class="rl-actions">${it.file_path?`<button type="button" class="btn" data-rl-download="${esc(it.id)}">⬇ ${esc(it.file_name||'Файл')} <small>${esc(bytesLabel(it.file_size))}</small></button>`:''}<button type="button" class="btn" data-rl-edit="${esc(it.id)}">Править</button>${RL.confirmDel===it.id?`<button type="button" class="btn danger" data-rl-delete="${esc(it.id)}">${grpOf(it)?'Точно удалить во всех проектах?':'Точно удалить?'}</button><button type="button" class="btn" data-rl-nodel="1">Отмена</button>`:`<button type="button" class="btn danger" data-rl-askdel="${esc(it.id)}">Удалить</button>`}</div>`:`<button type="button" class="rl-more" data-rl-open="${esc(it.id)}">${ch.length?`Изменения (${ch.length}) ▾`:'Подробнее ▾'}</button>`}</div></article>`;
 }
 function fieldsHtml(f,prefix){
   return`<div class="rl-grid"><label>Название<input id="${prefix}Title" value="${esc(f.title)}" maxlength="300"></label><label>Дата релиза<input id="${prefix}Date" type="date" value="${esc(f.date)}"></label><label>Версия<input id="${prefix}Version" value="${esc(f.version)}" maxlength="60" placeholder="например 2.4.1"></label><label>Теги через запятую<input id="${prefix}Tags" value="${esc((f.tags||[]).join(', '))}"></label></div><label class="rl-wide">Краткое описание<textarea id="${prefix}Summary" rows="3" maxlength="4000">${esc(f.summary)}</textarea></label><label class="rl-wide">Что изменилось (каждый пункт с новой строки)<textarea id="${prefix}Changes" rows="5">${esc((f.changes||[]).join('\n'))}</textarea></label>`;
@@ -2169,13 +2179,17 @@ function readFields(prefix){
   return{title:v('Title').trim(),released_on:v('Date')||isoDate(new Date()),version:v('Version').trim(),summary:v('Summary').trim(),changes:v('Changes').split('\n').map(s=>s.trim()).filter(Boolean).slice(0,60),tags:[...new Set(v('Tags').split(/[,;\n]/).map(s=>s.trim().replace(/^#/,'')).filter(Boolean))].slice(0,30)};
 }
 function editHtml(it){
-  return`<article class="rl-card rl-edit" data-rl-id="${esc(it.id)}"><div class="rl-form">${fieldsHtml({title:it.title,date:it.released_on,version:it.version,summary:it.summary,changes:changesList(it.changes),tags:it.tags},'rlE')}<div class="rl-actions"><button type="button" class="btn primary" data-rl-saveedit="${esc(it.id)}">Сохранить</button><button type="button" class="btn" data-rl-canceledit="1">Отмена</button></div></div></article>`;
+  return`<article class="rl-card rl-edit" data-rl-id="${esc(it.id)}"><div class="rl-form">${fieldsHtml({title:it.title,date:it.released_on,version:it.version,summary:it.summary,changes:changesList(it.changes),tags:userTags(it)},'rlE')}<div class="rl-actions"><button type="button" class="btn primary" data-rl-saveedit="${esc(it.id)}">Сохранить</button><button type="button" class="btn" data-rl-canceledit="1">Отмена</button></div></div></article>`;
+}
+function projectPickerHtml(){
+  const d=RL.draft,sel=new Set(d.projects||[]);
+  return`<fieldset class="rl-projects"><legend>К каким проектам относится релиз</legend>${data.map(pr=>`<label class="rl-projpick"><input type="checkbox" data-rl-proj="${esc(pr.name)}"${sel.has(pr.name)?' checked':''}> ${pr.shared?'👥 ':''}${esc(pr.name)}</label>`).join('')}<div class="mini">Релиз появится во вкладке «Релизы» каждого выбранного проекта.</div></fieldset>`;
 }
 function draftHtml(){
   const d=RL.draft;
   if(!d)return`<div class="rl-add"><button type="button" class="btn primary" data-rl-new="1">＋ Добавить релиз</button></div>`;
   if(!d.analyzed)return`<div class="rl-form rl-new"><h4>Новый релиз</h4><p class="mini">Загрузите презентацию (.pptx), документ (.docx), текстовый файл или вставьте текст — карточка заполнится сама, перед сохранением её можно поправить.</p><label class="rl-file">Файл<input id="rlFile" type="file" accept=".pptx,.docx,.txt,.md,.pdf"></label><div class="rl-fname mini">${d.file?esc(d.file.name)+' · '+esc(bytesLabel(d.file.size)):''}</div><label class="rl-wide">Или вставьте текст<textarea id="rlPaste" rows="5" placeholder="Текст релиза, заметки, описание">${esc(d.text||'')}</textarea></label>${d.error?`<div class="rl-error">${esc(d.error)}</div>`:''}<div class="rl-actions"><button type="button" class="btn primary" data-rl-analyze="1"${RL.busy?' disabled':''}>${RL.busy?'Разбираем…':'Заполнить карточку'}</button><button type="button" class="btn" data-rl-cancel="1">Отмена</button></div></div>`;
-  return`<div class="rl-form rl-new"><h4>Карточка релиза</h4>${d.note?`<p class="mini">${esc(d.note)}</p>`:''}${d.file?`<div class="mini">Файл: ${esc(d.file.name)} · ${esc(bytesLabel(d.file.size))}</div>`:''}${fieldsHtml(d.fields,'rlN')}${d.error?`<div class="rl-error">${esc(d.error)}</div>`:''}<div class="rl-actions"><button type="button" class="btn primary" data-rl-save="1"${RL.busy?' disabled':''}>${RL.busy?'Сохраняем…':'Сохранить релиз'}</button><button type="button" class="btn" data-rl-cancel="1">Отмена</button></div></div>`;
+  return`<div class="rl-form rl-new"><h4>Карточка релиза</h4>${d.note?`<p class="mini">${esc(d.note)}</p>`:''}${d.file?`<div class="mini">Файл: ${esc(d.file.name)} · ${esc(bytesLabel(d.file.size))}</div>`:''}${fieldsHtml(d.fields,'rlN')}${projectPickerHtml()}${d.error?`<div class="rl-error">${esc(d.error)}</div>`:''}<div class="rl-actions"><button type="button" class="btn primary" data-rl-save="1"${RL.busy?' disabled':''}>${RL.busy?'Сохраняем…':'Сохранить релиз'}</button><button type="button" class="btn" data-rl-cancel="1">Отмена</button></div></div>`;
 }
 function render(keepFocus){
   const el=root();if(!el)return;
@@ -2183,7 +2197,7 @@ function render(keepFocus){
   const p=active();
   if(!signedIn()){el.innerHTML=`<div class="viewhead"><div><h3>Релизы проекта</h3></div></div><p class="mini">Релизы хранятся в облаке. Войдите в аккаунт, чтобы загружать презентации и тексты и искать по ним.</p>`;return}
   const list=visibleItems();
-  el.innerHTML=`<div class="viewhead"><div><h3>Релизы ${RL.all?'всех проектов':'проекта'}</h3><div class="mini">${RL.all?'Все доступные вам проекты':`Проект «${esc(p?.name||'')}»${p?.shared?' · видят все участники':''}`}. Загрузите презентацию или текст — карточка и поиск по дате появятся сами.</div></div></div>${draftHtml()}<div class="rl-search"><input id="rlSearch" type="search" placeholder="Поиск: слова, «октябрь 2026», 15.10.2026, версия, тег" value="${esc(RL.q)}" autocomplete="off"><label class="rl-all"><input id="rlAll" type="checkbox"${RL.all?' checked':''}> по всем проектам</label></div>${RL.error?`<div class="rl-error">${esc(RL.error)} <button type="button" class="btn" data-rl-reload="1">Повторить</button></div>`:''}${RL.loading?'<p class="mini">Загружаем…</p>':list.length?`<div class="rl-list">${list.map(cardHtml).join('')}</div><p class="mini rl-count">Показано ${list.length} из ${RL.items.length}</p>`:`<p class="mini rl-empty">${RL.items.length?'Ничего не найдено. Попробуйте другие слова или дату.':'Релизов пока нет — добавьте первый.'}</p>`}`;
+  el.innerHTML=`<div class="viewhead"><div><h3>Релизы ${RL.all?'всех проектов':'проекта'}</h3><div class="mini">${RL.all?'Все доступные вам проекты':`Проект «${esc(p?.name||'')}»${p?.shared?' · видят все участники':''}`}. Загрузите презентацию или текст — карточка и поиск по дате появятся сами.</div></div></div>${draftHtml()}<div class="rl-search"><input id="rlSearch" type="search" placeholder="Поиск: слова, «октябрь 2026», 15.10.2026, версия, тег" value="${esc(RL.q)}" autocomplete="off">${RL.global?'':`<label class="rl-all"><input id="rlAll" type="checkbox"${RL.all?' checked':''}> по всем проектам</label>`}</div>${RL.error?`<div class="rl-error">${esc(RL.error)} <button type="button" class="btn" data-rl-reload="1">Повторить</button></div>`:''}${RL.loading?'<p class="mini">Загружаем…</p>':list.length?`<div class="rl-list">${list.map(cardHtml).join('')}</div><p class="mini rl-count">Показано ${list.length} из ${RL.items.length}</p>`:`<p class="mini rl-empty">${RL.items.length?'Ничего не найдено. Попробуйте другие слова или дату.':'Релизов пока нет — добавьте первый.'}</p>`}`;
   if(focusId){const s=document.getElementById('rlSearch');s.focus();try{s.setSelectionRange(selStart,selStart)}catch(e){}}
 }
 
@@ -2209,12 +2223,19 @@ async function saveDraft(){
   let path=null;
   try{
     if(d.file)path=await uploadFile(d.file);
-    const p=active();
-    const row={...f,content:d.text||'',project_name:p.name,shared_project_id:p.shared?.id||null};
-    if(d.file){row.file_path=path;row.file_name=d.file.name.slice(0,300);row.file_type=(d.file.type||'').slice(0,120)||null;row.file_size=d.file.size}
-    const res=await cloudRequest('/rest/v1/project_releases?select='+SEL,{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(row)});
-    const saved=Array.isArray(res)?res[0]:res;
-    if(saved)RL.items=[saved,...RL.items].sort((a,b)=>String(b.released_on).localeCompare(String(a.released_on)));
+    const chosen=(d.projects||[]).map(n=>data.find(x=>x.name===n)).filter(Boolean);
+    if(!chosen.length)throw new Error('выберите хотя бы один проект');
+    const grp=chosen.length>1?(crypto.randomUUID?crypto.randomUUID():String(Date.now())):'';
+    const sys=grp?['grp:'+grp,...chosen.map(x=>'prj:'+x.name)]:[];
+    var saved=null;
+    for(const p of chosen){
+      const row={...f,tags:[...f.tags,...sys],content:d.text||'',project_name:p.name,shared_project_id:p.shared?.id||null};
+      if(d.file){row.file_path=path;row.file_name=d.file.name.slice(0,300);row.file_type=(d.file.type||'').slice(0,120)||null;row.file_size=d.file.size}
+      const res=await cloudRequest('/rest/v1/project_releases?select='+SEL,{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(row)});
+      const one=Array.isArray(res)?res[0]:res;
+      if(one){if(!saved)saved=one;const here=RL.all||p.name===activeProject;if(here)RL.items=[one,...RL.items]}
+    }
+    RL.items=RL.items.sort((a,b)=>String(b.released_on).localeCompare(String(a.released_on)));
     RL.draft=null;RL.openId=saved?.id||null;toast('Релиз сохранён');
   }catch(e){if(path)removeFile(path);d.error='Не удалось сохранить: '+e.message}
   RL.busy=false;render();
@@ -2222,18 +2243,22 @@ async function saveDraft(){
 async function saveEdit(id){
   const f=readFields('rlE');if(!f.title){toast('Введите название');return}
   try{
-    const res=await cloudRequest('/rest/v1/project_releases?id=eq.'+encodeURIComponent(id)+'&select='+SEL,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify(f)});
-    const row=Array.isArray(res)?res[0]:res;if(!row)throw new Error('нет прав или релиз удалён');
-    RL.items=RL.items.map(x=>x.id===id?row:x).sort((a,b)=>String(b.released_on).localeCompare(String(a.released_on)));RL.editId=null;toast('Изменения сохранены');
+    const cur=RL.items.find(x=>x.id===id),g=cur?grpOf(cur):'';
+    const body={...f,tags:[...f.tags,...(cur?sysTags(cur):[])]};
+    const res=await cloudRequest('/rest/v1/project_releases?'+(g?'tags=cs.'+encodeURIComponent('{grp:'+g+'}'):'id=eq.'+encodeURIComponent(id))+'&select='+SEL,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify(body)});
+    const rows=Array.isArray(res)?res:(res?[res]:[]);if(!rows.length)throw new Error('нет прав или релиз удалён');
+    const byId=new Map(rows.map(r=>[r.id,r]));
+    RL.items=RL.items.map(x=>byId.get(x.id)||x).sort((a,b)=>String(b.released_on).localeCompare(String(a.released_on)));RL.editId=null;toast('Изменения сохранены');
   }catch(e){toast('Не удалось сохранить: '+e.message)}
   render();
 }
 async function deleteRelease(id){
   const it=RL.items.find(x=>x.id===id);if(!it)return;
   try{
-    const res=await cloudRequest('/rest/v1/project_releases?id=eq.'+encodeURIComponent(id)+'&select=id',{method:'DELETE',headers:{Prefer:'return=representation'}});
+    const g=grpOf(it);
+    const res=await cloudRequest('/rest/v1/project_releases?'+(g?'tags=cs.'+encodeURIComponent('{grp:'+g+'}'):'id=eq.'+encodeURIComponent(id))+'&select=id',{method:'DELETE',headers:{Prefer:'return=representation'}});
     if(Array.isArray(res)&&!res.length)throw new Error('нет прав');
-    await removeFile(it.file_path);RL.items=RL.items.filter(x=>x.id!==id);RL.confirmDel=null;RL.openId=null;toast('Релиз удалён');
+    await removeFile(it.file_path);RL.items=RL.items.filter(x=>g?grpOf(x)!==g:x.id!==id);RL.confirmDel=null;RL.openId=null;toast('Релиз удалён');
   }catch(e){toast('Не удалось удалить: '+e.message)}
   render();
 }
@@ -2244,7 +2269,7 @@ async function download(id){
 document.addEventListener('click',e=>{
   const el=root();if(!el||!el.contains(e.target))return;
   const t=e.target.closest('button');if(!t)return;const ds=t.dataset;
-  if('rlNew' in ds){RL.draft={file:null,text:'',analyzed:false};render()}
+  if('rlNew' in ds){RL.draft={file:null,text:'',analyzed:false,projects:RL.global?[]:[activeProject]};render()}
   else if('rlCancel' in ds){RL.draft=null;render()}
   else if('rlAnalyze' in ds)analyze();
   else if('rlSave' in ds)saveDraft();
@@ -2264,6 +2289,7 @@ document.addEventListener('input',e=>{
 });
 document.addEventListener('change',e=>{
   if(e.target?.id==='rlAll'){RL.all=e.target.checked;RL.openId=null;loadReleases(true)}
+  else if(e.target?.dataset?.rlProj!==undefined&&RL.draft){const n=e.target.dataset.rlProj,set=new Set(RL.draft.projects||[]);if(e.target.checked)set.add(n);else set.delete(n);RL.draft.projects=[...set]}
   else if(e.target?.id==='rlFile'&&RL.draft){RL.draft.file=e.target.files[0]||null;RL.draft.text=document.getElementById('rlPaste')?.value||'';RL.draft.error='';render()}
 });
 /* ---- Подключение к навигации ---- */
@@ -2272,11 +2298,16 @@ window.switchView=function(view){
   const r=origSwitch.apply(this,arguments);
   const el=root();if(!el)return r;
   const on=activeView==='releases';el.hidden=!on;
-  if(on){$('viewFooter').textContent='Презентации и тексты релизов · карточка заполняется сама · поиск по словам и датам';$('projectHeader').hidden=false;render();loadReleases(false)}
+  if(on){$('viewFooter').textContent='Презентации и тексты релизов · карточка заполняется сама · поиск по словам и датам';$('projectHeader').hidden=RL.global;render();loadReleases(false)}
+  const nav=$('releasesNav');if(nav)nav.classList.toggle('active',on&&RL.global);
   return r;
 };
 const origRenderAll=window.renderAll;
 window.renderAll=function(){const r=origRenderAll.apply(this,arguments);if(activeView==='releases'&&root()&&RL.loadedFor&&!RL.all&&RL.loadedFor.split('|')[0]!==activeProject)loadReleases(false);return r};
+document.addEventListener('click',e=>{
+  if(e.target.closest?.('#releasesNav')){if(!RL.global||!RL.all){RL.global=true;RL.all=true;RL.openId=null;RL.loadedFor=''}switchView('releases');return}
+  const tab=e.target.closest?.('.tab[data-view="releases"]');if(tab&&RL.global){RL.global=false;RL.all=false;RL.openId=null;RL.loadedFor=''}
+},true);
 window.__releasesApi={buildCard,parseQuery,extractText,matchesDate,visibleItems};
 })();
 /* ===== Вложения задач (картинки и голосовые из Telegram) ===== */

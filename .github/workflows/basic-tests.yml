@@ -79,6 +79,8 @@ jobs:
       - name: Run board layout browser test
         run: node tests/board-layout.mjs
 
+      - name: Run releases multi-project browser test
+        run: node tests/releases-multi.mjs
       - name: Run project order browser test
         run: node tests/project-order.mjs
 
