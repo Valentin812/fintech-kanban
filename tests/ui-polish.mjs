@@ -13,7 +13,7 @@ const origin = `http://127.0.0.1:${server.address().port}`;
 const launchOptions = { headless: true };
 if (process.env.CHROMIUM_EXECUTABLE) launchOptions.executablePath = process.env.CHROMIUM_EXECUTABLE;
 const browser = await chromium.launch(launchOptions);
-function assert(c, m) { if (!c) throw new Error(m); }
+function assert(c, m) { if (!c) { console.log('::error::' + String(m).replace(/\n/g, ' ').slice(0, 900)); throw new Error(m); } }
 const ME = '00000000-0000-4000-8000-000000000001';
 const session = { access_token: 'm', refresh_token: 'r', user: { id: ME, email: 'o@example.test', user_metadata: {} } };
 const tk = (id, title) => ({ id, title, status: 'Очередь', owner: 'Яковлев В.', end: '', description: '', comment: '' });
