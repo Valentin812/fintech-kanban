@@ -12,7 +12,7 @@ assert.ok(start > 0 && end > start, 'parseTaskText section not found in the bot 
 const dir = await mkdtemp(join(tmpdir(), 'bot-parse-'));
 const file = join(dir, 'parse.ts');
 await writeFile(file, source.slice(start, end));
-const { parseTaskText: p, parseImageReply: img, ocrTextToTask: ocr, parseNoteCommand: note, parseListMessage: listMsg } = await import(pathToFileURL(file).href);
+const { parseTaskText: p, parseImageReply: img, ocrTextToTask: ocr, parseNoteCommand: note, parseListMessage: listMsg, parseDialogReply: dlg, dialogSystemPrompt: dlgPrompt } = await import(pathToFileURL(file).href);
 const td = (s) => { const r = p(s); return [r.title, r.description, r.due]; };
 
 // The message that started it: dictated, no punctuation.
@@ -84,4 +84,14 @@ assert.equal(listMsg('1. Только одна строка'), null, 'one item i
 assert.equal(listMsg('Позвонить в банк. Версия 2.0 готова'), null);
 assert.equal(listMsg('Купить 2 кофе и 3 булки'), null);
 assert.equal(listMsg(Array.from({ length: 30 }, (_, i) => `${(i % 9) + 1}. пункт ${i}`).join('\n')).items.length, 20, 'at most 20 items');
+// AI dialog: the model reply is parsed defensively.
+const d1 = dlg('Вот: {"kind":"task","reply":"","items":[{"title":"Позвонить в банк","description":"узнать тарифы","due":"завтра","project":"Альфа"},{"title":"","description":"x"}]}');
+assert.equal(d1.kind, 'task'); assert.equal(d1.items.length, 1); assert.equal(d1.items[0].project, 'Альфа');
+assert.deepEqual(dlg('{"kind":"ask","reply":"Это задача или заметка?","items":[]}'), { kind: 'ask', items: [], reply: 'Это задача или заметка?' });
+assert.equal(dlg('{"kind":"task","items":[]}'), null, 'task without items is rejected');
+assert.equal(dlg('{"kind":"ask","reply":""}'), null, 'question without text is rejected');
+assert.equal(dlg('{"kind":"delete_all","items":[{"title":"x"}]}'), null, 'unknown kind is rejected');
+assert.equal(dlg('просто текст'), null);
+assert.equal(dlg('{"kind":"note","items":' + JSON.stringify(Array.from({ length: 30 }, () => ({ title: 'n' }))) + '}').items.length, 10);
+assert.match(dlgPrompt(['Альфа'], '2026-10-27'), /Альфа/);
 console.log('Telegram list message OK');
