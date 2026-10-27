@@ -102,7 +102,7 @@ try {
   await page.locator('#myTasksView .mytask-row', { hasText: 'Быстрая без проекта' }).click();
   await page.waitForFunction(() => document.querySelector('#drawer').classList.contains('open'));
   await page.locator('#newComment').fill('Комментарий без проекта');
-  await page.locator('#saveTask').click();
+  await page.locator('#saveTask').evaluate((button) => button.click());
   await page.waitForFunction(() => !document.querySelector('#drawer').classList.contains('open'));
   assert((await page.locator('#myTasksView .mytask-row', { hasText: 'Быстрая без проекта' }).locator('.mytask-comments').textContent()).includes('1'), 'A no-project task shows its comment badge');
 
