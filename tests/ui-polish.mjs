@@ -69,6 +69,8 @@ try {
   await page.evaluate(() => cloudOpen());
   await page.locator('#bgClear').click();
   assert(await page.evaluate(() => document.body.getAttribute('data-bg')) === null, 'Background can be removed');
+  const bgGeo = await page.evaluate(() => { const r = (s) => document.querySelector(s).getBoundingClientRect(); const t = r('.bg-picker .cloud-group-title'), u = r('.bg-upload'), c = r('#bgClear'), n = r('.bg-picker .mini'); return { titleAboveUpload: t.bottom <= u.top + 1, uploadAboveClear: u.bottom <= c.top + 1, clearAboveNote: c.bottom <= n.top + 1 }; });
+  assert(bgGeo.titleAboveUpload && bgGeo.uploadAboveClear && bgGeo.clearAboveNote, 'Background buttons do not overlap the text: ' + JSON.stringify(bgGeo));
   await page.evaluate(() => { document.getElementById('cloudModal').classList.remove('show'); });
   // List width grip
   await page.evaluate(() => { document.documentElement.dataset.layout = 'rows'; switchView('tasks'); });
