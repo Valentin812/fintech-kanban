@@ -83,6 +83,14 @@ jobs:
         run: node tests/releases-multi.mjs
       - name: Run project order browser test
         run: node tests/project-order.mjs
+      - name: Quick task and note-to-project tests
+        run: node tests/quick-task.mjs
+      - name: Undo stack tests
+        run: node tests/undo-stack.mjs
+      - name: Cloud pull tests
+        run: node tests/cloud-pull.mjs
+      - name: Resources edit tests
+        run: node tests/resources-edit.mjs
 
       - name: Run Telegram message parser test
         run: node --experimental-strip-types tests/telegram-parse.mjs

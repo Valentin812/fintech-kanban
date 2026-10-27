@@ -58,7 +58,8 @@ try {
   const box = (id) => page.locator(`article.task[data-id="${id}"]`).evaluate((e) => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y }; });
   const colsBefore = await page.locator('.board .column').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().y));
   assert(new Set(colsBefore.map(Math.round)).size === 1, 'By default the columns stand side by side');
-  await page.locator('#layoutToggle').click();
+  await page.locator('#viewModeToggle').click();
+  await page.locator('#viewModeToggle').click();
   assert(await page.evaluate(() => document.documentElement.dataset.layout) === 'rows', 'Rows layout is on');
   const ys = await page.locator('.board .column').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().y)));
   assert(new Set(ys).size === ys.length, `Statuses stand one under another: ${ys}`);
@@ -75,7 +76,7 @@ try {
   await page.reload();
   await page.locator('.app').waitFor({ state: 'visible' });
   assert(await page.evaluate(() => document.documentElement.dataset.layout) === 'rows', 'The choice is remembered');
-  await page.locator('#layoutToggle').click();
+  await page.locator('#viewModeToggle').click();
   assert(await page.evaluate(() => document.documentElement.dataset.layout) === 'columns', 'Switches back');
   assert(!errors.length, `Page errors: ${errors.join('; ')}`);
   console.log('Board layout OK: rows as lines, add-column on top, remembered, switchable');
