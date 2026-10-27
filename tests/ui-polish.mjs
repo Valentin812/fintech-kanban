@@ -129,6 +129,20 @@ try {
   await page.evaluate(() => { switchView('inbox'); const v = document.getElementById('myTasksView'); if (!v.querySelector('.mytask-list')) { const d = document.createElement('div'); d.className = 'mytask-list'; d.innerHTML = '<button class="mytask-row"><span class="mytask-title">Проверка</span></button>'; v.appendChild(d); } });
   const lists = await page.evaluate(() => { const L = (c) => { const [r, g, b] = c.match(/\d+/g).map(Number); return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 }; const l = document.querySelector('#myTasksView .mytask-list'); return { bg: L(getComputedStyle(l).backgroundColor), text: L(getComputedStyle(l.querySelector('.mytask-title')).color) }; });
   assert(lists.bg < 0.3 && lists.text > 0.6, 'Pixel task list is dark with light text: ' + JSON.stringify(lists));
+  // «Лаборатория»: hidden, opens after 5 taps on the version line, hides after expiry
+  await page.setViewportSize({ width: 1400, height: 800 });
+  await page.evaluate(() => cloudOpen());
+  assert(await page.locator('#cloudLabGroup').isHidden(), 'Lab is hidden by default');
+  for (let i = 0; i < 4; i++) await page.locator('.app-version').click();
+  assert(await page.locator('#cloudLabGroup').isHidden(), 'Four taps are not enough');
+  await page.locator('.app-version').click();
+  assert(await page.locator('#cloudLabGroup').isVisible(), 'Five taps open the lab entry');
+  await page.locator('#labOpen').click();
+  assert(await page.locator('#labModal .lab-game').count() === 3, 'Lab lists three games');
+  await page.locator('#labClose').click();
+  await page.evaluate(() => window.__lab.expire());
+  assert(await page.locator('#cloudLabGroup').isHidden(), 'Lab hides when the hour is over');
+  await page.evaluate(() => { document.getElementById('cloudModal').classList.remove('show'); });
   // Mobile: link title is not squeezed vertically
   await page.setViewportSize({ width: 390, height: 800 });
   await page.evaluate(() => { switchView('links'); renderResources('links'); });

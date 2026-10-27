@@ -1923,6 +1923,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.10.27-23',date:'27.10.2026',title:'Лаборатория (заготовка)',items:['Добавлен скрытый раздел для будущих мини-игр. Он спрятан и сам скрывается через час и при выходе.']},
  {v:'2026.10.27-22',date:'27.10.2026',title:'Карточка задачи на телефоне',items:['Описание и комментарий растут вместе с текстом (до 60% высоты экрана), длинные тексты удобно читать.','Убрана кнопка «Сохранить» — изменения и так сохраняются автоматически; остаётся «Завершить».']},
  {v:'2026.10.27-21',date:'27.10.2026',title:'Подзадачи: срок и ответственный',items:['У подзадачи на доске показываются ответственный и срок, если они указаны (просроченный срок — красным).']},
  {v:'2026.10.27-20',date:'27.10.2026',title:'Полосы: строка задачи',items:['В режиме «Полосами» под названием слева — «＋ подзадача» и комментарии, справа — ответственный, срок и закреп.']},
@@ -2978,6 +2979,40 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
   if(drawer)new MutationObserver(()=>{if(drawer.classList.contains('open'))setTimeout(fitAll,30)}).observe(drawer,{attributes:true,attributeFilter:['class']});
   window.addEventListener('resize',fitAll);
   window.__fitTextareas=fitAll;
+})();
+/* ===== «Лаборатория»: скрытый раздел (5 нажатий на «Версия …»), прячется через час и при выходе ===== */
+(function labModule(){
+  const KEY='fintech-kanban-lab-until',HOUR=3600*1000;
+  const ss={get:()=>{try{return sessionStorage.getItem(KEY)}catch(e){return null}},set:v=>{try{sessionStorage.setItem(KEY,v)}catch(e){}},del:()=>{try{sessionStorage.removeItem(KEY)}catch(e){}}};
+  const changelog=$('cloudChangelogGroup');if(!changelog)return;
+  const group=document.createElement('section');group.className='cloud-action-group';group.id='cloudLabGroup';group.hidden=true;
+  group.innerHTML='<div class="cloud-group-title">Лаборатория</div><button class="btn" id="labOpen" type="button">🧪 Открыть лабораторию</button>';
+  changelog.parentNode.insertBefore(group,changelog.nextSibling);
+  const modal=document.createElement('div');modal.className='modal';modal.id='labModal';
+  modal.innerHTML='<div class="modalcard" role="dialog" aria-modal="true" aria-labelledby="labTitle"><h3 id="labTitle">Лаборатория</h3><p class="mini" style="margin:0 0 12px;line-height:1.5">Здесь будут небольшие игры на 2–3 человек между пользователями. Раздел сам спрячется через час или при выходе из аккаунта.</p><div class="lab-games"><div class="lab-game"><b>Захват территорий</b><span class="mini">Пошаговая стратегия на 2–3 игроков · скоро</span></div><div class="lab-game"><b>Дуэль слов</b><span class="mini">Слова из общего набора букв · скоро</span></div><div class="lab-game"><b>Мини-герои</b><span class="mini">Тактика с героями и отрядами · позже</span></div></div><div style="display:flex;justify-content:flex-end;margin-top:14px"><button class="btn" id="labClose" type="button">Закрыть</button></div></div>';
+  document.body.appendChild(modal);
+  const st=document.createElement('style');
+  st.textContent='.lab-games{display:grid;gap:8px}.lab-game{display:grid;gap:2px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card,#fff)}#cloudModal #labOpen{width:100%;text-align:left}';
+  document.head.appendChild(st);
+  const active=()=>{const until=Number(ss.get()||0);return until>Date.now()&&!!cloudSession};
+  function tick(){
+    const on=active();
+    if(!on){if(ss.get()!==null)ss.del();modal.classList.remove('show')}
+    group.hidden=!on;
+  }
+  let taps=0,timer=0;
+  document.addEventListener('click',e=>{
+    if(!e.target.closest('.app-version'))return;
+    taps++;clearTimeout(timer);timer=setTimeout(()=>{taps=0},3000);
+    if(taps>=5){taps=0;if(!cloudSession){return}ss.set(String(Date.now()+HOUR));tick();if(typeof toast==='function')toast('Лаборатория открыта на час')}
+  });
+  $('labOpen').addEventListener('click',()=>{if(!active()){tick();return}modal.classList.add('show')});
+  $('labClose').addEventListener('click',()=>modal.classList.remove('show'));
+  modal.addEventListener('click',e=>{if(e.target===modal)modal.classList.remove('show')});
+  setInterval(tick,15000);
+  const cm=$('cloudModal');if(cm)new MutationObserver(tick).observe(cm,{attributes:true,attributeFilter:['class']});
+  tick();
+  window.__lab={tick,expire:()=>{ss.set(String(Date.now()-1000));tick()}};
 })();
 /* ===== Мобильная версия: активная вкладка проекта всегда видна ===== */
 (function tabsIntoView(){
