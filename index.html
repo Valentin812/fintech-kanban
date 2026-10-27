@@ -1145,6 +1145,8 @@ html[data-layout="rows"] .board .column>.add{margin-top:4px}
   /* задачи проекта — список */
   #statusStrip,#statusStrip[hidden]{display:none!important}
   .app .board{display:block!important;overflow-x:hidden!important;overflow-y:auto!important;scroll-snap-type:none!important;padding:4px 10px 10px!important;gap:0!important}
+  .app .board[hidden]{display:none!important}
+  .viewhead>div>.mini,.qn-head .mini,.viewFooter,#viewFooter,.autosave-note{display:none!important}
   .app .board .column{display:block;flex:none!important;width:auto!important;min-width:0!important;max-width:none!important;background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important;margin:0 0 14px;scroll-snap-align:none}
   .app .board .colhead{padding:4px 2px 6px!important;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
   .app .board .colhead .col-grip{display:none}
@@ -1888,7 +1890,8 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
- {v:'2026.10.27-08',date:'27.10.2026',title:'Мобильная версия: проекты по кнопке, задачи списком',items:['На телефоне лента проектов убрана: сверху кнопка с названием проекта, по нажатию открывается список проектов.','Задачи проекта на телефоне идут списком по статусам, как в «Моих задачах», без горизонтального свайпа по колонкам.']},
+ {v:'2026.10.27-12',date:'27.10.2026',title:'Мобильная: чистые вкладки',items:['На телефоне старая доска больше не торчит над вкладками «Мои задачи», «Завершённые», «Релизы», «Ссылки» и другими.','Убраны поясняющие тексты под заголовками вкладок и в заметках — больше места под содержимое.']},
+  {v:'2026.10.27-08',date:'27.10.2026',title:'Мобильная версия: проекты по кнопке, задачи списком',items:['На телефоне лента проектов убрана: сверху кнопка с названием проекта, по нажатию открывается список проектов.','Задачи проекта на телефоне идут списком по статусам, как в «Моих задачах», без горизонтального свайпа по колонкам.']},
  {v:'2026.10.27-07',date:'27.10.2026',title:'Релизы: общий раздел и несколько проектов',items:['В меню слева появился раздел «Релизы» — релизы всех проектов в одном месте.','При добавлении релиза можно отметить несколько проектов: он появится во вкладке «Релизы» каждого из них, с пометкой «также: …». Правка и удаление применяются сразу ко всем проектам релиза.']},
  {v:'2026.10.27-06',date:'27.10.2026',title:'Участники: переименование',items:['В «Участниках» у каждого есть кнопка «Переименовать»: новое имя подставится у ответственных во всех задачах.','При открытии «Участников» сверху больше не остаётся шапка проекта с вкладками.']},
  {v:'2026.10.27-05',date:'27.10.2026',title:'Порядок проектов',items:['Проекты в списке слева можно перетаскивать мышью и менять местами — приоритетные ставь вверх. Порядок сохраняется в аккаунте. С клавиатуры: Alt+↑ / Alt+↓.']},
