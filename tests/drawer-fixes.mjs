@@ -86,7 +86,7 @@ try {
   await page.locator('#memberName').fill('Яковлев Виктор');
   await page.locator('#memberEmail').fill('yakovlev@example.test');
   await page.locator('#memberForm button[type="submit"]').click();
-  await page.locator('[data-view="tasks"]').click();
+  await page.evaluate(() => switchView('tasks'));
 
   // 1. Owner suggestions in the "new task" dialog.
   await page.locator('.column[data-status="Очередь"] [data-add]').first().click();
