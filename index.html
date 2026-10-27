@@ -1177,7 +1177,7 @@ html[data-layout="rows"] .board .column>.add{margin-top:4px}
 #projects .project.drop-after{box-shadow:0 3px 0 0 var(--blue,#2878f0)}
 .projecttitle-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.quick-task-btn{padding:5px 12px;font-size:13px;font-weight:650;white-space:nowrap}.qn-proj{max-width:130px;border:1px solid var(--line);border-radius:8px;padding:3px 6px;font:inherit;font-size:12px;background:var(--card,#fff);color:inherit;cursor:pointer}@media(max-width:700px){.quick-task-btn{display:none}}
 .res-bind-h{font-weight:700;font-size:13px;margin:12px 0 4px}.res-bind-list{display:grid;gap:4px;max-height:200px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:8px}.res-bind-list label{display:flex;gap:8px;align-items:center;font-size:13px;cursor:pointer}.res-bind-search{width:100%;box-sizing:border-box;margin:0 0 6px;border:1px solid var(--line);border-radius:8px;padding:7px 10px;font:inherit;background:var(--card,#fff);color:inherit}.task-link-row .task-link-remove[data-edit-link]{margin-left:6px}
-@media(min-width:1000px){html[data-layout="rows"] body.drawer-open .board{max-width:max(400px,calc(100vw - 255px - 700px))}html[data-layout="rows"] body.drawer-open .board .column{max-width:max(400px,calc(100vw - 255px - 700px))}html[data-layout="rows"] body.drawer-open .board .cards>.task .tasktitle{flex:1 1 auto}html[data-layout="rows"] body.drawer-open .board .cards>.task .subtask-add,html[data-layout="rows"] body.drawer-open .board .cards>.task .meta:first-of-type{display:none}}
+@media(min-width:1000px){html[data-layout="rows"] body.drawer-open .board{max-width:max(400px,calc(100vw - 255px - 700px))}html[data-layout="rows"] body.drawer-open .board .column{max-width:max(400px,calc(100vw - 255px - 700px))}}
 .qn-item{flex-wrap:wrap;row-gap:0}.qn-text{flex:1 1 calc(100% - 40px)}.qn-item>.qn-age,.qn-item>.qn-act,.qn-item>.qn-del,.qn-item>.qn-proj{flex:0 0 auto}.qn-item>.qn-age,.qn-item>.qn-act:first-of-type{margin-left:26px}
 .qn-panel{padding:8px 12px}.qn-panel .qn-head{margin-bottom:4px}.qn-panel .qn-head h3{font-size:14px}.qn-panel .qn-head .mini{font-size:11px}.qn-input{padding:6px 10px;font-size:13px}.qn-item{padding:2px}
 @media(max-width:700px){.resource{flex-wrap:wrap}.resource-main{flex:1 1 calc(100% - 56px);min-width:0}.resource-main a{overflow-wrap:anywhere}.resource-meta{overflow-wrap:anywhere}.resource>.smallbtn{flex:0 0 auto;margin-left:0}.resource>.smallbtn:first-of-type{margin-left:48px}}
@@ -1187,7 +1187,7 @@ html[data-layout="rows"] .board .cards>.task .task-order-controls{position:absol
 html[data-layout="rows"] .board .cards>.task .tasktitle{flex:1 1 100%;min-width:0;margin:0;font-size:14px;font-weight:600;overflow-wrap:anywhere}
 html[data-layout="rows"] .board .cards>.task .meta{display:flex;flex:0 0 auto;align-items:center;gap:8px;margin:0;padding:0;border:0;font-size:12px}
 html[data-layout="rows"] .board .cards>.task .meta .owner{min-width:0;justify-content:flex-start}
-html[data-layout="rows"] .board .cards>.task .subtask-list{display:none}
+html[data-layout="rows"] .board .cards>.task .subtask-list{display:grid;order:99;flex:0 0 100%;margin:2px 0 0}
 html[data-layout="rows"] .board .cards>.task .subtask-add{display:inline-block;flex:0 0 auto;width:auto;margin:0;padding:0;border:0;font-size:12px;white-space:nowrap}
 html[data-layout="rows"] .board .cards>.task .archive-task{position:static;flex:0 0 auto;margin:0}
 #listWidthGrip{position:fixed;width:9px;margin-left:-4px;cursor:ew-resize;z-index:30;display:none;background:transparent;touch-action:none}#listWidthGrip:hover,#listWidthGrip.drag{background:rgba(100,120,170,.35)}
@@ -1913,6 +1913,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.10.27-18',date:'27.10.2026',title:'Подзадачи в полосах',items:['В режиме «Полосами» добавленные подзадачи теперь видны под задачей.','Строка задачи выглядит одинаково с открытой и закрытой карточкой: ответственный, подзадача, закреп и комментарии остаются под названием.']},
  {v:'2026.10.27-17',date:'27.10.2026',title:'Темы: Пиксель-арт и Ламповая',items:['«Пиксель-арт»: списки в «Мои задачи» и «Завершённые» теперь тёмные, как быстрые заметки, без белых блоков.','«Ламповая» стала темнее на пару тонов.']},
  {v:'2026.10.27-16',date:'27.10.2026',title:'Кнопка фона',items:['В меню аккаунта кнопка «Загрузить своё фото» больше не наезжает на текст.']},
  {v:'2026.10.27-15',date:'27.10.2026',title:'Полоса прокрутки у края',items:['В режиме «Полосами» полоса прокрутки теперь у правого края экрана, как в «Моих задачах».']},
