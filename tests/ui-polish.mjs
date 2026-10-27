@@ -13,7 +13,7 @@ const origin = `http://127.0.0.1:${server.address().port}`;
 const launchOptions = { headless: true };
 if (process.env.CHROMIUM_EXECUTABLE) launchOptions.executablePath = process.env.CHROMIUM_EXECUTABLE;
 const browser = await chromium.launch(launchOptions);
-function assert(c, m) { if (!c) throw new Error(m); }
+function assert(c, m) { if (!c) { console.log('::error::' + String(m).replace(/\n/g, ' ').slice(0, 900)); throw new Error(m); } }
 const ME = '00000000-0000-4000-8000-000000000001';
 const session = { access_token: 'm', refresh_token: 'r', user: { id: ME, email: 'o@example.test', user_metadata: {} } };
 const tk = (id, title) => ({ id, title, status: 'Очередь', owner: 'Яковлев В.', end: '', description: '', comment: '' });
@@ -99,6 +99,10 @@ try {
   await page.waitForTimeout(300);
   const g2 = await subGeo();
   assert(g2 && g2.visible && g2.belowInfo && g2.infoBelowTitle, 'Same row layout with the drawer open: ' + JSON.stringify(g2));
+  // Left: «＋ подзадача» and comments; right: owner, due date and pin
+  await page.evaluate(() => { const t = active().tasks.find((x) => !x.parent); t.end = '30.10.2026'; t.comment = '27.10.2026, 09:52:47 — 123'; renderAll(); });
+  const sides = await page.locator('#board article.task').first().evaluate((e) => { const R = (s) => e.querySelector(s)?.getBoundingClientRect(); const c = e.getBoundingClientRect(), add = R('.subtask-add'), com = R('.comment-peek-btn'), pin = R('.pin-btn'), date = R('.date'), owner = [...e.querySelectorAll('.meta span')].find((x) => !x.classList.contains('date') && !x.classList.contains('owner')).getBoundingClientRect(); return { addLeft: add.left - c.left, comLeft: com.left - c.left, ownerRightHalf: owner.left > com.right, dateRightHalf: date.left > com.right, pinRightEdge: c.right - pin.right, sameLine: Math.abs(add.top - pin.top) < 14 && Math.abs(add.top - owner.top) < 14 && Math.abs(add.top - com.top) < 14 }; });
+  assert(sides.addLeft < 200 && sides.comLeft < 300 && sides.ownerRightHalf && sides.dateRightHalf && sides.pinRightEdge < 40 && sides.sameLine, 'Subtask and comments on the left, owner/date/pin on the right: ' + JSON.stringify(sides));
   await page.evaluate(() => closeDrawer());
   // A second subtask can be added by clicking «＋ подзадача» (the drag handle must not cover it)
   await page.locator('#board article.task').first().locator('.subtask-add').click({ timeout: 5000 });

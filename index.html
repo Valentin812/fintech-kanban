@@ -1188,6 +1188,15 @@ html[data-layout="rows"] .board .cards>.task .tasktitle{flex:1 1 100%;min-width:
 html[data-layout="rows"] .board .cards>.task .meta{display:flex;flex:0 0 auto;align-items:center;gap:8px;margin:0;padding:0;border:0;font-size:12px}
 html[data-layout="rows"] .board .cards>.task .meta .owner{min-width:0;justify-content:flex-start}
 html[data-layout="rows"] .board .cards>.task .subtask-list{display:grid;order:99;flex:0 0 100%;margin:2px 0 0}
+html[data-layout="rows"] .board .cards>.task .meta:has(.owner){display:contents}
+html[data-layout="rows"] .board .cards>.task .meta:has(.owner) .owner{display:contents}
+html[data-layout="rows"] .board .cards>.task .tasktitle{order:0}
+html[data-layout="rows"] .board .cards>.task .subtask-add{order:1}
+html[data-layout="rows"] .board .cards>.task .comment-peek-btn{order:2}
+html[data-layout="rows"] .board .cards>.task::after{content:"";order:3;flex:1 1 0;min-width:0}
+html[data-layout="rows"] .board .cards>.task .meta:not(:has(.owner)){order:4}
+html[data-layout="rows"] .board .cards>.task .date{order:5}
+html[data-layout="rows"] .board .cards>.task .pin-btn{order:6}
 html[data-layout="rows"] .board .cards>.task .subtask-add{display:inline-block;flex:0 0 auto;width:auto;margin:0;padding:0;border:0;font-size:12px;white-space:nowrap}
 html[data-layout="rows"] .board .cards>.task .archive-task{position:static;flex:0 0 auto;margin:0}
 #listWidthGrip{position:fixed;width:9px;margin-left:-4px;cursor:ew-resize;z-index:30;display:none;background:transparent;touch-action:none}#listWidthGrip:hover,#listWidthGrip.drag{background:rgba(100,120,170,.35)}
@@ -1913,6 +1922,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.10.27-20',date:'27.10.2026',title:'Полосы: строка задачи',items:['В режиме «Полосами» под названием слева — «＋ подзадача» и комментарии, справа — ответственный, срок и закреп.']},
  {v:'2026.10.27-19',date:'27.10.2026',title:'Вторая подзадача',items:['В режиме «Полосами» можно добавить вторую и следующие подзадачи: невидимый блок перетаскивания больше не перекрывает кнопку «＋ подзадача».']},
  {v:'2026.10.27-18',date:'27.10.2026',title:'Подзадачи в полосах',items:['В режиме «Полосами» добавленные подзадачи теперь видны под задачей.','Строка задачи выглядит одинаково с открытой и закрытой карточкой: ответственный, подзадача, закреп и комментарии остаются под названием.']},
  {v:'2026.10.27-17',date:'27.10.2026',title:'Темы: Пиксель-арт и Ламповая',items:['«Пиксель-арт»: списки в «Мои задачи» и «Завершённые» теперь тёмные, как быстрые заметки, без белых блоков.','«Ламповая» стала темнее на пару тонов.']},
