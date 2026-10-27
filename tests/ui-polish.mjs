@@ -102,6 +102,10 @@ try {
   await page.evaluate(() => applyTheme('pixel'));
   const lum = await page.evaluate(() => { const [r, g, b] = getComputedStyle(document.body).backgroundColor.match(/\d+/g).map(Number); return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255; });
   assert(lum < 0.3, 'Pixel theme is dark: ' + lum);
+  // Lists in «Мои задачи» are dark in Pixel too (no white blocks with pale text)
+  await page.evaluate(() => { switchView('inbox'); const v = document.getElementById('myTasksView'); if (!v.querySelector('.mytask-list')) { const d = document.createElement('div'); d.className = 'mytask-list'; d.innerHTML = '<button class="mytask-row"><span class="mytask-title">Проверка</span></button>'; v.appendChild(d); } });
+  const lists = await page.evaluate(() => { const L = (c) => { const [r, g, b] = c.match(/\d+/g).map(Number); return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 }; const l = document.querySelector('#myTasksView .mytask-list'); return { bg: L(getComputedStyle(l).backgroundColor), text: L(getComputedStyle(l.querySelector('.mytask-title')).color) }; });
+  assert(lists.bg < 0.3 && lists.text > 0.6, 'Pixel task list is dark with light text: ' + JSON.stringify(lists));
   // Mobile: link title is not squeezed vertically
   await page.setViewportSize({ width: 390, height: 800 });
   await page.evaluate(() => { switchView('links'); renderResources('links'); });
