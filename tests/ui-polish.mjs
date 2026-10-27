@@ -44,7 +44,7 @@ try {
   assert((await page.locator('.subtask-add').first().textContent()).trim() === '＋ подзадача', 'Short subtask label');
   // Rows: narrower block, stays left of the open drawer
   await page.evaluate(() => { document.documentElement.dataset.layout = 'rows'; });
-  const bw = await page.locator('#board').evaluate((e) => e.getBoundingClientRect().width);
+  const bw = await page.locator('#board .column').first().evaluate((e) => e.getBoundingClientRect().width);
   assert(bw <= 900, 'Rows block is narrow: ' + bw);
   await page.evaluate(() => openTask(1));
   await page.waitForTimeout(300);
@@ -75,9 +75,14 @@ try {
   await page.waitForTimeout(600);
   const gb = await page.locator('#listWidthGrip').boundingBox();
   assert(gb, 'Width grip is visible for the rows block');
-  const w0 = await page.locator('#board').evaluate((e) => e.getBoundingClientRect().width);
+  // Полоса прокрутки доски у правого края области, а не у края блока
+  const edge = await page.evaluate(() => { const b = document.getElementById('board').getBoundingClientRect(), m = document.querySelector('.main').getBoundingClientRect(), c = document.querySelector('#board .column').getBoundingClientRect(); return { boardRight: b.right, mainRight: m.right, colWidth: c.width }; });
+  assert(Math.abs(edge.boardRight - edge.mainRight) < 3, 'Board scrollbar sits at the right edge: ' + JSON.stringify(edge));
+  assert(edge.colWidth <= 881, 'Rows block stays narrow: ' + edge.colWidth);
+  const colW = () => page.locator('#board .column').first().evaluate((e) => e.getBoundingClientRect().width);
+  const w0 = await colW();
   await page.mouse.move(gb.x + 4, gb.y + 100); await page.mouse.down(); await page.mouse.move(gb.x - 150, gb.y + 100, { steps: 5 }); await page.mouse.up();
-  const w1 = await page.locator('#board').evaluate((e) => e.getBoundingClientRect().width);
+  const w1 = await colW();
   assert(w1 < w0 - 100, `Block got narrower by dragging: ${w0} -> ${w1}`);
   assert(await page.evaluate(() => localStorage.getItem('fintech-kanban-list-w')) !== null, 'Width is remembered');
   // Rows look like «Мои задачи»: title above, info line under it, on the left
