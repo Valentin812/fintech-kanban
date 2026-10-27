@@ -55,6 +55,7 @@ try {
 
   // The global «Релизы» section: no project header, pick several projects.
   await page.locator('#releasesNav').click();
+  assert(await page.locator('#projects .project.active').count() === 0, 'No project is highlighted in the global Releases view');
   await page.locator('#releasesView').waitFor({ state: 'visible' });
   assert(await page.locator('#projectHeader').isHidden(), 'Global releases hide the project header');
   await page.locator('[data-rl-new]').click();

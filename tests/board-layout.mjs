@@ -64,7 +64,7 @@ try {
   const ys = await page.locator('.board .column').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().y)));
   assert(new Set(ys).size === ys.length, `Statuses stand one under another: ${ys}`);
   const widths = await page.locator('.board .column').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().width));
-  assert(widths.every((w) => w > 900), `Each status spans the width: ${widths}`);
+  assert(widths.every((w) => w > 600 && w <= 880 && Math.abs(w - widths[0]) < 2), `Each status is one compact block of equal width: ${widths}`);
   await page.evaluate(() => { const p = active(); p.tasks.push({ id: 91, title: 'Ещё', status: 'Очередь', owner: '', end: '', description: '', comment: '' }); renderAll(); });
   const a = await box(1), b = await box(91);
   assert(b.y > a.y && Math.abs(a.x - b.x) < 2, 'Tasks of one status go as lines one under another');

@@ -87,6 +87,8 @@ jobs:
         run: node tests/quick-task.mjs
       - name: Undo stack tests
         run: node tests/undo-stack.mjs
+      - name: UI polish tests
+        run: node tests/ui-polish.mjs
       - name: Cloud pull tests
         run: node tests/cloud-pull.mjs
       - name: Resources edit tests
