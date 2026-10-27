@@ -85,6 +85,8 @@ jobs:
         run: node tests/project-order.mjs
       - name: Quick task and note-to-project tests
         run: node tests/quick-task.mjs
+      - name: MAX bot logic tests
+        run: node tests/max-bot.mjs
       - name: Undo stack tests
         run: node tests/undo-stack.mjs
       - name: UI polish tests
