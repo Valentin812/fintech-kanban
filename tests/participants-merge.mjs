@@ -112,6 +112,20 @@ try {
   assert(savedState?.members?.some((m) => m.name === 'Лимарь Андрей' && m.email === 'a.s.limar@example.test' && m.linked), 'Merged member must be saved to the cloud');
   assert(await page.locator('#peopleView .person-row', { hasText: 'a.s.limar@example.test' }).count() === 1, 'People list should show one merged row');
 
+  // Rename from the participants tab (and the project header does not stay on top of it).
+  assert(await page.locator('#projectHeader').isHidden(), 'Project header must not stay above the participants list');
+  await page.locator('#peopleView [data-rename-person="Лимарь Андрей"]').first().click();
+  await page.locator('#renameInput').fill('Лимарь А.');
+  await page.locator('#renameConfirm').click();
+  const renamed = await page.evaluate(() => ({ names: allParticipants().map((p) => p.name), owners: [...data[0].tasks.map((t) => t.owner), ...standaloneTasks.map((t) => t.owner)] }));
+  assert(renamed.names.includes('Лимарь А.') && !renamed.names.includes('Лимарь Андрей'), `Participant renamed: ${JSON.stringify(renamed.names)}`);
+  assert(renamed.owners.some((o) => o === 'Лимарь А.') && !renamed.owners.some((o) => o.includes('Лимарь Андрей')), `Owners renamed in tasks: ${JSON.stringify(renamed.owners)}`);
+  assert(await page.evaluate(() => allParticipants().filter((p) => p.email === 'a.s.limar@example.test').length) === 1, 'The account stays one participant after rename');
+  await page.locator('#peopleView [data-rename-person="Лимарь А."]').first().click();
+  await page.locator('#renameInput').fill('Лимарь Андрей');
+  await page.locator('#renameInput').press('Enter');
+  assert((await page.evaluate(() => allParticipants().map((p) => p.name))).includes('Лимарь Андрей'), 'Renamed back');
+
   // Assigning the merged person notifies their account email, only for newly added assignees.
   await page.evaluate(() => { switchView('tasks'); openTask(3); });
   await page.locator('#dOwner').fill('Яковлев В., Лимарь Андрей');
