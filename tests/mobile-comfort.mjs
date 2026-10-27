@@ -168,10 +168,14 @@ try {
   const tabBox = await page.locator('#tabs .tab.active').boundingBox();
   assert(tabBox && tabBox.x >= 0 && tabBox.x + tabBox.width <= 391, `Active tab is visible: ${JSON.stringify(tabBox)}`);
   await page.evaluate(() => { switchView('tasks'); openTask(1); });
-  const save = await page.locator('#saveTask').boundingBox();
+  assert(await page.locator('#saveTask').isHidden(), 'No «Сохранить» button in the phone card (autosave)');
+  const save = await page.locator('#completeTask').boundingBox();
   const pin = await page.locator('#pinTask').boundingBox();
   assert(save.width > 300 && pin.width < save.width * 0.7, `Drawer actions use a 2-column grid: save ${save.width}, pin ${pin.width}`);
   assert(pin.height >= 40, `Drawer buttons are tall enough: ${pin.height}`);
+  const grow = await page.evaluate(() => { const d = document.getElementById('dDescription'); const h0 = d.offsetHeight; d.value = Array.from({ length: 25 }, (_, i) => 'Строка описания ' + (i + 1)).join('\n'); d.dispatchEvent(new Event('input', { bubbles: true })); return { h0, h1: d.offsetHeight, max: innerHeight * 0.6 }; });
+  assert(grow.h1 > grow.h0 + 100 && grow.h1 <= grow.max + 4, 'Description grows with its text up to 60% of the screen: ' + JSON.stringify(grow));
+  await page.evaluate(() => { const d = document.getElementById('dDescription'); d.value = ''; d.dispatchEvent(new Event('input', { bubbles: true })); });
   await page.evaluate(() => closeDrawer());
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'No horizontal page scroll on a phone');
   assert(!phone.unexpected.length, `Unexpected requests: ${phone.unexpected.join('; ')}`);
