@@ -35,6 +35,12 @@
 #cloudModal .cloud-security-group{border-color:#e5e7eb;background:#fff}
 #cloudModal .cloud-security-group .cloud-group-title{color:#7b8494}
 #cloudModal #cloudLogoutAll{color:#dc2626}
+#cloudModal .bg-picker{display:grid;gap:4px;min-width:0}
+#cloudModal .bg-picker .cloud-group-title{display:block;margin:6px 0 0}
+#cloudModal .bg-actions{display:grid;gap:4px;min-width:0}
+#cloudModal .bg-actions .btn{display:block;box-sizing:border-box;width:100%;margin:0;min-height:36px;padding:8px 10px;border:0;border-radius:8px;background:transparent;text-align:left;font-size:13px;line-height:1.3;cursor:pointer;color:inherit}
+#cloudModal .bg-actions .btn:hover{background:#f3f5f8}
+#cloudModal .bg-picker .mini{padding:2px 10px}
 #cloudModal #telegramLinkStatus{line-height:1.5;margin:4px 8px 8px!important}
 #cloudModal #telegramLinkStatus a{overflow-wrap:anywhere}
 @media(max-width:420px){#cloudModal .modalcard{top:52px;right:8px;padding:6px;width:calc(100vw - 16px);max-height:calc(100dvh - 60px)}#cloudModal .cloud-actions{grid-template-columns:minmax(0,1fr)}#cloudModal #cloudLogin,#cloudModal #cloudSignup{grid-column:1;grid-row:auto}}
@@ -296,7 +302,7 @@ body.dark-theme .mention-menu,body.dark-theme .global-search-results,body.dark-t
 body.dark-theme .mention-option:hover,body.dark-theme .global-search-result:hover{background:#24344a}
 body.dark-theme .cloud-action-group,body.dark-theme #cloudModal .cloud-action-group{background:#1b2534;border-color:#303b4d}
 body.dark-theme #cloudModal .cloud-action-group button{color:#e7edf6}
-body.dark-theme #cloudModal .cloud-action-group button:hover{background:#24344a}
+body.dark-theme #cloudModal .cloud-action-group button:hover{background:#24344a}body.dark-theme #cloudModal .bg-actions .btn:hover{background:#24344a}
 body.dark-theme #cloudModal .cloud-group-title{color:#9aa8bc}
 body.dark-theme .overlay{background:#0009}
 body.dark-theme .toast{background:#e7edf6;color:#111722}
@@ -715,7 +721,7 @@ body[data-theme="latte"] .mention-menu,body[data-theme="latte"] .global-search-r
 body[data-theme="latte"] .mention-option:hover,body[data-theme="latte"] .global-search-result:hover{background:#e6d6bf}
 body[data-theme="latte"] .cloud-action-group,body[data-theme="latte"] #cloudModal .cloud-action-group{background:#fffaf3;border-color:#dccdb9}
 body[data-theme="latte"] #cloudModal .cloud-action-group button{color:#3b2d24}
-body[data-theme="latte"] #cloudModal .cloud-action-group button:hover{background:#e6d6bf}
+body[data-theme="latte"] #cloudModal .cloud-action-group button:hover{background:#e6d6bf}body[data-theme="latte"] #cloudModal .bg-actions .btn:hover{background:#e6d6bf}
 body[data-theme="latte"] #cloudModal .cloud-group-title{color:#6f5b4c}
 body[data-theme="latte"] .overlay{background:#3b2d2466}
 body[data-theme="latte"] .toast{background:#3b2d24;color:#f7f1e8}
@@ -780,7 +786,7 @@ body[data-theme="cappuccino"] .mention-menu,body[data-theme="cappuccino"] .globa
 body[data-theme="cappuccino"] .mention-option:hover,body[data-theme="cappuccino"] .global-search-result:hover{background:#97705c}
 body[data-theme="cappuccino"] .cloud-action-group,body[data-theme="cappuccino"] #cloudModal .cloud-action-group{background:#7a5444;border-color:#4a2d24}
 body[data-theme="cappuccino"] #cloudModal .cloud-action-group button{color:#fff8ef}
-body[data-theme="cappuccino"] #cloudModal .cloud-action-group button:hover{background:#97705c}
+body[data-theme="cappuccino"] #cloudModal .cloud-action-group button:hover{background:#97705c}body[data-theme="cappuccino"] #cloudModal .bg-actions .btn:hover{background:#97705c}
 body[data-theme="cappuccino"] #cloudModal .cloud-group-title{color:#f0e3d3}
 body[data-theme="cappuccino"] .overlay{background:#000a}
 body[data-theme="cappuccino"] .toast{background:#fff8ef;color:#613e32}
@@ -1906,6 +1912,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.10.27-16',date:'27.10.2026',title:'Кнопка фона',items:['В меню аккаунта кнопка «Загрузить своё фото» больше не наезжает на текст.']},
  {v:'2026.10.27-15',date:'27.10.2026',title:'Полоса прокрутки у края',items:['В режиме «Полосами» полоса прокрутки теперь у правого края экрана, как в «Моих задачах».']},
  {v:'2026.10.27-14',date:'27.10.2026',title:'Полосы как в «Моих задачах», свой фон, Капучино',items:['Полосы выглядят как «Мои задачи»: название сверху, под ним слева ответственный, «＋ подзадача», срок, закреп и комментарии.','Ширину полос, «Моих задач» и «Завершённых» можно менять: потяните за правый край блока, двойной щелчок — вернуть по умолчанию.','Тема «Капучино» перекрашена под присланный образец (тёмный шоколадный).','Фон: готовые картинки убраны, остаётся только загрузка своего фото.','Новая колонка создаётся по Enter.','В пустой колонке одна кнопка «Добавить задачу» вместо двух.']},
   {v:'2026.10.27-13',date:'27.10.2026',title:'Фоны, тёмный Пиксель-арт, полосы у панели задачи',items:['Фон приложения: в меню аккаунта → «Оформление» → «Фон» — готовые (Рассвет, Лес, Океан, Сумерки, Мокко, Точки, Волны, Сетка) или своё фото. Фон хранится на этом устройстве.','Тема «Пиксель-арт» теперь тёмная (сумеречный фиолетовый).','Полосы: блок стал уже, а при открытии карточки задачи доска сжимается и остаётся видна слева; «＋ Добавить подзадачу» → «＋ подзадача».','Быстрые заметки: починена вёрстка (текст не вытягивался в столбик), блок стал компактнее.','«Релизы» в боковом меню больше не подсвечивают проект.','Мобильная версия: названия ссылок и документов больше не вытягиваются в вертикаль; кнопка в карточке задачи «Готово» теперь «Сохранить» (чтобы не путать с «Завершить»).']},
