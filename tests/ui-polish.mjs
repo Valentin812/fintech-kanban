@@ -58,17 +58,39 @@ try {
   const tw = await page.locator('#qnPop .qn-text').first().evaluate((e) => e.getBoundingClientRect().width);
   assert(tw > 150, 'Note text is wide enough: ' + tw);
   await page.keyboard.press('Escape');
-  // Background presets + custom upload
-  await page.evaluate(() => window.__bg.set('dusk'));
-  assert(await page.evaluate(() => document.body.getAttribute('data-bg')) === 'dusk', 'Preset background applied');
-  await page.reload(); await page.locator('.app').waitFor({ state: 'visible' });
-  assert(await page.evaluate(() => document.body.getAttribute('data-bg')) === 'dusk', 'Background is remembered');
+  // Only a custom background: upload, remembered, removable; no presets
   await page.evaluate(() => cloudOpen());
+  assert(await page.locator('#bgSelect').count() === 0, 'No preset backgrounds are offered');
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
   await page.setInputFiles('#bgFile', { name: 'bg.png', mimeType: 'image/png', buffer: png });
   await page.waitForFunction(() => document.body.getAttribute('data-bg') === 'custom');
+  await page.reload(); await page.locator('.app').waitFor({ state: 'visible' });
+  assert(await page.evaluate(() => document.body.getAttribute('data-bg')) === 'custom', 'Custom background is remembered');
+  await page.evaluate(() => cloudOpen());
   await page.locator('#bgClear').click();
   assert(await page.evaluate(() => document.body.getAttribute('data-bg')) === null, 'Background can be removed');
+  await page.evaluate(() => { document.getElementById('cloudModal').classList.remove('show'); });
+  // List width grip
+  await page.evaluate(() => { document.documentElement.dataset.layout = 'rows'; switchView('tasks'); });
+  await page.waitForTimeout(600);
+  const gb = await page.locator('#listWidthGrip').boundingBox();
+  assert(gb, 'Width grip is visible for the rows block');
+  const w0 = await page.locator('#board').evaluate((e) => e.getBoundingClientRect().width);
+  await page.mouse.move(gb.x + 4, gb.y + 100); await page.mouse.down(); await page.mouse.move(gb.x - 150, gb.y + 100, { steps: 5 }); await page.mouse.up();
+  const w1 = await page.locator('#board').evaluate((e) => e.getBoundingClientRect().width);
+  assert(w1 < w0 - 100, `Block got narrower by dragging: ${w0} -> ${w1}`);
+  assert(await page.evaluate(() => localStorage.getItem('fintech-kanban-list-w')) !== null, 'Width is remembered');
+  // Rows look like «Мои задачи»: title above, info line under it, on the left
+  const geo = await page.locator('#board article.task').first().evaluate((e) => { const t = e.querySelector('.tasktitle').getBoundingClientRect(), m = e.querySelector('.subtask-add').getBoundingClientRect(), c = e.getBoundingClientRect(); return { below: m.top >= t.bottom - 2, left: m.left - c.left }; });
+  assert(geo.below && geo.left < 400, 'Info line is under the title and near the left: ' + JSON.stringify(geo));
+  // New column is created with Enter; an empty column has one «Добавить задачу» only
+  await page.evaluate(() => { document.documentElement.dataset.layout = 'columns'; switchView('tasks'); });
+  await page.locator('#addStatus').click();
+  await page.locator('.status-inline-input').fill('Тест-колонка');
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => document.querySelector('.column[data-status="Тест-колонка"]'));
+  assert(await page.locator('.column[data-status="Тест-колонка"] .colhead .plus[data-add]').count() === 0, 'No header plus in an empty column');
+  assert(await page.locator('.column[data-status="Тест-колонка"] >> text=Добавить задачу').count() === 1, 'One add-task button in an empty column');
   // Pixel theme is dark
   await page.evaluate(() => applyTheme('pixel'));
   const lum = await page.evaluate(() => { const [r, g, b] = getComputedStyle(document.body).backgroundColor.match(/\d+/g).map(Number); return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255; });
