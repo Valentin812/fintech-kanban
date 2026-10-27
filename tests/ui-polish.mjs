@@ -90,6 +90,16 @@ try {
   // Rows look like «Мои задачи»: title above, info line under it, on the left
   const geo = await page.locator('#board article.task').first().evaluate((e) => { const t = e.querySelector('.tasktitle').getBoundingClientRect(), m = e.querySelector('.subtask-add').getBoundingClientRect(), c = e.getBoundingClientRect(); return { below: m.top >= t.bottom - 2, left: m.left - c.left }; });
   assert(geo.below && geo.left < 400, 'Info line is under the title and near the left: ' + JSON.stringify(geo));
+  // Subtasks are visible in rows, and the row looks the same with the drawer open
+  const subInfo = await page.evaluate(() => { const first = document.querySelector('#board article.task'); const pid = Number(first.dataset.id); active().tasks.push({ id: 987654, parent: pid, title: 'Подзадача для проверки', status: 'Очередь', owner: '', end: '', description: '', comment: '' }); renderAll(); return pid; });
+  const subGeo = async () => page.locator('#board article.task').first().evaluate((e) => { const l = e.querySelector('.subtask-link'); if (!l) return null; const t = e.querySelector('.tasktitle').getBoundingClientRect(), m = e.querySelector('.subtask-add').getBoundingClientRect(), s = l.getBoundingClientRect(); return { visible: s.height > 0, belowInfo: s.top >= m.bottom - 2, infoBelowTitle: m.top >= t.bottom - 2 }; });
+  const g1 = await subGeo();
+  assert(g1 && g1.visible && g1.belowInfo && g1.infoBelowTitle, 'Subtask is shown under the info line: ' + JSON.stringify(g1));
+  await page.evaluate((id) => openTask(id), subInfo);
+  await page.waitForTimeout(300);
+  const g2 = await subGeo();
+  assert(g2 && g2.visible && g2.belowInfo && g2.infoBelowTitle, 'Same row layout with the drawer open: ' + JSON.stringify(g2));
+  await page.evaluate(() => closeDrawer());
   // New column is created with Enter; an empty column has one «Добавить задачу» only
   await page.evaluate(() => { document.documentElement.dataset.layout = 'columns'; switchView('tasks'); });
   await page.locator('#addStatus').click();
