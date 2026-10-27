@@ -1151,6 +1151,8 @@ html[data-layout="rows"] .board .column>.add{margin-top:4px}
   /* задачи проекта — список */
   #statusStrip,#statusStrip[hidden]{display:none!important}
   .app .board{display:block!important;overflow-x:hidden!important;overflow-y:auto!important;scroll-snap-type:none!important;padding:4px 10px 10px!important;gap:0!important}
+  .app .board[hidden]{display:none!important}
+  .viewhead>div>.mini,.qn-head .mini,.viewFooter,#viewFooter,.autosave-note{display:none!important}
   .app .board .column{display:block;flex:none!important;width:auto!important;min-width:0!important;max-width:none!important;background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important;margin:0 0 14px;scroll-snap-align:none}
   .app .board .colhead{padding:4px 2px 6px!important;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
   .app .board .colhead .col-grip{display:none}
@@ -1896,6 +1898,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.10.27-12',date:'27.10.2026',title:'Мобильная: чистые вкладки',items:['На телефоне старая доска больше не торчит над вкладками «Мои задачи», «Завершённые», «Релизы», «Ссылки» и другими.','Убраны поясняющие тексты под заголовками вкладок и в заметках — больше места под содержимое.']},
  {v:'2026.10.27-11',date:'27.10.2026',title:'Ctrl+Z, заметки в проект, быстрая задача',items:['Ctrl+Z отменяет последние действия (до 30), Ctrl+Shift+Z или Ctrl+Y возвращает. Работает для личных проектов, задач, заметок и порядка проектов; в полях ввода действует обычная отмена текста. Правки общих проектов не отменяются.','В быстрых заметках у каждой заметки есть выбор «→ в проект…»: заметка сразу становится задачей в нужном проекте.','У названия проекта появилась кнопка «＋ Задача» для быстрого создания задачи.']},
  {v:'2026.10.27-10',date:'27.10.2026',title:'Синхронизация, Капучино, ссылки',items:['Заметки и задачи с телефона теперь сами появляются на ПК (и наоборот) — страницу перезагружать не нужно, обновление раз в 20 секунд и при возврате на вкладку.','Тема «Капучино» стала светлее — мягкий мокко; белых фонов у карточек и полос больше нет ни в одной теме.','Колонки «Готово» на доске больше нет: завершённые задачи сразу уходят на вкладку «Завершённые», старые из колонки перенесены туда автоматически.','Ссылки и документы: название можно изменить (✎) в проекте и в карточке задачи.','Ссылку или документ можно привязать (⛓) к нескольким проектам и задачам: они видны во всех отмеченных местах, а в чужом проекте их можно отвязать.']},
  {v:'2026.10.27-09',date:'27.10.2026',title:'Вид доски одной кнопкой',items:['Вместо двух кнопок — одна: «Стандарт → Компактно → Полосами». На телефоне переключаются только стандартный и компактный.','В режиме полос ответственный и «＋ Добавить подзадачу» стоят слева, сразу после названия, а не у правого края экрана.','Ссылка «в завершённые» больше не сдвигает карточку: она появляется при наведении на месте, строка не растёт.']},

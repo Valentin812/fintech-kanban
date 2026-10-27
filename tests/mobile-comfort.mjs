@@ -96,6 +96,13 @@ try {
   await page.locator('#mobileBar [data-mb="home"]').click();
   await page.waitForFunction(() => activeView === 'home');
   assert(await page.locator('#mobileBar [data-mb="home"].active').count() === 1, 'Home tab should become active');
+  // Other views must not show the old board above them, and carry no explanatory text.
+  for (const v of ['mytasks', 'completed', 'links', 'releases']) {
+    await page.evaluate((x) => switchView(x), v);
+    assert(await page.locator('#board').isHidden(), `Board is hidden in the «${v}» view on a phone`);
+  }
+  await page.evaluate(() => switchView('completed'));
+  assert(await page.locator('#completedView .viewhead .mini').first().isHidden(), 'Explanatory text under the tab title is hidden on a phone');
   await page.locator('#mobileBar [data-mb="tasks"]').click();
   await page.waitForFunction(() => activeView === 'tasks');
 
