@@ -100,6 +100,11 @@ try {
   const g2 = await subGeo();
   assert(g2 && g2.visible && g2.belowInfo && g2.infoBelowTitle, 'Same row layout with the drawer open: ' + JSON.stringify(g2));
   await page.evaluate(() => closeDrawer());
+  // A second subtask can be added by clicking «＋ подзадача» (the drag handle must not cover it)
+  await page.locator('#board article.task').first().locator('.subtask-add').click({ timeout: 5000 });
+  await page.keyboard.type('Вторая подзадача');
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => document.querySelectorAll('#board article.task')[0].querySelectorAll('.subtask-link').length === 2);
   // New column is created with Enter; an empty column has one «Добавить задачу» only
   await page.evaluate(() => { document.documentElement.dataset.layout = 'columns'; switchView('tasks'); });
   await page.locator('#addStatus').click();
