@@ -81,7 +81,7 @@ try {
 
   // 1. Autosave: edits are saved while the drawer stays open; Escape cancels (with undo), outside click saves.
   await page.evaluate(() => openTask(3));
-  assert(await page.locator('#saveTask').textContent() === 'Готово', 'Save button should read «Готово»');
+  assert(await page.locator("#saveTask").textContent() === "Сохранить", 'Save button should read «Сохранить»');
   await page.locator('#dDescription').fill('Autosaved description');
   await page.waitForFunction(() => document.querySelector('#autosaveNote')?.classList.contains('saved'), null, { timeout: 4000 });
   await page.waitForTimeout(1100);
