@@ -125,9 +125,9 @@ try {
   assert(JSON.stringify(await visibleCards()) === '[1]', `Mine + overdue should show only my overdue task: ${await visibleCards()}`);
   assert(await page.locator('[data-quick-filter="mine"]').getAttribute('aria-pressed') === 'true', 'Active filter should be marked pressed');
   await page.locator('[data-quick-filter="overdue"]').click();
-  assert(JSON.stringify(await visibleCards()) === '[1,3,4]', `Mine filter should show all my tasks: ${await visibleCards()}`);
+  assert(JSON.stringify(await visibleCards()) === '[1,3]', `Mine filter should show all my tasks: ${await visibleCards()}`);
   await page.locator('[data-quick-filter="mine"]').click();
-  assert((await visibleCards()).length === 4, 'Turning filters off should show everything');
+  assert((await visibleCards()).length === 3, 'Turning filters off should show everything (done tasks are archived)');
   await page.evaluate(() => { activeProject = 'Second'; switchView('home'); });
   await page.locator('[data-home-overdue]').click();
   await page.waitForFunction(() => activeProject === 'Main' && activeView === 'tasks');
@@ -160,10 +160,10 @@ try {
 
   // 8. Columns can be dragged by their header.
   const order = () => page.locator('#board .column').evaluateAll((cols) => cols.map((c) => c.dataset.status));
-  await page.locator('.column[data-status="Готово"] .col-grip').dragTo(page.locator('.column[data-status="Очередь"]'), { targetPosition: { x: 10, y: 60 } });
-  assert(JSON.stringify(await order()) === JSON.stringify(['Готово', 'Очередь', 'В работе', 'На анализе']), `Column drag should reorder: ${await order()}`);
+  await page.locator('.column[data-status="На анализе"] .col-grip').dragTo(page.locator('.column[data-status="Очередь"]'), { targetPosition: { x: 10, y: 60 } });
+  assert(JSON.stringify(await order()) === JSON.stringify(['На анализе', 'Очередь', 'В работе']), `Column drag should reorder: ${await order()}`);
   await page.waitForTimeout(1100);
-  assert(JSON.stringify(writes.at(-1)?.state?.projectMeta?.Main?.statusOrder) === JSON.stringify(['Готово', 'Очередь', 'В работе', 'На анализе']), 'Dragged order should be saved');
+  assert(JSON.stringify((writes.at(-1)?.state?.projectMeta?.Main?.statusOrder || []).filter((s) => s !== 'Готово')) === JSON.stringify(['На анализе', 'Очередь', 'В работе']), 'Dragged order should be saved');
   assert(await page.evaluate(() => data[0].tasks.length) === 4, 'Dragging a column must not move or lose tasks');
 
   // Cards still move between columns by drag and drop.
