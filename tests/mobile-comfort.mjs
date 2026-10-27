@@ -66,19 +66,22 @@ try {
   const headerBottom = await page.locator('#taskToolbar').boundingBox();
   assert(headerBottom.y < 170, `Header should be compact, toolbar starts at ${headerBottom.y}px`);
 
-  const strip = page.locator('#statusStrip button');
-  const stripBox = await page.locator('#statusStrip').boundingBox(), firstBtn = await strip.first().boundingBox();
-  assert(stripBox.height >= firstBtn.height, `Column switcher must not be squeezed: ${stripBox.height} < ${firstBtn.height}`);
-  assert(await strip.count() >= 3, 'Column switcher should list the columns');
-  assert((await strip.first().textContent()).includes('1'), 'Column switcher shows task counts');
-  const colWidth = (await page.locator('.column').first().boundingBox()).width;
-  assert(colWidth >= 340, `Columns should almost fill the screen, got ${colWidth}px`);
+  // Tasks of a project go as a list by status, like «Мои задачи» (no swiping between columns).
+  assert(await page.locator('#statusStrip').isHidden(), 'No column switcher: the board is a list on a phone');
+  const cols = await page.locator('.board .column').evaluateAll((els) => els.slice(0, 3).map((e) => { const r = e.getBoundingClientRect(); return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width) }; }));
+  assert(cols.length >= 2 && cols[0].x === cols[1].x && cols[1].y > cols[0].y, `Statuses stack one under another: ${JSON.stringify(cols)}`);
+  assert(cols[0].w >= 340, `Lists fill the screen width: ${cols[0].w}px`);
+  const rowBox = await page.locator('.board article.task').first().boundingBox();
+  assert(rowBox.width >= 330 && rowBox.height < 110, `A task is a compact full-width row: ${JSON.stringify(rowBox)}`);
 
-  await strip.nth(1).click();
-  await page.waitForFunction(() => document.querySelector('#board').scrollLeft > 100);
-  await page.waitForFunction(() => document.querySelectorAll('#statusStrip button')[1].classList.contains('active'));
-  await strip.nth(2).click();
-  await page.waitForFunction(() => document.querySelectorAll('#statusStrip button')[2].classList.contains('active'));
+  // Projects open from a button instead of a scrolling ribbon.
+  assert(await page.locator('#projects').isHidden(), 'The project ribbon is hidden by default');
+  assert(await page.locator('#mbProjectBtn').isVisible(), 'The project button is shown');
+  await page.locator('#mbProjectBtn').click();
+  await page.locator('#projects .project').first().waitFor({ state: 'visible' });
+  assert(await page.evaluate(() => document.body.classList.contains('mb-projects-open')), 'Project sheet opens');
+  await page.locator('#projects .project').first().click();
+  await page.waitForFunction(() => !document.body.classList.contains('mb-projects-open'));
 
   // «+» creates a task in the current context.
   await page.locator('#mobileBar [data-mb="add"]').click();
@@ -176,7 +179,7 @@ try {
   assert(!desktop.errors.length, `Page errors: ${desktop.errors.join('; ')}`);
   await desktop.context.close();
 
-  console.log('Mobile comfort OK: bottom navigation, column switcher, full-width columns, desktop untouched');
+  console.log('Mobile comfort OK: bottom navigation, project button, task list, desktop untouched');
 } finally {
   await browser.close();
   await new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
