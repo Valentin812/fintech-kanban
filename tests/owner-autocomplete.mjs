@@ -86,7 +86,7 @@ try {
   await page.locator('#memberName').fill('Анна Смирнова');
   await page.locator('#memberEmail').fill('anna@example.test');
   await page.locator('#memberForm button[type="submit"]').click();
-  await page.locator('[data-view="tasks"]').click();
+  await page.evaluate(() => switchView('tasks'));
   await page.locator('.column[data-status="Очередь"] [data-add]').first().click();
   await page.locator('#newTitle').fill('Проверка ответственного');
   await page.locator('#createTask').click();

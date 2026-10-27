@@ -82,7 +82,7 @@ try {
   await page.locator('#authSubmit').click();
   await page.locator('.app').waitFor({ state: 'visible' });
 
-  await page.locator('[data-view="tasks"]').click();
+  await page.evaluate(() => switchView('tasks'));
   const add = () => page.locator('.column[data-status="Очередь"] [data-add]').first().click();
 
   // New task dialog: Esc cancels, outside click with a title creates, outside click when empty just closes.

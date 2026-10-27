@@ -66,14 +66,19 @@ try {
   assert(widths.every((w) => w > 900), `Each status spans the width: ${widths}`);
   await page.evaluate(() => { const p = active(); p.tasks.push({ id: 91, title: 'Ещё', status: 'Очередь', owner: '', end: '', description: '', comment: '' }); renderAll(); });
   const a = await box(1), b = await box(91);
-  assert(Math.abs(a.y - b.y) < 2 && b.x > a.x, 'Cards of one status go in a row');
+  assert(b.y > a.y && Math.abs(a.x - b.x) < 2, 'Tasks of one status go as lines one under another');
+  const hgt = await page.locator('article.task[data-id="1"]').evaluate((e) => e.getBoundingClientRect().height);
+  assert(hgt < 60, `A task line is compact: ${hgt}`);
+  const addY = await page.locator('#addStatus').evaluate((e) => e.getBoundingClientRect().y);
+  assert(addY < ys[0], `The «add column» button is on top: ${addY} vs ${ys[0]}`);
+  assert(await page.locator('#saveTask').isHidden(), 'No «Готово» button in the card on desktop');
   await page.reload();
   await page.locator('.app').waitFor({ state: 'visible' });
   assert(await page.evaluate(() => document.documentElement.dataset.layout) === 'rows', 'The choice is remembered');
   await page.locator('#layoutToggle').click();
   assert(await page.evaluate(() => document.documentElement.dataset.layout) === 'columns', 'Switches back');
   assert(!errors.length, `Page errors: ${errors.join('; ')}`);
-  console.log('Board layout OK: rows, cards in a row, remembered, switchable');
+  console.log('Board layout OK: rows as lines, add-column on top, remembered, switchable');
 } finally {
   await browser.close();
   await new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
