@@ -96,17 +96,17 @@ try {
 
   // 1. Columns can be reordered and the order is saved per project.
   const columnOrder = () => page.locator('#board .column').evaluateAll((cols) => cols.map((c) => c.dataset.status));
-  assert(JSON.stringify(await columnOrder()) === JSON.stringify(['Очередь', 'В работе', 'На анализе', 'Готово']), 'Unexpected initial column order');
+  assert(JSON.stringify(await columnOrder()) === JSON.stringify(['Очередь', 'В работе', 'На анализе']), 'Unexpected initial column order (no «Готово» column)');
   assert(await page.locator('#board .col-move-btn, #board [data-move-status]').count() === 0, 'Columns are reordered with the mouse only — no arrow buttons');
   const headerBox = async (st) => page.locator(`.column[data-status="${st}"]`).boundingBox();
   let box = await headerBox('На анализе');
-  await page.locator('.column[data-status="Готово"] .col-grip').dragTo(page.locator('.column[data-status="На анализе"]'), { targetPosition: { x: 8, y: 20 } });
+  await page.locator('.column[data-status="На анализе"] .col-grip').dragTo(page.locator('.column[data-status="Очередь"]'), { targetPosition: { x: 8, y: 20 } });
   box = await headerBox('В работе');
   await page.locator('.column[data-status="Очередь"] .col-grip').dragTo(page.locator('.column[data-status="В работе"]'), { targetPosition: { x: Math.round(box.width) - 8, y: 20 } });
-  const reordered = ['В работе', 'Очередь', 'Готово', 'На анализе'];
+  const reordered = ['На анализе', 'В работе', 'Очередь'];
   assert(JSON.stringify(await columnOrder()) === JSON.stringify(reordered), `Columns were not reordered: ${await columnOrder()}`);
   await page.waitForTimeout(1200);
-  assert(JSON.stringify(writes.at(-1)?.state?.projectMeta?.['Extras project']?.statusOrder) === JSON.stringify(reordered), 'Column order must be saved to the cloud');
+  assert(JSON.stringify((writes.at(-1)?.state?.projectMeta?.['Extras project']?.statusOrder || []).filter((s) => s !== 'Готово')) === JSON.stringify(reordered), 'Column order must be saved to the cloud');
   await page.evaluate(() => openTask(5));
   assert(await page.locator('label', { hasText: 'Колонка' }).first().isVisible(), 'Task drawer should call the field «Колонка»');
   const options = await page.locator('#dStatus option').evaluateAll((o) => o.map((x) => x.value));

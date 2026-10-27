@@ -81,7 +81,7 @@ try {
   }
   const lum = (css) => { const [r, g, b] = css.match(/[\d.]+/g).map(Number); return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255; };
   assert(lum(colors.latte.bg) > 0.85 && lum(colors.latte.card) > lum(colors.latte.bg), `Latte should be light with lighter cards: ${JSON.stringify(colors.latte)}`);
-  assert(lum(colors.cappuccino.bg) < 0.2 && lum(colors.cappuccino.card) > lum(colors.cappuccino.bg), `Cappuccino should be dark: ${JSON.stringify(colors.cappuccino)}`);
+  assert(lum(colors.cappuccino.bg) > 0.3 && lum(colors.cappuccino.bg) < 0.55 && lum(colors.cappuccino.card) > lum(colors.cappuccino.bg) && lum(colors.cappuccino.ink) > 0.9, `Cappuccino should be a mid-tone mocha with light text: ${JSON.stringify(colors.cappuccino)}`);
   assert(/^rgb\(\s*(\d+),\s*(\d+),\s*(\d+)\)$/.test(colors.latte.bg) && colors.latte.bg.match(/\d+/g).map(Number).every((v, i, a) => i === 0 || v <= a[0]), 'Latte background should be warm, not blue');
   await d.page.evaluate(() => { themeToggle.value = 'light'; themeToggle.dispatchEvent(new Event('change')); });
 
