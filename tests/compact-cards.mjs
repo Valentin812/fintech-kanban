@@ -57,14 +57,15 @@ try {
   const { page, errors } = await open({ width: 1300, height: 800 });
   const height = () => page.locator('article.task[data-id="1"]').evaluate((e) => e.getBoundingClientRect().height);
   const normal = await height();
-  await page.locator('#densityToggle').click();
+  await page.locator('#viewModeToggle').click();
   const compact = await height();
   assert(await page.evaluate(() => document.documentElement.dataset.density) === 'compact', 'Density is switched on');
   assert(compact < normal * 0.75, `Compact cards are noticeably lower: ${normal} → ${compact}`);
   await page.reload();
   await page.locator('.app').waitFor({ state: 'visible' });
   assert(await page.evaluate(() => document.documentElement.dataset.density) === 'compact', 'The choice is remembered');
-  await page.locator('#densityToggle').click();
+  await page.locator('#viewModeToggle').click();
+  await page.locator('#viewModeToggle').click();
   assert(await page.evaluate(() => document.documentElement.dataset.density) === 'normal', 'Switches back');
   assert(!errors.length, `Page errors: ${errors.join('; ')}`);
   console.log('Compact cards OK: lower cards, remembered, switchable');
