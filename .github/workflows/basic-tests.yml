@@ -53,6 +53,9 @@ jobs:
       - name: Run mobile comfort browser test
         run: node tests/mobile-comfort.mjs
 
+      - name: Run key notes browser test
+        run: node tests/key-notes.mjs
+
       - name: Run assistant logic test
         run: node --experimental-strip-types tests/assistant-logic.mjs
 
