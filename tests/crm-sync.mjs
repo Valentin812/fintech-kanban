@@ -164,6 +164,11 @@ try {
   if (u220.fields.status !== 'active' || u220.fields.due !== '2026-11-05' || u220.base.version !== 3 || u220.productId !== 7) throw new Error('Update 220: ' + JSON.stringify(u220));
   if (u221.fields.due !== '2026-10-30' || u221.base.dueTime !== '18:00' || u221.fields.status) throw new Error('Update 221: ' + JSON.stringify(u221));
   await until(() => page.evaluate((id) => data.find((p) => p.name === 'Этажи · Ремонты').tasks.find((t) => t.id === id).crm.version === 4, t220.id));
+  // Задача, связанная до появления комментариев (без sent/cids/cseen), не ломает синхронизацию.
+  await page.evaluate((id) => { const x = data.find((p) => p.name === 'Этажи · Ремонты').tasks.find((q) => q.id === id); delete x.crm.sent; delete x.crm.cids; delete x.crm.cseen; x.comment = ''; }, t221.id);
+  await page.evaluate(() => window.__crm.sync(true));
+  await wait(1500);
+  if (await page.evaluate(() => document.body.textContent.includes('Cannot read properties'))) throw new Error('Legacy linked task must not break the sync');
   // Комментарии из CRM подтягиваются в задачу.
   await until(() => page.evaluate((id) => (data.find((p) => p.name === 'Этажи · Ремонты').tasks.find((t) => t.id === id).comment || '').includes('Сергей Админ: Ждём ответа банка'), t220.id));
   // Комментарий из канбана уходит в CRM один раз, версия задачи обновляется.
