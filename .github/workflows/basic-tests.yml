@@ -59,6 +59,9 @@ jobs:
       - name: Run meetings browser test
         run: node tests/meetings.mjs
 
+      - name: Run Meeting Hub browser test
+        run: node tests/meetings-hub.mjs
+
       - name: Run key notes browser test
         run: node tests/key-notes.mjs
 

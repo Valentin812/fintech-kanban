@@ -146,6 +146,17 @@ try {
   await page.setViewportSize({ width: 390, height: 800 });
   const fits = await page.evaluate(() => { const r = document.getElementById('keyNotes').getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth + 1; });
   if (!fits) throw new Error('Card must fit on a phone');
+  // The open card must not be squeezed/clipped by the layout (hint and entries stay fully visible).
+  await page.setViewportSize({ width: 1280, height: 620 });
+  await page.evaluate(() => { activeProject = data[0].name; switchView('tasks'); });
+  await card.waitFor({ state: 'visible' });
+  if (!(await card.evaluate((el) => el.classList.contains('open')))) await card.locator('.kn-head').click();
+  const clip = await page.evaluate(() => {
+    const c = document.getElementById('keyNotes'), b = c.querySelector('.kn-body');
+    const cr = c.getBoundingClientRect(), br = b.getBoundingClientRect();
+    return { cardBottom: cr.bottom, bodyBottom: br.bottom, flex: getComputedStyle(c).flexShrink };
+  });
+  if (clip.bodyBottom > clip.cardBottom + 1 || clip.flex !== '0') throw new Error('Key notes card is clipped: ' + JSON.stringify(clip));
   if (pageErrors.length) throw new Error('Page errors: ' + pageErrors.join('; '));
   console.log('Key notes OK');
 } finally {
