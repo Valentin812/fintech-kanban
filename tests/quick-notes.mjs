@@ -93,6 +93,17 @@ try {
   await input.press('Enter');
   if (await panel.locator('.qn-item').count() !== 2) throw new Error('Two notes expected');
   if (!(await page.evaluate(() => document.activeElement?.classList.contains('qn-input')))) throw new Error('Focus should stay in the input for the next note');
+  // Shift+Enter makes a new line instead of saving; Enter saves the multi-line note.
+  await input.fill('Первая строка');
+  await input.press('Shift+Enter');
+  await input.type('Вторая строка');
+  if (await panel.locator('.qn-item').count() !== 2) throw new Error('Shift+Enter must not save the note');
+  await input.press('Enter');
+  const multi = panel.locator('.qn-text', { hasText: 'Вторая строка' });
+  await multi.waitFor();
+  if (!(await multi.evaluate((el) => el.textContent.includes('\n') && getComputedStyle(el).whiteSpace === 'pre-wrap'))) throw new Error('Line break must be kept and shown');
+  await panel.locator('.qn-item', { hasText: 'Вторая строка' }).locator('[data-qn-task]').click();
+  if (!(await page.evaluate(() => standaloneTasks.some((t) => t.title === 'Первая строка' && t.description === 'Вторая строка')))) throw new Error('First line is the title, the rest is the description');
   // Edit: Esc cancels, Enter saves, outside click saves.
   await panel.locator('.qn-text', { hasText: 'Отправить счёт' }).click();
   await page.locator('.qn-edit').fill('Отправить счёт (отменить)');
