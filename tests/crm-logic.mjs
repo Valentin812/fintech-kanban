@@ -1,6 +1,6 @@
 // node --experimental-strip-types tests/crm-logic.mjs
 import assert from 'node:assert/strict';
-const { normalizeComment, buildComment, normalizeTask, buildPatch, buildCreate, dateOnly, offsetOf, ymdInZone, hmInZone } = await import('../supabase/functions/crm-sync/logic.ts');
+const { normalizeComment, buildComment, normalizeTask, buildPatch, buildCreate, buildChecklist, dateOnly, offsetOf, ymdInZone, hmInZone } = await import('../supabase/functions/crm-sync/logic.ts');
 
 // Даты: SQL DATE как полночь сервера в любом поясе, due_at в поясе задачи.
 assert.equal(dateOnly('2026-11-10T00:00:00.000Z'), '2026-11-10');
@@ -25,7 +25,7 @@ assert.ok('error' in buildPatch({ version: 3 }, { status: 'closed' }));
 assert.deepEqual(buildPatch({ version: 3 }, { status: 'done', title: ' Новое ' }).body, { version: 3, status: 'done', title: 'Новое' });
 assert.deepEqual(buildPatch({ version: 3, dueTime: '18:00', dueTz: 'Asia/Yekaterinburg' }, { due: '2026-11-12' }).body, { version: 3, dueAt: '2026-11-12T18:00:00+05:00', dueTimezone: 'Asia/Yekaterinburg' });
 assert.deepEqual(buildPatch({ version: 3 }, { due: '2026-11-12' }).body, { version: 3, dueDate: '2026-11-12' });
-assert.deepEqual(buildPatch({ version: 3, dueTime: '18:00' }, { due: '' }).body, { version: 3, dueAt: null, repeat: 'none', dueDate: null });
+assert.deepEqual(buildPatch({ version: 3, dueTime: '18:00' }, { due: '' }).body, { version: 3, dueAt: null, repeat: 'none', dueDate: null, startDate: null });
 assert.ok('error' in buildPatch({ version: 3 }, { due: '12.11.2026' }));
 
 // Создание: ключ операции, ответственный — числовой ID CRM.
@@ -38,4 +38,30 @@ assert.equal(normalizeComment({ id: 1, body: '  ' }), null);
 assert.ok('error' in buildComment({ body: 'x' }));
 assert.ok('error' in buildComment({ requestKey: 'kanban-0000000001', body: ' ' }));
 assert.deepEqual(buildComment({ requestKey: 'kanban-0000000001', body: ' Ок ' }).body, { requestKey: 'kanban-0000000001', body: 'Ок' });
+
+// Дата начала: в PATCH и при создании (только вместе со сроком и не позже него).
+assert.deepEqual(buildPatch({ version: 3 }, { start: '2026-11-01' }).body, { version: 3, startDate: '2026-11-01' });
+assert.deepEqual(buildPatch({ version: 3 }, { start: '' }).body, { version: 3, startDate: null });
+assert.ok('error' in buildPatch({ version: 3 }, { start: '01.11.2026' }));
+assert.equal(normalizeTask({ id: 1, start_date: '2026-11-01T00:00:00.000Z' }).start, '2026-11-01');
+assert.equal(normalizeTask({ id: 1 }).start, '');
+const cr = buildCreate({ requestKey: 'kanban-0000000001', title: 'A', due: '2026-11-10', start: '2026-11-01', status: 'active', checklist: [' один ', '', 'два'] });
+assert.deepEqual([cr.body.startDate, cr.body.status, cr.items], ['2026-11-01', 'active', ['один', 'два']]);
+assert.equal('startDate' in buildCreate({ requestKey: 'kanban-0000000001', title: 'A', start: '2026-11-01' }).body, false);
+assert.equal('startDate' in buildCreate({ requestKey: 'kanban-0000000001', title: 'A', due: '2026-10-01', start: '2026-11-01' }).body, false);
+assert.equal(buildCreate({ requestKey: 'kanban-0000000001', title: 'A', status: 'cancelled' }).body.status, 'new');
+
+// Чек-лист: список в карточке и в списке (счётчики), операции над пунктами.
+const withList = normalizeTask({ id: 1, checklist: [{ id: 5, title: ' Пункт ', completed: true }, { id: 6, text: 'Второй' }, { id: 7, title: 'Удалён', deleted_at: '2026-10-28' }, { title: 'без id' }] });
+assert.deepEqual(withList.checklist, [{ id: '5', title: 'Пункт', completed: true }, { id: '6', title: 'Второй', completed: false }]);
+assert.deepEqual([withList.clTotal, withList.clDone], [2, 1]);
+const preview = normalizeTask({ id: 1, checklist_total: 3, checklist_done: 1, checklist_preview: [] });
+assert.deepEqual([preview.checklist, preview.clTotal, preview.clDone], [null, 3, 1]);
+assert.deepEqual(buildChecklist({ op: 'add', version: 4, requestKey: 'kanban-0000000001-c0', title: ' Новый ' }), { method: 'POST', suffix: '', body: { version: 4, requestKey: 'kanban-0000000001-c0', title: 'Новый' } });
+assert.deepEqual(buildChecklist({ op: 'set', version: 4, itemId: '602', completed: true }), { method: 'PATCH', suffix: '/602', body: { version: 4, completed: true } });
+assert.deepEqual(buildChecklist({ op: 'delete', version: 4, itemId: '602' }), { method: 'PATCH', suffix: '/602', body: { version: 4, deleted: true } });
+assert.ok('error' in buildChecklist({ op: 'set', version: 0, itemId: '602' }));
+assert.ok('error' in buildChecklist({ op: 'set', version: 4, itemId: '6/../' }));
+assert.ok('error' in buildChecklist({ op: 'add', version: 4, requestKey: 'short', title: 'x' }));
+assert.ok('error' in buildChecklist({ op: 'nope', version: 4 }));
 console.log('CRM logic OK');

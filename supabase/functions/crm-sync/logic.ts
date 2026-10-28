@@ -44,7 +44,18 @@ export type CrmTask = {
   id: string; productId: number; title: string; description: string; status: string; priority: number;
   due: string; dueTime: string; dueTz: string; assignee: string; requester: string; protocolId: string;
   version: number; createdAt: string; updatedAt: string; archived: boolean; comments: number;
+  start: string; clTotal: number; clDone: number; checklist: CrmItem[] | null;
 };
+export type CrmItem = { id: string; title: string; completed: boolean };
+
+// Пункт чек-листа CRM (в CRM подзадачи — это и есть пункты чек-листа). Удалённые пропускаются.
+export function normalizeItem(i: any): CrmItem | null {
+  if (!i || typeof i !== "object" || i.id === undefined || i.id === null) return null;
+  if (i.deleted === true || i.deleted_at) return null;
+  const title = str(i.title ?? i.text ?? i.name, 500).trim();
+  if (!title) return null;
+  return { id: str(i.id, 40), title, completed: !!(i.completed ?? i.done ?? i.completed_at) };
+}
 
 export function normalizeTask(t: any): CrmTask | null {
   if (!t || typeof t !== "object" || t.id === undefined || t.id === null) return null;
@@ -68,10 +79,19 @@ export function normalizeTask(t: any): CrmTask | null {
     updatedAt: str(t.updated_at, 40),
     archived: !!t.archived_at,
     comments: Number(t.comment_count) || 0,
+    start: dateOnly(t.start_date ?? t.startDate),
+    ...checklistOf(t),
   };
 }
+function checklistOf(t: any): { clTotal: number; clDone: number; checklist: CrmItem[] | null } {
+  if (Array.isArray(t.checklist)) {
+    const list = t.checklist.map(normalizeItem).filter(Boolean).slice(0, 100) as CrmItem[];
+    return { checklist: list, clTotal: list.length, clDone: list.filter((i) => i.completed).length };
+  }
+  return { checklist: null, clTotal: Number(t.checklist_total) || 0, clDone: Number(t.checklist_done) || 0 };
+}
 
-export type UpdateFields = { title?: string; description?: string; status?: string; due?: string };
+export type UpdateFields = { title?: string; description?: string; status?: string; due?: string; start?: string };
 export type Base = { version: number; dueTime?: string; dueTz?: string };
 
 // Проверка запроса клиента на изменение и сборка тела PATCH для CRM.
@@ -90,30 +110,61 @@ export function buildPatch(base: Base, fields: UpdateFields): { body: Record<str
     if (!due) {
       if (time) { body.dueAt = null; body.repeat = "none"; }
       body.dueDate = null;
+      if (typeof f.start !== "string") body.startDate = null;
     } else {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(due) || isNaN(new Date(due + "T00:00:00Z").getTime())) return { error: "Неверная дата." };
       if (time) { body.dueAt = `${due}T${time}:00${offsetOf(tz, due)}`; body.dueTimezone = tz; }
       else body.dueDate = due;
     }
   }
+  if (typeof f.start === "string") {
+    const st = f.start.trim();
+    if (!st) body.startDate = null;
+    else if (!/^\d{4}-\d{2}-\d{2}$/.test(st) || isNaN(new Date(st + "T00:00:00Z").getTime())) return { error: "Неверная дата начала." };
+    else body.startDate = st;
+  }
   if (Object.keys(body).length < 2) return { error: "Нечего менять." };
   return { body };
 }
 
-export type CreateInput = { requestKey?: string; title?: string; description?: string; assignedTo?: string; due?: string };
-export function buildCreate(input: CreateInput): { body: Record<string, unknown> } | { error: string } {
+export type CreateInput = { requestKey?: string; title?: string; description?: string; assignedTo?: string; due?: string; start?: string; status?: string; checklist?: unknown };
+export function buildCreate(input: CreateInput): { body: Record<string, unknown>; items: string[] } | { error: string } {
   const key = String(input?.requestKey ?? "");
   if (!/^[A-Za-z0-9_-]{12,128}$/.test(key)) return { error: "Нет ключа операции." };
   const title = String(input?.title ?? "").trim().slice(0, 200);
   if (!title) return { error: "Пустое название." };
-  const body: Record<string, unknown> = { requestKey: key, title, status: "new", priority: 3 };
+  const status = CRM_STATUSES.includes(input?.status as any) && input?.status !== "cancelled" ? String(input?.status) : "new";
+  const body: Record<string, unknown> = { requestKey: key, title, status, priority: 3 };
   const desc = String(input?.description ?? "").slice(0, 10000);
   if (desc.trim()) body.description = desc;
   const who = String(input?.assignedTo ?? "").trim();
   if (who) { if (!/^\d{1,20}$/.test(who)) return { error: "Неверный ответственный." }; body.assignedTo = who; }
   const due = String(input?.due ?? "").trim();
   if (due) { if (!/^\d{4}-\d{2}-\d{2}$/.test(due)) return { error: "Неверная дата." }; body.dueDate = due; }
-  return { body };
+  // Дата начала в CRM требует срока и не может быть позже него.
+  const start = String(input?.start ?? "").trim();
+  if (start && due && /^\d{4}-\d{2}-\d{2}$/.test(start) && start <= due) body.startDate = start;
+  const items = (Array.isArray(input?.checklist) ? input.checklist : []).map((x) => String(x ?? "").trim().slice(0, 500)).filter(Boolean).slice(0, 100);
+  return { body, items };
+}
+
+export type ChecklistInput = { requestKey?: string; version?: number; op?: string; title?: string; itemId?: string; completed?: boolean };
+// Операции с чек-листом; version — версия родительской задачи.
+export function buildChecklist(input: ChecklistInput): { method: "POST" | "PATCH"; suffix: string; body: Record<string, unknown> } | { error: string } {
+  const version = Number(input?.version);
+  if (!Number.isSafeInteger(version) || version < 1) return { error: "Нет версии задачи." };
+  const itemId = String(input?.itemId ?? "");
+  if (input?.op === "add") {
+    const key = String(input?.requestKey ?? "");
+    if (!/^[A-Za-z0-9_-]{12,128}$/.test(key)) return { error: "Нет ключа операции." };
+    const title = String(input?.title ?? "").trim().slice(0, 500);
+    if (!title) return { error: "Пустой пункт." };
+    return { method: "POST", suffix: "", body: { version, requestKey: key, title } };
+  }
+  if (!/^\d{1,20}$/.test(itemId)) return { error: "Нет пункта." };
+  if (input?.op === "set") return { method: "PATCH", suffix: `/${itemId}`, body: { version, completed: input?.completed === true } };
+  if (input?.op === "delete") return { method: "PATCH", suffix: `/${itemId}`, body: { version, deleted: true } };
+  return { error: "Неизвестная операция." };
 }
 
 export type CrmComment = { id: string; body: string; createdAt: string; author: string; by: string };

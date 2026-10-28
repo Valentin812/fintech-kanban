@@ -1,7 +1,7 @@
 // Синхронизация задач с CRM «Этажи» через её API (код CRM не меняется).
 // Вход в CRM — логин и пароль владельца из секретов функции; токен CRM не покидает сервер.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { buildComment, buildCreate, buildPatch, normalizeComment, normalizeTask } from "./logic.ts";
+import { buildChecklist, buildComment, buildCreate, buildPatch, normalizeComment, normalizeTask } from "./logic.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -120,7 +120,43 @@ Deno.serve(async (req) => {
       const built = buildCreate(body);
       if ("error" in built) return json({ error: built.error }, 400);
       const r = await crm("/api/tasks", { method: "POST", product, body: built.body });
-      return json({ task: normalizeTask(r?.task), duplicate: !!r?.duplicate });
+      let task = normalizeTask(r?.task);
+      let failed = false;
+      // Пункты чек-листа добавляются по одному: каждая запись меняет версию задачи.
+      if (task && !r?.duplicate) {
+        for (let i = 0; i < built.items.length; i++) {
+          try {
+            const c = await crm(`/api/tasks/${task.id}/checklist`, { method: "POST", product, body: { version: task.version, requestKey: `${body.requestKey}-c${i}`.slice(0, 128), title: built.items[i] } });
+            task = normalizeTask(c?.task) ?? task;
+          } catch (e) { console.error("CRM checklist on create failed:", (e as Error).message); failed = true; break; }
+        }
+      }
+      return json({ task, duplicate: !!r?.duplicate, checklistFailed: failed });
+    }
+    if (body?.action === "task") {
+      const id = String(body?.id ?? "");
+      if (!/^\d{1,20}$/.test(id) || !product) return json({ error: "Нет задачи." }, 400);
+      return json({ task: normalizeTask(await crm(`/api/tasks/${id}`, { product })) });
+    }
+    if (body?.action === "checklist") {
+      const id = String(body?.id ?? "");
+      if (!/^\d{1,20}$/.test(id) || !product) return json({ error: "Нет задачи." }, 400);
+      const built = buildChecklist(body);
+      if ("error" in built) return json({ error: built.error }, 400);
+      try {
+        const r = await crm(`/api/tasks/${id}/checklist${built.suffix}`, { method: built.method, product, body: built.body });
+        return json({ task: normalizeTask(r?.task ?? r), duplicate: !!r?.duplicate });
+      } catch (e) {
+        if (e instanceof CrmError && e.status === 409) {
+          const fresh = await crm(`/api/tasks/${id}`, { product }).catch(() => null);
+          return json({ conflict: true, task: normalizeTask(fresh) }, 409);
+        }
+        throw e;
+      }
+    }
+    if (body?.action === "products") {
+      const list = await crm("/api/products");
+      return json({ products: (Array.isArray(list) ? list : []).map((p: any) => ({ id: Number(p?.id) || 0, name: String(p?.name ?? "").slice(0, 80) })).filter((p: any) => p.id).slice(0, 20) });
     }
     if (body?.action === "comment") {
       const id = String(body?.id ?? "");
