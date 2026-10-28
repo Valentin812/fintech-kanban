@@ -3453,7 +3453,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
   nav.addEventListener('click',()=>{switchView('meetings')});
   {const h=String(location.hash||'').match(/^#meeting=([\w-]{6,60})/);if(h){let n=0;const iv=setInterval(()=>{n++;const app=document.querySelector('.app');if(app&&!app.hidden&&signedIn()){clearInterval(iv);try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}S.openId=h[1];switchView('meetings')}else if(n>60)clearInterval(iv)},500)}}
   const oa=window.renderAll;window.renderAll=function(){const r=oa.apply(this,arguments);if(activeView==='meetings'){document.querySelectorAll('#projects .project.active').forEach(b=>b.classList.remove('active'));render()}return r};
-  window.__meetings={list,open:id=>{S.openId=id;S.q='';S.filter='all';S.proj='';switchView('meetings')},forProject:name=>{if(!S.hubAt&&signedIn())loadHub(false).then(()=>{try{window.renderKeyNotes&&window.renderKeyNotes()}catch(e){}});return[...list(),...S.hub].filter(m=>(m.projects||[]).includes(name)).sort((a,b)=>(b.date||'').localeCompare(a.date||''))},addTask,importFiles,parseTasks,render};
+  window.__meetings={list,open:id=>{S.openId=id;S.q='';S.filter='all';S.proj='';switchView('meetings')},forProject:name=>{let kOpen=false;try{kOpen=localStorage.getItem('fintech-kanban-keynotes-open:'+name)==='1'}catch(e){}if(kOpen&&!S.hubAt&&signedIn())loadHub(false).then(()=>{try{window.renderKeyNotes&&window.renderKeyNotes()}catch(e){}});return[...list(),...S.hub].filter(m=>(m.projects||[]).includes(name)).sort((a,b)=>(b.date||'').localeCompare(a.date||''))},addTask,importFiles,parseTasks,render};
 })();
 /* ===== Мобильная версия: активная вкладка проекта всегда видна ===== */
 (function tabsIntoView(){
