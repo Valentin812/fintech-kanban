@@ -1222,11 +1222,12 @@ html.list-w-set[data-layout="rows"] .board .column{max-width:var(--list-w)}
 .ai-chips button{font-size:12px;padding:4px 9px}
 @media (max-width:700px){.ai-panel{right:8px;left:8px;bottom:8px;width:auto;height:calc(100vh - 16px)}}
 /* ===== Важное по проекту ===== */
-.key-notes{margin:0 0 10px;border:1px solid var(--line,#d7deea);border-radius:12px;background:var(--card,#fff);overflow:hidden}
+.key-notes{margin:0 0 10px;border:1px solid var(--line,#d7deea);border-radius:12px;background:var(--card,#fff);overflow:hidden;flex:0 0 auto}
 .kn-head{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;user-select:none}
 .kn-head b{font-size:14px}.kn-head .kn-prev{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;opacity:.7}
 .kn-head .kn-chev{transition:transform .15s}.key-notes.open .kn-chev{transform:rotate(90deg)}
 .kn-body{display:none;padding:0 12px 12px}.key-notes.open .kn-body{display:block}
+.key-notes.open .kn-body{max-height:min(55vh,520px);overflow-y:auto;overscroll-behavior:contain}
 .kn-add{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
 .kn-add textarea{resize:none;min-height:56px;border:1px solid var(--line,#d7deea);border-radius:8px;padding:8px 10px;font:inherit;color:inherit;background:transparent;box-sizing:border-box;width:100%}
 .kn-add-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
