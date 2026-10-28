@@ -53,6 +53,7 @@ try {
   const dl = await page.locator('#drawer').evaluate((e) => e.getBoundingClientRect().left);
   assert(right <= dl + 1, `Rows stay visible left of the drawer: board ${right} vs drawer ${dl}`);
   await page.evaluate(() => closeDrawer());
+  assert(await page.waitForFunction(() => document.body.classList.contains('drawer-anim'), null, { timeout: 1500 }).then(() => true) && await page.locator('#board .column').first().evaluate((e) => getComputedStyle(e).transitionProperty.includes('max-width')), 'Rows block resizes smoothly when the drawer closes');
   // Notes layout: text is not squeezed
   await page.locator('#qnTopButton').click();
   const tw = await page.locator('#qnPop .qn-text').first().evaluate((e) => e.getBoundingClientRect().width);
