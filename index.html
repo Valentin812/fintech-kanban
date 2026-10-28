@@ -2013,6 +2013,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.10.28-07',date:'28.10.2026',title:'Комментарии с CRM «Этажи»',items:['Комментарии к задачам из CRM теперь ходят в обе стороны: написанный в канбане уходит в CRM (один раз, без дублей), новые из CRM появляются в задаче с именем автора.']},
  {v:'2026.10.28-06',date:'28.10.2026',title:'Задачи из CRM «Этажи»',items:['Задачи из CRM «Этажи», где вы основной или дополнительный ответственный, приходят в проекты «Этажи · …» с пометкой и номером задачи CRM. Статус, срок, название и описание, изменённые здесь, уходят обратно в CRM, а изменения из CRM подтягиваются каждые 5 минут. Отменённые в CRM задачи уходят в архив. Кнопка «＋ Поручить в CRM» ставит задачу другому сотруднику.']},
  {v:'2026.10.28-05',date:'28.10.2026',title:'ИИ и встречи',items:['В карточке встречи (в том числе из Meeting Hub) появилась кнопка «🤖 Разобрать с ИИ»: Джарвис читает итог, решения и задачи, предлагает краткий итог, привязку к проектам и задачи по встрече; всё применяется только после «Применить». Ассистент теперь знает о встречах и умеет создавать их.']},
  {v:'2026.10.28-03',date:'28.10.2026',title:'Встречи',items:['В боковой панели появился раздел «Встречи». Туда приходят итоги встреч из Meeting Hub (резюме, решения, задачи, открытые вопросы, расшифровка), есть поиск по тексту. У каждой задачи кнопка «На доску»: задача создаётся в выбранном проекте с ответственным, сроком и ссылкой на встречу. Встречу можно привязать к проекту; список встреч виден в карточке «Важное» проекта.','Свои встречи можно вести вручную: подготовка, краткий итог, привязка к проектам, импорт файлов (.txt, .md, .json) и разнос задач по проектам.','Внизу раздела — подключённые программы Meeting Hub и кнопка «Отозвать».']},
@@ -3517,7 +3518,8 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     if(v.status&&(!s||v.status!==s.status))t.status=v.status;
     const off=r.status==='cancelled'||!!r.archived;if(off)shelve(t);
     if(r.assignee)t.owner=r.assignee;
-    t.crm={cancelled:off,id:r.id,productId:r.productId,version:r.version,dueTime:r.dueTime||'',dueTz:r.dueTz||'',priority:r.priority,requester:r.requester||'',protocolId:r.protocolId||'',comments:r.comments||0,updatedAt:r.updatedAt||'',snap:{title:v.title,description:v.description,status:v.status||t.status,end:v.end}}}
+    const keep=t.crm||{};
+    t.crm={sent:keep.sent||[],cids:keep.cids||[],cseen:keep.cseen||0,cancelled:off,id:r.id,productId:r.productId,version:r.version,dueTime:r.dueTime||'',dueTz:r.dueTz||'',priority:r.priority,requester:r.requester||'',protocolId:r.protocolId||'',comments:r.comments||0,updatedAt:r.updatedAt||'',snap:{title:v.title,description:v.description,status:v.status||t.status,end:v.end}}}
   function newTask(r){const t={id:freshTaskId(),title:'',start:ru(r.createdAt)||todayRu(),end:'',status:'Очередь',owner:'',description:'',comment:'',link:S.url,linkTitle:'Открыть CRM «Этажи»',mt:'',documents:[],extraLinks:[],source:'crm'};merge(t,r);return t}
   function diff(t){
     const s=t.crm?.snap;if(!s||t.crm.gone||t.crm.cancelled)return null;const f={};
@@ -3527,12 +3529,31 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     if((t.end||'')!==(s.end||'')){const d=t.end?iso(t.end):'';if(!t.end||d)f.due=d}
     return Object.keys(f).length?f:null}
   const crmTasks=()=>data.filter(p=>!p.shared).flatMap(p=>(p.tasks||[]).filter(t=>t.crm));
+  // Комментарии: «дата — текст» в t.comment уходят в CRM по одному (ключ операции из хеша записи — повтор не создаёт дубль), новые из CRM добавляются сюда.
+  const hash=x=>{let h=5381;for(let i=0;i<x.length;i++)h=((h<<5)+h+x.charCodeAt(i))>>>0;return h.toString(36)+x.length.toString(36)};
+  const plain=e=>{const m=e.match(/^\d{2}\.\d{2}\.\d{4}, \d{2}:\d{2}:\d{2} — ([\s\S]*)$/);return(m?m[1]:e).trim()};
+  async function pushComments(t){
+    if(!t.crm||t.crm.gone||t.crm.cancelled)return false;let changed=false;
+    for(const e of commentEntries(t.comment)){
+      const h=hash(e);if(t.crm.sent.includes(h))continue;
+      try{const r=await call({action:'comment',productId:t.crm.productId,id:t.crm.id,requestKey:`kanban-${t.crm.id}-${h}`,body:plain(e)});
+        t.crm.sent.push(h);if(r.comment?.id)t.crm.cids.push(r.comment.id);if(r.version>0)t.crm.version=r.version;changed=true}
+      catch(err){if(err.status&&err.status<500&&err.status!==429){t.crm.sent.push(h);changed=true;toast('CRM не приняла комментарий к «'+t.title+'»: '+err.message)}else throw err}}
+    if(t.crm.sent.length>300)t.crm.sent=t.crm.sent.slice(-300);return changed}
+  async function pullComments(t){
+    const r=await call({action:'comments',productId:t.crm.productId,id:t.crm.id});let n=0;
+    for(const c of (r.comments||[]).slice().reverse()){
+      if(t.crm.cids.includes(c.id))continue;t.crm.cids.push(c.id);
+      const e=`${new Date(c.createdAt).toLocaleString('ru-RU')} — ${c.author?c.author+': ':''}${c.body}`;
+      t.crm.sent.push(hash(e));t.comment=(t.comment?t.comment+'\n\n':'')+e;n++}
+    t.crm.cseen=t.crm.comments||0;if(t.crm.cids.length>300)t.crm.cids=t.crm.cids.slice(-300);return n}
   async function pushAll(){
     let changed=false;
     for(const t of crmTasks()){
       const f=diff(t);if(!f)continue;
       try{const r=await call({action:'update',productId:t.crm.productId,id:t.crm.id,base:{version:t.crm.version,dueTime:t.crm.dueTime,dueTz:t.crm.dueTz},fields:f});if(r.task){merge(t,r.task);changed=true}}
       catch(e){if(e.status===409){if(e.body?.task){merge(t,e.body.task);changed=true}toast(`«${t.title}» изменили в CRM — подтянул свежую версию, проверьте`)}else if(e.status===400||e.status===403||e.status===404){toast('CRM не приняла изменение «'+t.title+'»: '+e.message);t.crm.snap={...t.crm.snap,...{title:t.title,description:t.description||'',status:t.status,end:t.end||''}};changed=true}else throw e}}
+    for(const t of crmTasks())if(await pushComments(t))changed=true;
     if(changed)save();return changed}
   async function sync(manual){
     if(S.busy||!enabled()||!cloudStateReady||!signed())return;S.busy=true;
@@ -3550,6 +3571,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
           else if(rt.status!=='cancelled'){p.tasks.push(newTask(rt));changed=true}}
         // Пропала из полной выборки: архив или сняли с меня — убираем с доски, ничего не удаляя.
         if(prod.complete)for(const t of byId.values())if(!t.crm.gone){t.crm.gone=true;shelve(t);changed=true}}
+      let fetched=0;for(const t of crmTasks()){if(fetched>=10)break;if(t.crm.gone||t.crm.cancelled||(t.crm.comments||0)===(t.crm.cseen||0))continue;fetched++;try{if(await pullComments(t))changed=true;else changed=true}catch(e){console.warn('CRM comments failed',e)}}
       if(changed){save();renderAll()}
       S.last=Date.now();if(manual)toast('CRM «Этажи»: обновлено')
     }catch(e){
