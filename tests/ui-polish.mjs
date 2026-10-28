@@ -54,6 +54,15 @@ try {
   assert(right <= dl + 1, `Rows stay visible left of the drawer: board ${right} vs drawer ${dl}`);
   await page.evaluate(() => closeDrawer());
   assert(await page.waitForFunction(() => document.body.classList.contains('drawer-anim'), null, { timeout: 1500 }).then(() => true) && await page.locator('#board .column').first().evaluate((e) => getComputedStyle(e).transitionProperty.includes('max-width')), 'Rows block resizes smoothly when the drawer closes');
+  // A width chosen by the user is kept as is while the drawer is open.
+  await page.evaluate(() => window.__listWidth.set(560));
+  await page.waitForTimeout(600);
+  const wBefore = await page.locator('#board .column').first().evaluate((e) => e.getBoundingClientRect().width);
+  await page.evaluate(() => openTask(1));
+  await page.waitForTimeout(500);
+  const wOpen = await page.locator('#board .column').first().evaluate((e) => e.getBoundingClientRect().width);
+  assert(Math.abs(wOpen - wBefore) < 2, `Chosen width must not change with the drawer: ${wBefore} -> ${wOpen}`);
+  await page.evaluate(() => { closeDrawer(); window.__listWidth.set(0); });
   // Notes layout: text is not squeezed
   await page.locator('#qnTopButton').click();
   const tw = await page.locator('#qnPop .qn-text').first().evaluate((e) => e.getBoundingClientRect().width);
