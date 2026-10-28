@@ -3532,8 +3532,10 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
   // Комментарии: «дата — текст» в t.comment уходят в CRM по одному (ключ операции из хеша записи — повтор не создаёт дубль), новые из CRM добавляются сюда.
   const hash=x=>{let h=5381;for(let i=0;i<x.length;i++)h=((h<<5)+h+x.charCodeAt(i))>>>0;return h.toString(36)+x.length.toString(36)};
   const plain=e=>{const m=e.match(/^\d{2}\.\d{2}\.\d{4}, \d{2}:\d{2}:\d{2} — ([\s\S]*)$/);return(m?m[1]:e).trim()};
+  // Задачи, связанные до появления комментариев, не имеют этих полей.
+  const fixComments=t=>{if(!Array.isArray(t.crm.sent))t.crm.sent=[];if(!Array.isArray(t.crm.cids))t.crm.cids=[];if(typeof t.crm.cseen!=='number')t.crm.cseen=0};
   async function pushComments(t){
-    if(!t.crm||t.crm.gone||t.crm.cancelled)return false;let changed=false;
+    if(!t.crm||t.crm.gone||t.crm.cancelled)return false;let changed=false;fixComments(t);
     for(const e of commentEntries(t.comment)){
       const h=hash(e);if(t.crm.sent.includes(h))continue;
       try{const r=await call({action:'comment',productId:t.crm.productId,id:t.crm.id,requestKey:`kanban-${t.crm.id}-${h}`,body:plain(e)});
@@ -3541,6 +3543,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
       catch(err){if(err.status&&err.status<500&&err.status!==429){t.crm.sent.push(h);changed=true;toast('CRM не приняла комментарий к «'+t.title+'»: '+err.message)}else throw err}}
     if(t.crm.sent.length>300)t.crm.sent=t.crm.sent.slice(-300);return changed}
   async function pullComments(t){
+    fixComments(t);
     const r=await call({action:'comments',productId:t.crm.productId,id:t.crm.id});let n=0;
     for(const c of (r.comments||[]).slice().reverse()){
       if(t.crm.cids.includes(c.id))continue;t.crm.cids.push(c.id);
