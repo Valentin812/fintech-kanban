@@ -1221,7 +1221,7 @@ html.list-w-set[data-layout="rows"] .board .column{max-width:var(--list-w)}
 .ai-form textarea{flex:1;resize:none;min-height:38px;max-height:120px;border:1px solid var(--line,#d7deea);border-radius:8px;padding:8px;font:inherit;background:transparent;color:inherit}
 .ai-chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 8px}
 .ai-chips button{font-size:12px;padding:4px 9px}
-@media (max-width:700px){.ai-panel{right:8px;left:8px;bottom:8px;width:auto;height:calc(100vh - 16px)}}
+@media (max-width:700px){.ai-panel{right:8px;left:8px;top:calc(env(safe-area-inset-top,0px) + 8px);bottom:calc(env(safe-area-inset-bottom,0px) + 8px);width:auto;height:auto;max-height:none;z-index:1000}.ai-head{position:sticky;top:0;background:inherit;border-radius:14px 14px 0 0;flex:0 0 auto}.ai-head #aiClose{min-width:44px;min-height:40px;font-size:22px;line-height:1}.ai-log{min-height:0}}
 /* ===== Важное по проекту ===== */
 .key-notes{margin:0 0 10px;border:1px solid var(--line,#d7deea);border-radius:12px;background:var(--card,#fff);overflow:hidden;flex:0 0 auto}
 .kn-head{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;user-select:none}
@@ -3127,6 +3127,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
   const open=v=>{panel.classList.toggle('show',v);btn.setAttribute('aria-expanded',String(v));if(v){if(!log.children.length)add('Привет! Я Джарвис. Могу рассказать о твоих задачах, составить план дня, создать или изменить задачи и разобрать текст на задачи.');input.focus()}};
   btn.addEventListener('click',()=>open(!panel.classList.contains('show')));
   $('aiClose').addEventListener('click',()=>open(false));
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&panel.classList.contains('show')&&!document.querySelector('.modal.show')){open(false)}});
   $('aiClear').addEventListener('click',()=>{history=[];log.innerHTML='';open(true)});
   const findTask=id=>{for(const p of data){const t=(p.tasks||[]).find(x=>Number(x.id)===Number(id));if(t)return {t,p}}const t=(standaloneTasks||[]).find(x=>Number(x.id)===Number(id));return t?{t,p:null}:null};
   const describe=a=>{

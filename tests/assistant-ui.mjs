@@ -124,6 +124,14 @@ try {
   await page.setViewportSize({ width: 390, height: 800 });
   const fits = await page.evaluate(() => { const r = document.getElementById('aiPanel').getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.bottom <= innerHeight; });
   if (!fits) throw new Error('Assistant panel must fit on a phone');
+  // Phone: the close button stays inside the screen, is large enough to tap, and the panel closes.
+  const close = await page.evaluate(() => { const b = document.getElementById('aiClose').getBoundingClientRect(), p = document.getElementById('aiPanel').getBoundingClientRect(); return { top: b.top, right: b.right, w: b.width, h: b.height, panelTop: p.top }; });
+  if (close.top < 0 || close.right > 390 || close.w < 40 || close.h < 36 || close.panelTop < 0) throw new Error('Close button must be reachable on a phone: ' + JSON.stringify(close));
+  await page.locator('#aiClose').click();
+  if (await page.locator('#aiPanel.show').count()) throw new Error('Panel must close on tap');
+  await page.evaluate(() => window.__ai.open(true));
+  await page.keyboard.press('Escape');
+  if (await page.locator('#aiPanel.show').count()) throw new Error('Escape must close the panel');
   if (pageErrors.length) throw new Error('Page errors: ' + pageErrors.join('; '));
   console.log('Assistant UI OK');
 } finally {
