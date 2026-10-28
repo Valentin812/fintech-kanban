@@ -1023,7 +1023,8 @@ body[data-theme="cappuccino"] .home-progress>span,body[data-theme="cappuccino"] 
 .qn-item{display:flex;align-items:center;gap:8px;padding:4px 2px;border-radius:8px;min-width:0}
 .qn-item:hover{background:rgba(127,127,127,.07)}
 .qn-check input{width:16px;height:16px;margin:0;cursor:pointer}
-.qn-text{flex:1;min-width:0;text-align:left;border:0;background:none;font:inherit;color:inherit;padding:3px 0;cursor:text;overflow-wrap:anywhere}
+.qn-text{flex:1;min-width:0;text-align:left;border:0;background:none;font:inherit;color:inherit;padding:3px 0;cursor:text;overflow-wrap:anywhere;white-space:pre-wrap}
+textarea.qn-input,textarea.qn-edit{resize:none;line-height:1.35;min-height:36px;overflow-y:auto;display:block}
 .qn-done .qn-text{text-decoration:line-through;opacity:.55}
 .qn-old .qn-age{color:#c2410c}
 .qn-age{font-size:11px;color:var(--muted);white-space:nowrap}
@@ -1940,6 +1941,8 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.10.28-01',date:'28.10.2026',title:'Многострочные заметки',items:['В быстрых заметках Enter сохраняет заметку, а Shift+Enter переносит строку — можно писать длинный текст абзацами. Поле растёт по мере ввода, переносы сохраняются. При превращении в задачу первая строка становится названием, остальное — описанием.']},
+ {v:'2026.10.27-24',date:'27.10.2026',title:'ИИ-ассистент Джарвис',items:['В верхней панели появилась кнопка «🤖 Джарвис» (после входа в аккаунт): чат, который знает твои открытые задачи. Спроси сводку или план дня, попроси создать или изменить задачу, добавить подзадачи или разобрать текст на задачи.','Ассистент сам ничего не меняет: он предлагает список действий, и они применяются только после кнопки «Применить».']},
  {v:'2026.10.27-23',date:'27.10.2026',title:'Лаборатория (заготовка)',items:['Добавлен скрытый раздел для будущих мини-игр. Он спрятан и сам скрывается через час и при выходе.']},
  {v:'2026.10.27-22',date:'27.10.2026',title:'Карточка задачи на телефоне',items:['Описание и комментарий растут вместе с текстом (до 60% высоты экрана), длинные тексты удобно читать.','Убрана кнопка «Сохранить» — изменения и так сохраняются автоматически; остаётся «Завершить».']},
  {v:'2026.10.27-21',date:'27.10.2026',title:'Подзадачи: срок и ответственный',items:['У подзадачи на доске показываются ответственный и срок, если они указаны (просроченный срок — красным).']},
@@ -1958,7 +1961,6 @@ const CHANGELOG=[
   {v:'2026.10.27-08',date:'27.10.2026',title:'Мобильная версия: проекты по кнопке, задачи списком',items:['На телефоне лента проектов убрана: сверху кнопка с названием проекта, по нажатию открывается список проектов.','Задачи проекта на телефоне идут списком по статусам, как в «Моих задачах», без горизонтального свайпа по колонкам.']},
  {v:'2026.10.27-07',date:'27.10.2026',title:'Релизы: общий раздел и несколько проектов',items:['В меню слева появился раздел «Релизы» — релизы всех проектов в одном месте.','При добавлении релиза можно отметить несколько проектов: он появится во вкладке «Релизы» каждого из них, с пометкой «также: …». Правка и удаление применяются сразу ко всем проектам релиза.']},
  {v:'2026.10.27-06',date:'27.10.2026',title:'Участники: переименование',items:['В «Участниках» у каждого есть кнопка «Переименовать»: новое имя подставится у ответственных во всех задачах.','При открытии «Участников» сверху больше не остаётся шапка проекта с вкладками.']},
- {v:'2026.10.27-06',date:'27.10.2026',title:'ИИ-ассистент Джарвис',items:['В верхней панели появилась кнопка «🤖 Джарвис» (после входа в аккаунт): чат, который знает твои открытые задачи. Спроси сводку или план дня, попроси создать или изменить задачу, добавить подзадачи или разобрать текст на задачи.','Ассистент сам ничего не меняет: он предлагает список действий, и они применяются только после кнопки «Применить».']},
  {v:'2026.10.27-05',date:'27.10.2026',title:'Порядок проектов',items:['Проекты в списке слева можно перетаскивать мышью и менять местами — приоритетные ставь вверх. Порядок сохраняется в аккаунте. С клавиатуры: Alt+↑ / Alt+↓.']},
  {v:'2026.10.27-04',date:'27.10.2026',title:'Полосы строками, кнопка «колонка» сверху',items:['В режиме «Полосами» задачи идут строками, как в «Моих задачах»: название, ответственный, срок, закрепление.','Кнопка «＋ Добавить колонку» в этом режиме стоит сверху.','На компьютере из карточки задачи убрана кнопка «Готово»: изменения сохраняются автоматически, а нажатие на свободное место закрывает карточку. На телефоне кнопка осталась.']},
   {v:'2026.10.27-03',date:'27.10.2026',title:'Быстрые заметки везде и из Telegram',items:['В верхней панели появилась кнопка «⚡ Заметка»: открывается на любой вкладке, в том числе на доске проекта и на телефоне. Рядом с названием — число открытых заметок.','В Telegram напиши Джарвису /заметка текст или «заметка: текст» — это быстрая заметка, а не задача; она появится в приложении при открытии.']},
@@ -2446,12 +2448,14 @@ document.addEventListener('click',async e=>{
 (function(){
 const DAY=24*3600*1000;
 let editId=null;
+const cleanNote=v=>String(v||'').replace(/\r\n?/g,'\n').split('\n').map(l=>l.replace(/[ \t]+/g,' ').trim()).join('\n').replace(/\n{3,}/g,'\n\n').trim().slice(0,2000);
+const fitNote=el=>{if(!el)return;el.style.height='auto';el.style.height=Math.min(el.scrollHeight+2,Math.round(innerHeight*.5))+'px'};
 const ago=ts=>{const m=Math.max(0,Math.round((Date.now()-ts)/60000));if(m<1)return'только что';if(m<60)return m+' мин назад';const h=Math.round(m/60);if(h<24)return h+' ч назад';const d=Math.round(h/24);return d+' дн назад'};
 function prune(){const before=quickNotes.length;quickNotes=quickNotes.filter(n=>!(n.done&&n.doneAt&&Date.now()-n.doneAt>DAY));return before!==quickNotes.length}
 function panel(where){
   const open=quickNotes.filter(n=>!n.done),done=quickNotes.filter(n=>n.done);
-  const item=n=>`<li class="qn-item${n.done?' qn-done':''}${!n.done&&Date.now()-n.created>DAY?' qn-old':''}" data-qn="${esc(n.id)}"><label class="qn-check"><input type="checkbox" data-qn-toggle="${esc(n.id)}"${n.done?' checked':''} aria-label="Готово"></label>${editId===n.id?`<input class="qn-edit" data-qn-editing="${esc(n.id)}" value="${esc(n.text)}" maxlength="300" aria-label="Текст заметки">`:`<button type="button" class="qn-text" data-qn-edit="${esc(n.id)}" title="Нажмите, чтобы изменить">${esc(n.text)}</button>`}<span class="qn-age">${esc(ago(n.created))}</span>${n.done?'':`<button type="button" class="qn-act" data-qn-task="${esc(n.id)}" title="Сделать задачей без проекта">→ в задачу</button><select class="qn-proj" data-qn-proj="${esc(n.id)}" aria-label="Положить заметку в проект" title="Сразу положить заметку задачей в проект"><option value="">→ в проект…</option>${data.map(pr=>`<option value="${esc(pr.name)}">${esc(pr.name)}</option>`).join('')}</select>`}<button type="button" class="qn-act qn-del" data-qn-del="${esc(n.id)}" title="Удалить" aria-label="Удалить заметку">×</button></li>`;
-  return`<section class="qn-panel" data-qn-where="${where}"><div class="qn-head"><h3>Быстрые заметки</h3><span class="mini">дела на пару часов · ${open.length?open.length+' открыто':'пусто'}</span>${done.length?`<button type="button" class="qn-clear" data-qn-clear="1">Убрать выполненные (${done.length})</button>`:''}</div><form class="qn-add" data-qn-form="1"><input class="qn-input" placeholder="${matchMedia('(max-width:700px)').matches?'Быстрая заметка · Enter':'Например: перезвонить Азату после обеда · Enter'}" maxlength="300" autocomplete="off" aria-label="Новая заметка"><button class="btn" type="submit">＋</button></form>${quickNotes.length?`<ul class="qn-list">${open.map(item).join('')}${done.map(item).join('')}</ul>`:''}</section>`;
+  const item=n=>`<li class="qn-item${n.done?' qn-done':''}${!n.done&&Date.now()-n.created>DAY?' qn-old':''}" data-qn="${esc(n.id)}"><label class="qn-check"><input type="checkbox" data-qn-toggle="${esc(n.id)}"${n.done?' checked':''} aria-label="Готово"></label>${editId===n.id?`<textarea class="qn-edit" data-qn-editing="${esc(n.id)}" rows="1" maxlength="2000" aria-label="Текст заметки">${esc(n.text)}</textarea>`:`<button type="button" class="qn-text" data-qn-edit="${esc(n.id)}" title="Нажмите, чтобы изменить">${esc(n.text)}</button>`}<span class="qn-age">${esc(ago(n.created))}</span>${n.done?'':`<button type="button" class="qn-act" data-qn-task="${esc(n.id)}" title="Сделать задачей без проекта">→ в задачу</button><select class="qn-proj" data-qn-proj="${esc(n.id)}" aria-label="Положить заметку в проект" title="Сразу положить заметку задачей в проект"><option value="">→ в проект…</option>${data.map(pr=>`<option value="${esc(pr.name)}">${esc(pr.name)}</option>`).join('')}</select>`}<button type="button" class="qn-act qn-del" data-qn-del="${esc(n.id)}" title="Удалить" aria-label="Удалить заметку">×</button></li>`;
+  return`<section class="qn-panel" data-qn-where="${where}"><div class="qn-head"><h3>Быстрые заметки</h3><span class="mini">дела на пару часов · ${open.length?open.length+' открыто':'пусто'}</span>${done.length?`<button type="button" class="qn-clear" data-qn-clear="1">Убрать выполненные (${done.length})</button>`:''}</div><form class="qn-add" data-qn-form="1"><textarea class="qn-input" rows="1" placeholder="${matchMedia('(max-width:700px)').matches?'Быстрая заметка · Enter, перенос — Shift+Enter':'Например: перезвонить Азату после обеда · Enter, новая строка — Shift+Enter'}" maxlength="2000" autocomplete="off" aria-label="Новая заметка"></textarea><button class="btn" type="submit">＋</button></form>${quickNotes.length?`<ul class="qn-list">${open.map(item).join('')}${done.map(item).join('')}</ul>`:''}</section>`;
 }
 function inject(viewId,where){
   const v=$(viewId);if(!v||v.hidden&&where!=='my')return;
@@ -2471,7 +2475,7 @@ function renderNotes(focusWhere){
   inject('myTasksView','my');inject('homeView','home');renderPop();
   {const n=quickNotes.filter(x=>!x.done).length,l=document.querySelector('#qnTopButton .qn-top-label');if(l)l.textContent=n?'Заметки · '+n:'Заметка'}
   if(focusWhere)document.querySelector(`.qn-panel[data-qn-where="${focusWhere}"] .qn-input`)?.focus();
-  const ed=document.querySelector('.qn-edit');if(ed){ed.focus();ed.setSelectionRange(ed.value.length,ed.value.length)}
+  const ed=document.querySelector('.qn-edit');if(ed){fitNote(ed);ed.focus();ed.setSelectionRange(ed.value.length,ed.value.length)}
 }
 window.renderQuickNotes=renderNotes;
 function popToggle(open){const pop=$('qnPop'),b=$('qnTopButton');if(!pop||!b)return;pop.hidden=!open;b.setAttribute('aria-expanded',String(open));if(open){renderPop();pop.querySelector('.qn-input')?.focus()}}
@@ -2484,12 +2488,12 @@ setTimeout(()=>{try{renderNotes()}catch(e){}},0);
 const find=id=>quickNotes.find(n=>String(n.id)===String(id));
 function commitEdit(cancel){
   const ed=document.querySelector('.qn-edit');if(!ed){editId=null;return}
-  const n=find(ed.dataset.qnEditing);const v=ed.value.replace(/\s+/g,' ').trim();
+  const n=find(ed.dataset.qnEditing);const v=cleanNote(ed.value);
   editId=null;if(!cancel&&n&&v&&v!==n.text){n.text=v;save()}renderNotes();
 }
 document.addEventListener('submit',e=>{
   const f=e.target.closest?.('[data-qn-form]');if(!f)return;e.preventDefault();
-  const input=f.querySelector('.qn-input');const text=input.value.replace(/\s+/g,' ').trim();if(!text){input.focus();return}
+  const input=f.querySelector('.qn-input');const text=cleanNote(input.value);if(!text){input.focus();return}
   quickNotes.unshift({id:'n'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),text,created:Date.now(),done:false});
   save();renderNotes(f.closest('.qn-panel')?.dataset.qnWhere);
 });
@@ -2502,14 +2506,17 @@ document.addEventListener('click',e=>{
   if(d.qnEdit!==undefined){editId=find(d.qnEdit)?.id??null;renderNotes()}
   else if(d.qnDel!==undefined){const i=quickNotes.findIndex(n=>String(n.id)===String(d.qnDel));if(i<0)return;const [gone]=quickNotes.splice(i,1);save();renderNotes();undoToast('Заметка удалена',()=>{quickNotes.splice(i,0,gone);save();renderNotes()})}
   else if(d.qnClear!==undefined){const gone=quickNotes.filter(n=>n.done);quickNotes=quickNotes.filter(n=>!n.done);save();renderNotes();undoToast('Выполненные убраны',()=>{quickNotes.push(...gone);save();renderNotes()})}
-  else if(d.qnTask!==undefined){const n=find(d.qnTask);if(!n)return;standaloneTasks.push({id:Date.now(),title:n.text.slice(0,200),start:'',end:'',status:'Очередь',owner:'',description:'',comment:'',documents:[],extraLinks:[]});quickNotes=quickNotes.filter(x=>x!==n);save();try{renderInbox();renderProjects()}catch(e){}if(activeView==='mytasks')renderMyTasks();else renderNotes();toast('Задача создана в «Мои задачи» · без проекта')}
+  else if(d.qnTask!==undefined){const n=find(d.qnTask);if(!n)return;standaloneTasks.push({id:Date.now(),title:n.text.split('\n')[0].slice(0,200),start:'',end:'',status:'Очередь',owner:'',description:n.text.split('\n').slice(1).join('\n').trim(),comment:'',documents:[],extraLinks:[]});quickNotes=quickNotes.filter(x=>x!==n);save();try{renderInbox();renderProjects()}catch(e){}if(activeView==='mytasks')renderMyTasks();else renderNotes();toast('Задача создана в «Мои задачи» · без проекта')}
 });
 document.addEventListener('keydown',e=>{
+  if(e.target?.classList?.contains('qn-input')&&e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();e.target.closest('form')?.requestSubmit();return}
+  if(e.target?.classList?.contains('qn-edit')&&e.key==='Enter'&&e.shiftKey)return;
   if(!e.target?.classList?.contains('qn-edit'))return;
   if(e.key==='Enter'){e.preventDefault();commitEdit(false)}
   else if(e.key==='Escape'){e.preventDefault();e.stopPropagation();commitEdit(true)}
 },true);
 document.addEventListener('pointerdown',e=>{const ed=document.querySelector('.qn-edit');if(ed&&e.target!==ed)commitEdit(false)},true);
+document.addEventListener('input',e=>{if(e.target?.classList?.contains('qn-input')||e.target?.classList?.contains('qn-edit'))fitNote(e.target)});
 setInterval(()=>{if(document.hidden||document.querySelector('.qn-edit')||document.activeElement?.classList?.contains('qn-input'))return;if(['mytasks','home'].includes(activeView))renderNotes()},60000);
 })();
 /* ===== Подсказка при наведении на задачу + сохранение по клику мимо / Esc ===== */
