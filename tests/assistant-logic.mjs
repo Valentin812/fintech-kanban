@@ -1,6 +1,6 @@
 // node --experimental-strip-types tests/assistant-logic.mjs
 import assert from 'node:assert/strict';
-const { buildContext, sanitizeReply, knownTaskIds, cleanMessages } = await import('../supabase/functions/assistant/logic.ts');
+const { buildContext, sanitizeReply, knownTaskIds, cleanMessages, knownMeetingIds, projectNames } = await import('../supabase/functions/assistant/logic.ts');
 const state = {
   data: [{ name: 'Альфа', tasks: [
     { id: 1, title: 'Первая', status: 'Очередь', owner: 'Я', end: '30.10.2026' },
@@ -9,6 +9,7 @@ const state = {
   ] }],
   standaloneTasks: [{ id: 9, title: 'Одиночная', status: 'Очередь' }],
   quickNotes: [{ text: 'позвонить' }],
+  projectMeta: { Альфа: { keyNotes: [{ text: 'Продолжим в декабре' }] }, __meetings__: { list: [{ id: 'm1', date: '2026-10-20', title: 'Созвон с банком', projects: ['Альфа'], summary: 'Обсудили тарифы', prep: '', tasks: [] }] } },
 };
 const ctx = buildContext(state, '2026-10-27');
 assert.match(ctx, /#1 \| Альфа \| Первая/);
@@ -33,4 +34,16 @@ assert.equal(sanitizeReply('{"reply":"r","actions":' + JSON.stringify(Array.from
 // Chat history from the client is cleaned.
 const msgs = cleanMessages([{ role: 'system', content: 'hack' }, { role: 'user', content: ' привет ' }, { role: 'assistant', content: '' }, { role: 'assistant', content: 'ок' }]);
 assert.deepEqual(msgs, [{ role: 'user', content: 'привет' }, { role: 'assistant', content: 'ок' }]);
+
+// Meetings: context and actions.
+assert.match(ctx, /m1 \| 2026-10-20 \| Созвон с банком/);
+assert.match(ctx, /Альфа: Продолжим в декабре/);
+const mids = knownMeetingIds(state), pn = projectNames(state);
+assert.ok(mids.has('m1'));
+const mt = sanitizeReply('{"reply":"ок","actions":[{"type":"set_meeting","id":"m1","fields":{"summary":"Итог","projects":["альфа","Чужой"],"x":1}},{"type":"meeting_tasks","meeting_id":"m1","tasks":[{"title":"Позвонить","project":"Альфа"},{"title":"Без проекта","project":"Нет такого"},{"title":""}]},{"type":"meeting_tasks","meeting_id":"zzz","tasks":[{"title":"x"}]},{"type":"set_meeting","id":"zzz","fields":{"summary":"x"}},{"type":"create_meeting","title":"Планёрка","date":"2026-11-01","time":"10:30","prep":"план","projects":["Альфа","Чужой"]},{"type":"create_meeting","title":"Плохая дата","date":"завтра","time":"утро","projects":[]}]}', ids, { meetingIds: mids, projects: pn });
+assert.equal(mt.actions.length, 4);
+assert.deepEqual(mt.actions[0], { type: 'set_meeting', id: 'm1', fields: { summary: 'Итог', projects: ['Альфа'] } });
+assert.deepEqual(mt.actions[1].tasks, [{ title: 'Позвонить', project: 'Альфа' }, { title: 'Без проекта', project: '' }]);
+assert.deepEqual(mt.actions[2], { type: 'create_meeting', title: 'Планёрка', date: '2026-11-01', time: '10:30', prep: 'план', projects: ['Альфа'] });
+assert.deepEqual([mt.actions[3].date, mt.actions[3].time], ['', '']);
 console.log('Assistant logic OK');

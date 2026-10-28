@@ -155,6 +155,11 @@ try {
   for (const t of ['Обсудили тарифы', 'Запуск в декабре', 'Подготовить договор', 'Кто согласует?']) if (!(await card.textContent()).includes(t)) throw new Error('Card must show: ' + t);
   await card.locator('details summary').click();
   await card.locator('.mt-tr', { hasText: 'Здравствуйте' }).waitFor();
+  // «Разобрать с ИИ»: the assistant gets the Hub meeting content (summary, decisions, tasks).
+  await page.evaluate(() => { window.__ai = { ask: (txt) => { window.__askedText = txt; } }; });
+  await card.locator('[data-mt-hai]').click();
+  const asked = await page.evaluate(() => window.__askedText || '');
+  if (!asked.includes('Подготовить договор') || !asked.includes('Запуск в декабре') || !asked.includes('Обсудили тарифы')) throw new Error('AI text must carry the Hub meeting: ' + asked.slice(0, 300));
   // «На доску»: project, owner, deadline, evidence and a link to the meeting.
   await card.locator('li', { hasText: 'Подготовить договор' }).locator('select').selectOption(proj);
   await card.locator('li', { hasText: 'Подготовить договор' }).locator('[data-mt-hadd]').click();

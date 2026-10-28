@@ -53,6 +53,9 @@ jobs:
       - name: Run mobile comfort browser test
         run: node tests/mobile-comfort.mjs
 
+      - name: Run meeting AI browser test
+        run: node tests/meeting-ai.mjs
+
       - name: Run meetings browser test
         run: node tests/meetings.mjs
 

@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { buildContext, cleanMessages, knownTaskIds, sanitizeReply, SYSTEM_PROMPT } from "./logic.ts";
+import { buildContext, cleanMessages, knownMeetingIds, knownTaskIds, projectNames, sanitizeReply, SYSTEM_PROMPT } from "./logic.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -89,12 +89,12 @@ Deno.serve(async (req) => {
     body: JSON.stringify({
       model: gigaModel,
       temperature: 0.2,
-      max_tokens: 1200,
+      max_tokens: 1800,
       messages: [{ role: "system", content: SYSTEM_PROMPT + "\n\n" + buildContext(state, today) }, ...messages],
     }),
     signal: AbortSignal.timeout(50000),
   }).catch((e) => { console.error("GigaChat chat error:", String((e as Error)?.message ?? e).slice(0, 200)); return null; });
   if (!chat || !chat.ok) { console.error("GigaChat chat HTTP error:", chat?.status); return json({ error: "Ассистент временно недоступен." }, 502); }
   const answer = String((await chat.json().catch(() => null))?.choices?.[0]?.message?.content ?? "");
-  return json(sanitizeReply(answer, knownTaskIds(state)));
+  return json(sanitizeReply(answer, knownTaskIds(state), { meetingIds: knownMeetingIds(state), projects: projectNames(state) }));
 });
