@@ -1243,6 +1243,39 @@ html.list-w-set[data-layout="rows"] .board .column{max-width:var(--list-w)}
 .kn-shot img{width:100%;height:100%;object-fit:cover;display:block}
 .kn-edit-ta{width:100%;min-height:60px;resize:vertical;border:1px solid var(--line,#d7deea);border-radius:8px;padding:8px;font:inherit;color:inherit;background:transparent;box-sizing:border-box}
 .kn-empty{font-size:13px;opacity:.65;padding:4px 0}
+/* ===== Встречи ===== */
+.mt-top{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;margin-bottom:14px}
+.mt-top h2{margin:0;font-size:22px}
+.mt-tools{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.mt-tools input,.mt-tools select{border:1px solid var(--line,#d7deea);border-radius:8px;padding:7px 9px;font:inherit;color:inherit;background:var(--card,#fff)}
+.mt-import{cursor:pointer}
+.mt-list{display:flex;flex-direction:column;gap:10px;max-width:980px}
+.mt-card{border:1px solid var(--line,#d7deea);border-radius:12px;background:var(--card,#fff);padding:10px 14px}
+.mt-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap;cursor:pointer}
+.mt-date{font-size:12px;opacity:.7;min-width:92px}.mt-title{font-size:15px}
+.mt-chip{font-size:11px;border:1px solid var(--line,#d7deea);border-radius:999px;padding:1px 8px}
+.mt-badge{margin-left:auto;font-size:11px;border-radius:999px;padding:1px 8px;background:rgba(127,127,127,.15)}
+.mt-badge.plan{background:rgba(47,109,246,.15)}
+.mt-prev{font-size:13px;opacity:.7;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mt-body{margin-top:10px;display:flex;flex-direction:column;gap:10px}
+.mt-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:8px}
+.mt-grid label,.mt-field{display:flex;flex-direction:column;gap:4px;font-size:12px}
+.mt-grid input,.mt-grid select,.mt-field textarea,.mt-addrow input,.mt-tasks select{border:1px solid var(--line,#d7deea);border-radius:8px;padding:7px 9px;font:inherit;font-size:14px;color:inherit;background:transparent;box-sizing:border-box;width:100%}
+.mt-field textarea{resize:vertical;line-height:1.4}
+.mt-projs{display:flex;flex-wrap:wrap;gap:6px}
+.mt-pchip{display:inline-flex;flex-direction:row!important;align-items:center;gap:4px!important;border:1px solid var(--line,#d7deea);border-radius:999px;padding:2px 9px;font-size:12px;cursor:pointer}
+.mt-tasks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.mt-tasks li{display:flex;gap:6px;align-items:center;flex-wrap:wrap;border:1px solid var(--line,#e3e8f1);border-radius:8px;padding:5px 8px}
+.mt-tasks li.added{opacity:.6}.mt-ttitle{flex:1 1 220px;font-size:14px;overflow-wrap:anywhere}
+.mt-tasks select{width:auto;max-width:200px}.mt-added{font-size:12px}
+.mt-x{border:0;background:none;cursor:pointer;color:inherit;font-size:16px}
+.mt-addrow{display:flex;gap:6px;flex-wrap:wrap}.mt-addrow input{flex:1 1 220px;width:auto}
+.mt-empty{opacity:.7;padding:20px 4px;max-width:640px;line-height:1.5}
+.mt-proj-block{margin-top:12px;border-top:1px solid var(--line,#e3e8f1);padding-top:8px}
+.mt-proj-block h4{margin:0 0 6px;font-size:13px}
+.mt-proj-item{display:flex;gap:8px;align-items:baseline;width:100%;text-align:left;border:0;background:none;font:inherit;color:inherit;cursor:pointer;padding:3px 0}
+.mt-proj-item span:first-child{font-size:12px;opacity:.7;min-width:80px}.mt-proj-item span:last-child{font-size:13px;opacity:.75;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+@media(max-width:700px){.mt-grid{grid-template-columns:1fr 1fr}.mt-badge{margin-left:0}}
 </style></head><body>
 <div class="auth-screen show" id="authScreen"><div class="auth-card"><div class="auth-brand">FinTech Kanban<span>Центр управления проектами и задачами</span></div><div class="auth-tabs"><button class="auth-tab active" id="authLoginTab" type="button">Вход</button><button class="auth-tab" id="authSignupTab" type="button">Регистрация</button></div><h2 id="authHeading">С возвращением</h2><p class="auth-description" id="authDescription">Войди, чтобы открыть свои проекты и задачи.</p><div class="field"><label for="authEmail">Email</label><input id="authEmail" type="email" autocomplete="username" placeholder="name@example.com"></div><div class="field"><label for="authPassword">Пароль</label><input id="authPassword" type="password" autocomplete="current-password" placeholder="Не менее 8 символов, буквы и цифры"></div><button class="btn primary auth-submit" id="authSubmit" type="button">Войти</button><button class="btn auth-submit" id="authReset" type="button" style="margin-top:10px">Забыли пароль?</button><div class="auth-status" id="authStatus" role="status" aria-live="polite"></div><div class="auth-foot">Ваши данные доступны только в вашей учётной записи.</div></div></div>
 <div id="qnPop" class="qn-pop" hidden></div><div class="app" hidden><nav id="mobileBar" aria-label="Основная навигация"><button type="button" data-mb="home"><span class="mb-icon" aria-hidden="true">⌂</span>Главная</button><button type="button" data-mb="tasks"><span class="mb-icon" aria-hidden="true">▦</span>Доска</button><button type="button" class="mb-add" data-mb="add" aria-label="Новая задача"><span class="mb-icon" aria-hidden="true">+</span></button><button type="button" data-mb="mytasks"><span class="mb-icon" aria-hidden="true">☰</span>Мои задачи<span class="mb-count" id="mbCount"></span></button><button type="button" data-mb="more" aria-expanded="false"><span class="mb-icon" aria-hidden="true">⋯</span>Ещё<span class="mb-count mb-dot" id="mbDot" hidden></span></button></nav><button type="button" id="qnFab" aria-label="Быстрая заметка" title="Быстрая заметка">⚡</button><aside class="sidebar"><div class="brand"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#2878f0"/><rect x="6.5" y="7" width="5" height="13" rx="1.6" fill="#fff"/><rect x="13.5" y="7" width="5" height="8" rx="1.6" fill="#fff" fill-opacity=".85"/><rect x="20.5" y="7" width="5" height="18" rx="1.6" fill="#fff" fill-opacity=".7"/></svg><span>Канбан проектов</span></div><button class="home-nav" id="homeNav" data-view="home"><span aria-hidden="true">⌂</span> Главная</button><button class="sidebar-inbox" id="standaloneNav" data-view="inbox" hidden style="display:none">Задачи без проектов <span id="standaloneCount"></span></button><button class="sidebar-inbox" id="myTasksNav" data-view="mytasks">Мои задачи <span id="myTasksCount"></span></button><button class="sidebar-inbox" id="releasesNav" type="button">Релизы</button><div class="sidehead"><span>ПРОЕКТЫ</span><div class="side-actions"><button id="newProject" title="Создать проект" aria-label="Создать проект">＋</button><button id="exportBtn" title="Экспорт данных">↥</button><button id="importBtn" title="Импорт задач из JSON">↧</button><input id="importFile" type="file" accept=".json,application/json" hidden><button id="projectToTask" title="Преобразовать выбранный проект в задачу">⇢</button><button id="deleteProject" title="Удалить выбранный проект" aria-label="Удалить выбранный проект"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 10v6M14 10v6"/></svg></button></div></div><div class="sidebar-transform-hint">Преобразовать проект в задачу</div><div id="projects"></div></aside>
@@ -1963,6 +1996,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.10.28-03',date:'28.10.2026',title:'Встречи',items:['В боковой панели появился раздел «Встречи»: заводи встречу, записывай подготовку и краткий итог, привязывай к одному или нескольким проектам. В проекте (карточка «Важное») видны все встречи по нему.','«📥 Импорт итогов» принимает файлы из распознавания встреч (.txt, .md, .json): итог, расшифровка, список задач. Задачи можно разнести по проектам по одной или все сразу.']},
  {v:'2026.10.28-02',date:'28.10.2026',title:'Важное по проекту',items:['Над колонками проекта появилась сворачиваемая карточка «📌 Важное по проекту»: сюда можно записать сроки, договорённости и паузы (например, «продолжим в декабре») и приложить скриншоты подтверждений из Telegram — кнопкой «📎» или вставкой из буфера. Записи с датой, их можно изменить и удалить. В общих проектах не показывается.']},
  {v:'2026.10.28-01',date:'28.10.2026',title:'Многострочные заметки',items:['В быстрых заметках Enter сохраняет заметку, а Shift+Enter переносит строку — можно писать длинный текст абзацами. Поле растёт по мере ввода, переносы сохраняются. При превращении в задачу первая строка становится названием, остальное — описанием.']},
  {v:'2026.10.27-24',date:'27.10.2026',title:'ИИ-ассистент Джарвис',items:['В верхней панели появилась кнопка «🤖 Джарвис» (после входа в аккаунт): чат, который знает твои открытые задачи. Спроси сводку или план дня, попроси создать или изменить задачу, добавить подзадачи или разобрать текст на задачи.','Ассистент сам ничего не меняет: он предлагает список действий, и они применяются только после кнопки «Применить».']},
@@ -3141,13 +3175,15 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
   function item(n){
     if(editId===n.id)return`<li class="kn-item" data-kn="${esc(n.id)}"><textarea class="kn-edit-ta" data-kn-editing="${esc(n.id)}" maxlength="5000">${esc(n.text)}</textarea><div class="kn-add-row"><button type="button" class="btn primary" data-kn-save="${esc(n.id)}">Сохранить</button><button type="button" class="btn" data-kn-cancel="1">Отмена</button></div></li>`;
     return`<li class="kn-item" data-kn="${esc(n.id)}"><div class="kn-item-head"><span>${esc(when(n.created))}</span><button type="button" data-kn-edit="${esc(n.id)}" title="Изменить" aria-label="Изменить">✎</button><button type="button" data-kn-del="${esc(n.id)}" title="Удалить" aria-label="Удалить">×</button></div>${n.text?`<div class="kn-text">${esc(n.text)}</div>`:''}${shots(n)}</li>`}
+  const meetings=()=>window.__meetings?window.__meetings.forProject(activeProject):[];
+  const meetingsBlock=()=>{const ms=meetings();if(!ms.length)return'';const fmt=iso=>{const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?`${m[3]}.${m[2]}.${m[1]}`:'без даты'};return`<div class="mt-proj-block"><h4>🗓 Встречи по проекту · ${ms.length}</h4>${ms.slice(0,8).map(m=>`<button type="button" class="mt-proj-item" data-kn-meeting="${esc(m.id)}"><span>${esc(fmt(m.date))}</span><b>${esc(m.title||'Встреча')}</b><span>${esc(((m.summary||m.prep||'').split('\n').find(Boolean)||'').slice(0,120))}</span></button>`).join('')}</div>`};
   function render(){
     const p=proj();const show=!!p&&!p.shared&&!$('taskToolbar').hidden;
     host.hidden=!show;if(!show)return;
     const l=list(),open=isOpen();
     const last=l[0];const prev=last?(last.text||'Вложение').split('\n')[0]:'Пока пусто: сроки, договорённости, скриншоты из чатов';
     host.className='key-notes'+(open?' open':'');
-    host.innerHTML=`<div class="kn-head" data-kn-toggle="1" role="button" tabindex="0" aria-expanded="${open}"><span class="kn-chev" aria-hidden="true">▸</span><b>📌 Важное по проекту${l.length?' · '+l.length:''}</b><span class="kn-prev">${esc(prev)}</span></div><div class="kn-body"><div class="kn-add"><textarea id="knText" rows="2" maxlength="5000" placeholder="Например: работа продолжится в декабре, согласовано в Telegram · Enter — добавить, Shift+Enter — новая строка"></textarea><div class="kn-add-row"><label class="btn kn-file-label">📎 Скриншот<input id="knFile" type="file" accept="image/*,.pdf" multiple hidden></label><span class="kn-pending" id="knPending">${pending.map(f=>`<span>${esc(f.name||'Скриншот')}</span>`).join('')}</span><button type="button" class="btn primary" data-kn-add="1">Добавить</button></div></div>${l.length?`<ul class="kn-list">${l.map(item).join('')}</ul>`:'<div class="kn-empty">Здесь фиксируй главное по проекту: сроки, договорённости, паузы, подтверждения со скриншотами. Эти записи видны только тебе.</div>'}</div>`;
+    host.innerHTML=`<div class="kn-head" data-kn-toggle="1" role="button" tabindex="0" aria-expanded="${open}"><span class="kn-chev" aria-hidden="true">▸</span><b>📌 Важное по проекту${l.length?' · '+l.length:''}${meetings().length?' · 🗓 '+meetings().length:''}</b><span class="kn-prev">${esc(prev)}</span></div><div class="kn-body"><div class="kn-add"><textarea id="knText" rows="2" maxlength="5000" placeholder="Например: работа продолжится в декабре, согласовано в Telegram · Enter — добавить, Shift+Enter — новая строка"></textarea><div class="kn-add-row"><label class="btn kn-file-label">📎 Скриншот<input id="knFile" type="file" accept="image/*,.pdf" multiple hidden></label><span class="kn-pending" id="knPending">${pending.map(f=>`<span>${esc(f.name||'Скриншот')}</span>`).join('')}</span><button type="button" class="btn primary" data-kn-add="1">Добавить</button></div></div>${l.length?`<ul class="kn-list">${l.map(item).join('')}</ul>`:'<div class="kn-empty">Здесь фиксируй главное по проекту: сроки, договорённости, паузы, подтверждения со скриншотами. Эти записи видны только тебе.</div>'}${meetingsBlock()}</div>`;
     host.querySelectorAll('img[data-kn-src]').forEach(img=>{signed(img.dataset.knSrc).then(u=>{img.src=u}).catch(()=>{img.replaceWith(document.createTextNode('🖼'))})});
     const ed=host.querySelector('.kn-edit-ta');if(ed){ed.focus();ed.setSelectionRange(ed.value.length,ed.value.length)}
   }
@@ -3171,6 +3207,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     pending=[];save();render();host.querySelector('#knText')?.focus()}
   host.addEventListener('click',e=>{
     const t=e.target;
+    const mtg=t.closest('[data-kn-meeting]');if(mtg){window.__meetings?.open(mtg.dataset.knMeeting);return}
     if(t.closest('[data-kn-toggle]')){setOpen(!isOpen());render();return}
     const shot=t.closest('[data-kn-shot]');
     if(shot){e.preventDefault();const [id,i]=shot.dataset.knShot.split(':');const n=list().find(x=>x.id===id);const a=n?.attachments?.[Number(i)];if(a)signed(a.path).then(u=>window.open(u,'_blank','noopener')).catch(err=>toast('Не удалось открыть: '+err.message));return}
@@ -3191,6 +3228,156 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
   host.addEventListener('paste',e=>{if(e.target?.id!=='knText')return;const files=[...(e.clipboardData?.files||[])].filter(f=>f.type.startsWith('image/'));if(files.length){e.preventDefault();addPending(files.map((f,i)=>f.name&&f.name!=='image.png'?f:new File([f],'screenshot-'+Date.now().toString(36)+i+'.png',{type:f.type})))}});
   window.__keyNotes={render,add:()=>add(),list};
   setTimeout(()=>{try{render()}catch(e){}},0);
+})();
+
+/* ===== Встречи: подготовка, итог, привязка к проектам, приём файлов итогов ===== */
+(function meetingsModule(){
+  const KEY='__meetings__';
+  const view=document.createElement('section');view.className='viewpanel extra-view meetings-view';view.id='meetingsView';view.hidden=true;
+  const board=$('board');if(!board)return;board.parentNode.insertBefore(view,board.nextSibling);
+  const nav=document.createElement('button');nav.className='sidebar-inbox';nav.id='meetingsNav';nav.type='button';nav.textContent='Встречи';
+  const rn=$('releasesNav')||$('myTasksNav');rn.insertAdjacentElement('afterend',nav);
+  const S={openId:null,q:'',filter:'all',proj:''};
+  const store=()=>{const m=projectMeta[KEY]=projectMeta[KEY]||{};if(!Array.isArray(m.list))m.list=[];return m.list};
+  const list=()=>{const m=projectMeta[KEY];return m&&Array.isArray(m.list)?m.list:[]};
+  const rid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+  const cut=(v,n)=>String(v??'').replace(/\r\n?/g,'\n').slice(0,n);
+  const one=(v,n)=>String(v??'').replace(/\s+/g,' ').trim().slice(0,n);
+  const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+  const ruDate=iso=>{const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?`${m[3]}.${m[2]}.${m[1]}`:''};
+  const projNames=()=>data.map(p=>p.name);
+  const byId=id=>list().find(m=>m.id===id);
+  const isPast=m=>m.status==='done'||(m.date&&m.date<today());
+  // ---- разбор файлов итогов ----
+  function parseTasks(text){
+    const out=[];
+    for(const raw of cut(text,60000).split('\n')){
+      let l=raw.trim();if(!l)continue;
+      const m=l.match(/^(?:[-*•–—]|\d{1,2}[.)]|\[[ xх]?\]|☐|☑|✅)\s*(?:\[[ xх]?\]\s*)?(.+)$/i);
+      if(!m)continue;l=m[1].replace(/^\*\*(.+?)\*\*/,'$1').trim();
+      if(l.length<3||l.length>300)continue;
+      out.push(l);
+    }
+    return [...new Set(out)].slice(0,60);
+  }
+  const KIND=n=>/транскр|расшифр|transcript|стенограмм/i.test(n)?'transcript':/задач|task|action|todo|поручен/i.test(n)?'tasks':'summary';
+  function fromJson(obj){
+    const o=Array.isArray(obj)?{tasks:obj}:obj;if(!o||typeof o!=='object')return null;
+    const pick=(...ks)=>{for(const k of ks){if(o[k]!==undefined&&o[k]!==null)return o[k]}return undefined};
+    const tasksRaw=pick('tasks','action_items','actionItems','todos','задачи');
+    const tasks=(Array.isArray(tasksRaw)?tasksRaw:[]).map(t=>typeof t==='string'?t:(t&&(t.title||t.text||t.task||t.name))||'').map(t=>one(t,300)).filter(t=>t.length>=3);
+    const sum=pick('summary','итог','итоги','resume');const tr=pick('transcript','расшифровка','text');
+    const title=pick('title','name','topic','название');const date=String(pick('date','started_at','start','дата')||'').slice(0,10);
+    return{title:one(title,200),summary:typeof sum==='string'?cut(sum,20000):Array.isArray(sum)?sum.map(x=>'• '+one(x,500)).join('\n'):'',transcript:typeof tr==='string'?cut(tr,60000):'',tasks,date:/^\d{4}-\d{2}-\d{2}$/.test(date)?date:''};
+  }
+  async function importFiles(files){
+    const m={id:rid('m'),title:'',date:today(),time:'',status:'done',prep:'',summary:'',transcript:'',projects:[],tasks:[],created:Date.now()};
+    const names=[];
+    for(const f of files){
+      if(f.size>3*1024*1024){toast('Файл больше 3 МБ пропущен: '+f.name);continue}
+      let text='';try{text=await f.text()}catch(e){toast('Не удалось прочитать '+f.name);continue}
+      names.push(f.name);
+      let j=null;if(/\.json$/i.test(f.name)){try{j=fromJson(JSON.parse(text))}catch(e){j=null}}
+      if(j){m.title=m.title||j.title;m.summary=m.summary||j.summary;m.transcript=m.transcript||j.transcript;j.tasks.forEach(t=>m.tasks.push(t));if(j.date)m.date=j.date;continue}
+      const kind=KIND(f.name);
+      if(kind==='transcript')m.transcript=m.transcript?m.transcript+'\n\n'+cut(text,60000):cut(text,60000);
+      else if(kind==='tasks')parseTasks(text).forEach(t=>m.tasks.push(t));
+      else{m.summary=m.summary?m.summary+'\n\n'+cut(text,20000):cut(text,20000);const h=text.match(/^\s*#\s+(.+)$/m);if(h&&!m.title)m.title=one(h[1],200)}
+    }
+    if(!names.length)return;
+    m.title=m.title||one(names[0].replace(/\.[^.]+$/,''),200)||'Встреча';
+    m.tasks=[...new Set(m.tasks)].slice(0,60).map(t=>({id:rid('t'),title:t,project:'',state:'new'}));
+    m.summary=m.summary.trim();
+    store().unshift(m);S.openId=m.id;save();render();toast('Встреча создана из файлов: '+names.length+' · задач найдено: '+m.tasks.length);
+  }
+  // ---- добавление задач в проекты ----
+  function addTask(m,t){
+    if(t.state==='added')return false;
+    const proj=t.project?data.find(p=>p.name===t.project):null;
+    const base={id:freshTaskId(),title:one(t.title,200),start:'',end:'',status:'Очередь',owner:'',description:`Из встречи «${m.title}»${m.date?' · '+ruDate(m.date):''}`,comment:'',link:'',mt:'',documents:[],extraLinks:[],source:'meeting',meetingId:m.id};
+    if(proj){const meta=projectMeta[proj.name]||{};const all=[...defaultStatuses(),...(meta.extraStatuses||[])];const order=Array.isArray(meta.statusOrder)?meta.statusOrder.filter(x=>all.includes(x)):[];base.status=[...order,...all.filter(x=>!order.includes(x))][0]||'Очередь';proj.tasks.push(base)}else standaloneTasks.push(base);
+    t.state='added';return true;
+  }
+  // ---- отображение ----
+  const chips=m=>(m.projects||[]).filter(n=>projNames().includes(n)).map(n=>`<span class="mt-chip">${esc(n)}</span>`).join('');
+  function card(m){
+    const open=S.openId===m.id;
+    const head=`<div class="mt-head" data-mt-toggle="${esc(m.id)}" role="button" tabindex="0" aria-expanded="${open}"><span class="mt-date">${esc(ruDate(m.date)||'без даты')}${m.time?' · '+esc(m.time):''}</span><b class="mt-title">${esc(m.title||'Без названия')}</b>${chips(m)}<span class="mt-badge ${isPast(m)?'done':'plan'}">${isPast(m)?'прошла':'предстоит'}</span></div>`;
+    if(!open){const sum=(m.summary||m.prep||'').split('\n').find(Boolean)||'';return`<article class="mt-card" data-mt="${esc(m.id)}">${head}${sum?`<div class="mt-prev">${esc(sum.slice(0,160))}</div>`:''}</article>`}
+    const pending=(m.tasks||[]).filter(t=>t.state!=='added').length;
+    return`<article class="mt-card open" data-mt="${esc(m.id)}">${head}<div class="mt-body">
+      <div class="mt-grid"><label>Название<input data-mt-f="title" value="${esc(m.title)}" maxlength="200"></label><label>Дата<input type="date" data-mt-f="date" value="${esc(m.date)}"></label><label>Время<input type="time" data-mt-f="time" value="${esc(m.time)}"></label><label>Статус<select data-mt-f="status"><option value="planned"${m.status!=='done'?' selected':''}>Предстоит</option><option value="done"${m.status==='done'?' selected':''}>Прошла</option></select></label></div>
+      <div class="mt-field"><span>Проекты</span><div class="mt-projs">${projNames().map(n=>`<label class="mt-pchip"><input type="checkbox" data-mt-proj="${esc(n)}"${(m.projects||[]).includes(n)?' checked':''}>${esc(n)}</label>`).join('')||'<em>Нет проектов</em>'}</div></div>
+      <label class="mt-field"><span>Подготовка к встрече</span><textarea data-mt-f="prep" rows="4" maxlength="20000" placeholder="Что обсудить, вопросы, цифры, что нужно подготовить">${esc(m.prep)}</textarea></label>
+      <label class="mt-field"><span>Краткий итог</span><textarea data-mt-f="summary" rows="5" maxlength="20000" placeholder="О чём договорились, решения, следующие шаги">${esc(m.summary)}</textarea></label>
+      <details class="mt-field"${m.transcript?'':' hidden'}><summary>Расшифровка (${(m.transcript||'').length} симв.)</summary><textarea data-mt-f="transcript" rows="8" maxlength="60000">${esc(m.transcript)}</textarea></details>
+      <div class="mt-field"><span>Задачи из встречи${(m.tasks||[]).length?` · не добавлено: ${pending}`:''}</span>
+        <ul class="mt-tasks">${(m.tasks||[]).map(t=>`<li class="${t.state==='added'?'added':''}" data-mt-task="${esc(t.id)}"><span class="mt-ttitle">${esc(t.title)}</span>${t.state==='added'?'<span class="mt-added">✓ добавлена</span>':`<select data-mt-tproj="${esc(t.id)}" aria-label="Проект"><option value="">Мои задачи</option>${projNames().map(n=>`<option${t.project===n?' selected':''}>${esc(n)}</option>`).join('')}</select><button class="btn" type="button" data-mt-tadd="${esc(t.id)}">Добавить</button><button class="mt-x" type="button" data-mt-tdel="${esc(t.id)}" aria-label="Убрать" title="Убрать">×</button>`}</li>`).join('')}</ul>
+        <div class="mt-addrow"><input id="mtNewTask" placeholder="Новая задача из встречи · Enter" maxlength="300"><button class="btn" type="button" data-mt-tnew="1">＋</button>${pending?`<button class="btn primary" type="button" data-mt-tall="1">Добавить все (${pending})</button>`:''}${m.transcript?'':`<button class="btn" type="button" data-mt-showtr="1">＋ Расшифровка</button>`}</div></div>
+      <div class="mt-actions"><button class="btn" type="button" data-mt-del="${esc(m.id)}">Удалить встречу</button></div></div></article>`;
+  }
+  function visible(){
+    const q=S.q.toLocaleLowerCase('ru');
+    return list().filter(m=>{
+      if(S.filter==='plan'&&isPast(m))return false;if(S.filter==='done'&&!isPast(m))return false;
+      if(S.proj&&!(m.projects||[]).includes(S.proj))return false;
+      return !q||`${m.title} ${m.prep} ${m.summary} ${(m.tasks||[]).map(t=>t.title).join(' ')}`.toLocaleLowerCase('ru').includes(q)}).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.created-a.created);
+  }
+  function render(){
+    if(view.hidden)return;
+    const keepScroll=view.scrollTop;const act=document.activeElement;const actKey=act&&act.dataset?(act.dataset.mtF||act.id):'';const pos=act&&act.selectionStart;
+    const l=visible();
+    view.innerHTML=`<div class="viewhead mt-top"><div><h2>Встречи</h2><div class="mini">подготовка, итоги и задачи по встречам · ${list().length} всего</div></div><div class="mt-tools"><input id="mtSearch" placeholder="Поиск по встречам…" value="${esc(S.q)}"><select id="mtFilter"><option value="all"${S.filter==='all'?' selected':''}>Все</option><option value="plan"${S.filter==='plan'?' selected':''}>Предстоящие</option><option value="done"${S.filter==='done'?' selected':''}>Прошедшие</option></select><select id="mtProj"><option value="">Все проекты</option>${projNames().map(n=>`<option${S.proj===n?' selected':''}>${esc(n)}</option>`).join('')}</select><button class="btn primary" type="button" data-mt-new="1">＋ Встреча</button><label class="btn mt-import" title="Итог, расшифровка, список задач: .txt, .md, .json">📥 Импорт итогов<input id="mtFiles" type="file" accept=".txt,.md,.markdown,.json,text/plain,application/json" multiple hidden></label></div></div>${l.length?`<div class="mt-list">${l.map(card).join('')}</div>`:`<div class="mt-empty">${list().length?'Ничего не найдено.':'Встреч пока нет. Нажми «＋ Встреча», чтобы подготовиться к ближайшей, или «📥 Импорт итогов», чтобы принять файлы из распознавания встреч.'}</div>`}`;
+    view.scrollTop=keepScroll;
+    if(actKey){const el=view.querySelector(`[data-mt-f="${actKey}"],#${CSS.escape(actKey)}`);if(el){el.focus();try{if(pos!=null)el.setSelectionRange(pos,pos)}catch(e){}}}
+  }
+  window.renderMeetings=render;
+  // ---- события ----
+  view.addEventListener('click',e=>{
+    const t=e.target;
+    const tg=t.closest('[data-mt-toggle]');if(tg&&!t.closest('input,select,button')){const id=tg.dataset.mtToggle;S.openId=S.openId===id?null:id;render();return}
+    if(t.closest('[data-mt-new]')){const m={id:rid('m'),title:'Новая встреча',date:today(),time:'',status:'planned',prep:'',summary:'',transcript:'',projects:S.proj?[S.proj]:[],tasks:[],created:Date.now()};store().unshift(m);S.openId=m.id;save();render();return}
+    const m=byId(t.closest('[data-mt]')?.dataset.mt);if(!m)return;
+    const del=t.closest('[data-mt-del]');
+    if(del){const arr=store(),i=arr.indexOf(m);arr.splice(i,1);S.openId=null;save();render();undoToast('Встреча удалена',()=>{store().splice(i,0,m);save();render()});return}
+    const add=t.closest('[data-mt-tadd]');
+    if(add){const tk=m.tasks.find(x=>x.id===add.dataset.mtTadd);if(tk&&addTask(m,tk)){save();try{renderProjects();renderBoard();renderInbox()}catch(err){}render();toast('Задача добавлена · '+(tk.project||'Мои задачи'))}return}
+    const tdel=t.closest('[data-mt-tdel]');if(tdel){m.tasks=m.tasks.filter(x=>x.id!==tdel.dataset.mtTdel);save();render();return}
+    if(t.closest('[data-mt-tall]')){let n=0;m.tasks.forEach(tk=>{if(addTask(m,tk))n++});save();try{renderProjects();renderBoard();renderInbox()}catch(err){}render();toast('Добавлено задач: '+n);return}
+    if(t.closest('[data-mt-tnew]')){const inp=$('mtNewTask'),v=one(inp?.value,300);if(v){m.tasks.push({id:rid('t'),title:v,project:(m.projects||[])[0]||'',state:'new'});save();render();$('mtNewTask')?.focus()}return}
+    if(t.closest('[data-mt-showtr]')){m.transcript=' ';render();const d=view.querySelector('details');if(d){d.hidden=false;d.open=true}return}
+  });
+  view.addEventListener('input',e=>{
+    const f=e.target?.dataset?.mtF;if(!f)return;const m=byId(e.target.closest('[data-mt]')?.dataset.mt);if(!m)return;
+    m[f]=f==='title'?one(e.target.value,200):f==='transcript'?cut(e.target.value,60000):cut(e.target.value,20000);
+    if(f==='title'){const h=e.target.closest('.mt-card').querySelector('.mt-title');if(h)h.textContent=m.title||'Без названия'}
+    clearTimeout(view._t);view._t=setTimeout(()=>save(),400);
+  });
+  view.addEventListener('change',e=>{
+    const t=e.target;
+    if(t.id==='mtFiles'){importFiles([...t.files]);t.value='';return}
+    if(t.id==='mtFilter'){S.filter=t.value;render();return}if(t.id==='mtProj'){S.proj=t.value;render();return}
+    const m=byId(t.closest('[data-mt]')?.dataset.mt);
+    if(t.dataset?.mtF==='status'||t.dataset?.mtF==='date'||t.dataset?.mtF==='time'){if(m){m[t.dataset.mtF]=t.value;save();render()}return}
+    if(!m)return;
+    if(t.dataset?.mtProj!==undefined){const n=t.dataset.mtProj;m.projects=t.checked?[...new Set([...(m.projects||[]),n])]:(m.projects||[]).filter(x=>x!==n);m.tasks.forEach(tk=>{if(tk.state!=='added'&&!tk.project&&m.projects.length===1)tk.project=m.projects[0]});save();render();return}
+    if(t.dataset?.mtTproj!==undefined){const tk=m.tasks.find(x=>x.id===t.dataset.mtTproj);if(tk){tk.project=t.value;save()}}
+  });
+  view.addEventListener('keydown',e=>{
+    if(e.target?.id==='mtNewTask'&&e.key==='Enter'){e.preventDefault();view.querySelector('[data-mt-tnew]')?.click()}
+    else if((e.key==='Enter'||e.key===' ')&&e.target?.dataset?.mtToggle!==undefined){e.preventDefault();e.target.click()}
+  });
+  view.addEventListener('input',e=>{if(e.target?.id==='mtSearch'){S.q=e.target.value;clearTimeout(view._s);view._s=setTimeout(render,200)}});
+  // ---- навигация ----
+  const orig=window.switchView;
+  window.switchView=function(v){
+    const r=orig.apply(this,arguments);
+    const on=activeView==='meetings';view.hidden=!on;nav.classList.toggle('active',on);
+    if(on){$('projectHeader').hidden=true;$('viewFooter').textContent='Подготовка, итоги и задачи по встречам · привязка к проектам';document.querySelectorAll('#projects .project.active').forEach(b=>b.classList.remove('active'));render()}
+    return r};
+  nav.addEventListener('click',()=>{switchView('meetings')});
+  const oa=window.renderAll;window.renderAll=function(){const r=oa.apply(this,arguments);if(activeView==='meetings'){document.querySelectorAll('#projects .project.active').forEach(b=>b.classList.remove('active'));render()}return r};
+  window.__meetings={list,open:id=>{S.openId=id;S.q='';S.filter='all';S.proj='';switchView('meetings')},forProject:name=>list().filter(m=>(m.projects||[]).includes(name)).sort((a,b)=>(b.date||'').localeCompare(a.date||'')),addTask,importFiles,parseTasks,render};
 })();
 /* ===== Мобильная версия: активная вкладка проекта всегда видна ===== */
 (function tabsIntoView(){
