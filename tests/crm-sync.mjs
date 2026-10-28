@@ -21,8 +21,8 @@ if (process.env.CHROMIUM_EXECUTABLE) launchOptions.executablePath = process.env.
 const browser = await chromium.launch(launchOptions);
 
 const T = (o) => ({ productId: 7, description: '', priority: 3, due: '', dueTime: '', dueTz: 'Asia/Yekaterinburg', assignee: 'Валентин', requester: 'Сергей Админ', protocolId: '', comments: 0, createdAt: '2026-10-27T08:00:00Z', updatedAt: '', archived: false, ...o });
-const crm = { calls: [], conflictNext: false, created: null, tasks: [
-  T({ id: '220', title: 'Провести встречу', status: 'new', version: 3, protocolId: '35' }),
+const crm = { calls: [], conflictNext: false, created: null, comments: [{ id: '800', task_id: '220', body: 'Ждём ответа банка', created_at: '2026-10-27T10:00:00Z', author_name: 'Сергей Админ', created_by: '104' }], sentKeys: new Map(), tasks: [
+  T({ id: '220', title: 'Провести встречу', status: 'new', version: 3, protocolId: '35', comments: 1 }),
   T({ id: '221', title: 'Организовать встречу', status: 'active', version: 5, due: '2026-10-28', dueTime: '18:00' }),
   T({ id: '222', title: 'Отменённая', status: 'cancelled', version: 2 }),
 ] };
@@ -114,6 +114,17 @@ try {
         await ok({ task: t });
         return;
       }
+      if (b.action === 'comment') {
+        const task = crm.tasks.find((x) => x.id === b.id);
+        if (crm.sentKeys.has(b.requestKey)) { await ok({ comment: { id: crm.sentKeys.get(b.requestKey), body: b.body }, version: task.version, duplicate: true }); return; }
+        const id = String(900 + crm.comments.length);
+        crm.comments.push({ id, task_id: b.id, body: b.body, created_at: '2026-10-28T15:55:00Z', author_name: 'Валентин', created_by: '101' });
+        crm.sentKeys.set(b.requestKey, id);
+        task.version++; task.comments = (task.comments || 0) + 1;
+        await ok({ comment: { id, body: b.body }, version: task.version, duplicate: false });
+        return;
+      }
+      if (b.action === 'comments') { await ok({ comments: crm.comments.filter((c) => c.task_id === b.id).reverse().map((c) => ({ id: c.id, body: c.body, createdAt: c.created_at, author: c.author_name, by: c.created_by })) }); return; }
       if (b.action === 'operators') { await ok({ operators: [{ id: '102', name: 'Лена' }, { id: '103', name: 'Андрей' }] }); return; }
       if (b.action === 'create') { crm.created = b; await ok({ task: { id: '300', title: b.title }, duplicate: false }); return; }
       await ok({ error: 'unknown' }, 400);
@@ -153,6 +164,17 @@ try {
   if (u220.fields.status !== 'active' || u220.fields.due !== '2026-11-05' || u220.base.version !== 3 || u220.productId !== 7) throw new Error('Update 220: ' + JSON.stringify(u220));
   if (u221.fields.due !== '2026-10-30' || u221.base.dueTime !== '18:00' || u221.fields.status) throw new Error('Update 221: ' + JSON.stringify(u221));
   await until(() => page.evaluate((id) => data.find((p) => p.name === 'Этажи · Ремонты').tasks.find((t) => t.id === id).crm.version === 4, t220.id));
+  // Комментарии из CRM подтягиваются в задачу.
+  await until(() => page.evaluate((id) => (data.find((p) => p.name === 'Этажи · Ремонты').tasks.find((t) => t.id === id).comment || '').includes('Сергей Админ: Ждём ответа банка'), t220.id));
+  // Комментарий из канбана уходит в CRM один раз, версия задачи обновляется.
+  await page.evaluate((id) => { const t = data.find((p) => p.name === 'Этажи · Ремонты').tasks.find((x) => x.id === id); t.comment = (t.comment ? t.comment + '\n\n' : '') + '28.10.2026, 20:50:12 — Договорился на пятницу'; save(); }, t220.id);
+  await until(() => crm.comments.some((c) => c.body === 'Договорился на пятницу'), 10000);
+  await wait(1500);
+  const sent = crm.calls.filter((c) => c.action === 'comment');
+  if (sent.length !== 1 || sent[0].id !== '220' || sent[0].productId !== 7 || !/^[A-Za-z0-9_-]{12,128}$/.test(sent[0].requestKey)) throw new Error('Comment push: ' + JSON.stringify(sent));
+  if (crm.comments.filter((c) => c.body === 'Ждём ответа банка').length !== 1) throw new Error('Pulled comment must not be echoed back');
+  const after = await page.evaluate((id) => { const t = data.find((p) => p.name === 'Этажи · Ремонты').tasks.find((x) => x.id === id); return { version: t.crm.version, n: t.comment.split('\n\n').length }; }, t220.id);
+  if (after.n !== 2 || after.version !== crm.tasks.find((x) => x.id === '220').version) throw new Error('Version/comments after push: ' + JSON.stringify(after));
   // Трёхстороннее слияние: в CRM поменяли название, у нас — описание; оба изменения сохраняются.
   const merged = await page.evaluate((id) => { const t = data.find((p) => p.name === 'Этажи · Ремонты').tasks.find((x) => x.id === id); t.description = 'Локальная заметка'; window.__crm.merge(t, { ...t.crm, id: '220', productId: 7, title: 'Новое из CRM', description: '', status: 'active', due: '2026-11-05', version: 9 }); return { title: t.title, description: t.description, diff: window.__crm.diff(t) }; }, t220.id);
   if (merged.title !== 'Новое из CRM' || merged.description !== 'Локальная заметка' || merged.diff?.description !== 'Локальная заметка' || merged.diff.title) throw new Error('Merge: ' + JSON.stringify(merged));

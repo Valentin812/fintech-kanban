@@ -1,6 +1,6 @@
 // node --experimental-strip-types tests/crm-logic.mjs
 import assert from 'node:assert/strict';
-const { normalizeTask, buildPatch, buildCreate, dateOnly, offsetOf, ymdInZone, hmInZone } = await import('../supabase/functions/crm-sync/logic.ts');
+const { normalizeComment, buildComment, normalizeTask, buildPatch, buildCreate, dateOnly, offsetOf, ymdInZone, hmInZone } = await import('../supabase/functions/crm-sync/logic.ts');
 
 // Даты: SQL DATE как полночь сервера в любом поясе, due_at в поясе задачи.
 assert.equal(dateOnly('2026-11-10T00:00:00.000Z'), '2026-11-10');
@@ -33,4 +33,9 @@ assert.ok('error' in buildCreate({ title: 'a' }));
 assert.ok('error' in buildCreate({ requestKey: 'kanban-0000000001', title: ' ' }));
 assert.ok('error' in buildCreate({ requestKey: 'kanban-0000000001', title: 'a', assignedTo: '1; drop' }));
 assert.deepEqual(buildCreate({ requestKey: 'kanban-0000000001', title: 'Проверить', assignedTo: '102', due: '2026-11-10', description: 'd' }).body, { requestKey: 'kanban-0000000001', title: 'Проверить', status: 'new', priority: 3, description: 'd', assignedTo: '102', dueDate: '2026-11-10' });
+assert.deepEqual(normalizeComment({ id: 700, body: ' Привет ', created_at: '2026-10-28T11:00:00Z', created_by: 101, author_name: 'Иван', secret: 'x' }), { id: '700', body: 'Привет', createdAt: '2026-10-28T11:00:00Z', author: 'Иван', by: '101' });
+assert.equal(normalizeComment({ id: 1, body: '  ' }), null);
+assert.ok('error' in buildComment({ body: 'x' }));
+assert.ok('error' in buildComment({ requestKey: 'kanban-0000000001', body: ' ' }));
+assert.deepEqual(buildComment({ requestKey: 'kanban-0000000001', body: ' Ок ' }).body, { requestKey: 'kanban-0000000001', body: 'Ок' });
 console.log('CRM logic OK');

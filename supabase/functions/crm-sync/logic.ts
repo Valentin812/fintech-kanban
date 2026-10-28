@@ -115,3 +115,19 @@ export function buildCreate(input: CreateInput): { body: Record<string, unknown>
   if (due) { if (!/^\d{4}-\d{2}-\d{2}$/.test(due)) return { error: "Неверная дата." }; body.dueDate = due; }
   return { body };
 }
+
+export type CrmComment = { id: string; body: string; createdAt: string; author: string; by: string };
+export function normalizeComment(c: any): CrmComment | null {
+  if (!c || typeof c !== "object" || c.id === undefined || c.id === null) return null;
+  const body = str(c.body, 4000).trim();
+  if (!body) return null;
+  return { id: str(c.id, 40), body, createdAt: str(c.created_at, 40), author: str(c.author_name || c.creator_name || c.created_by_name, 100), by: str(c.created_by, 40) };
+}
+
+export function buildComment(input: { requestKey?: string; body?: string }): { body: Record<string, unknown> } | { error: string } {
+  const key = String(input?.requestKey ?? "");
+  if (!/^[A-Za-z0-9_-]{12,128}$/.test(key)) return { error: "Нет ключа операции." };
+  const text = String(input?.body ?? "").trim().slice(0, 4000);
+  if (!text) return { error: "Пустой комментарий." };
+  return { body: { requestKey: key, body: text } };
+}

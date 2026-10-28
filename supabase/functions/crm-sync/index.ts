@@ -1,7 +1,7 @@
 // Синхронизация задач с CRM «Этажи» через её API (код CRM не меняется).
 // Вход в CRM — логин и пароль владельца из секретов функции; токен CRM не покидает сервер.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { buildCreate, buildPatch, normalizeTask } from "./logic.ts";
+import { buildComment, buildCreate, buildPatch, normalizeComment, normalizeTask } from "./logic.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -121,6 +121,20 @@ Deno.serve(async (req) => {
       if ("error" in built) return json({ error: built.error }, 400);
       const r = await crm("/api/tasks", { method: "POST", product, body: built.body });
       return json({ task: normalizeTask(r?.task), duplicate: !!r?.duplicate });
+    }
+    if (body?.action === "comment") {
+      const id = String(body?.id ?? "");
+      if (!/^\d{1,20}$/.test(id) || !product) return json({ error: "Нет задачи." }, 400);
+      const built = buildComment(body);
+      if ("error" in built) return json({ error: built.error }, 400);
+      const r = await crm(`/api/tasks/${id}/comments`, { method: "POST", product, body: built.body });
+      return json({ comment: normalizeComment(r?.comment), version: Number(r?.task?.version) || 0, duplicate: !!r?.duplicate });
+    }
+    if (body?.action === "comments") {
+      const id = String(body?.id ?? "");
+      if (!/^\d{1,20}$/.test(id) || !product) return json({ error: "Нет задачи." }, 400);
+      const r = await crm(`/api/tasks/${id}/comments`, { product });
+      return json({ comments: (Array.isArray(r?.items) ? r.items : []).map(normalizeComment).filter(Boolean).slice(0, 30) });
     }
     if (body?.action === "operators") {
       if (!product) return json({ error: "Нет проекта." }, 400);
