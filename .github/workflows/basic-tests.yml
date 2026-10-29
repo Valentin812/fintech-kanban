@@ -31,6 +31,8 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Run browser smoke test
         run: node tests/smoke.mjs
+      - name: Run JWT refresh browser test
+        run: node tests/jwt-refresh.mjs
       - name: Run owner autocomplete browser test
         run: node tests/owner-autocomplete.mjs
       - name: Run admin users browser test

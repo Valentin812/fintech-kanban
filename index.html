@@ -1673,7 +1673,13 @@ $('adminModal').addEventListener('click',e=>{if(e.target===$('adminModal'))close
 $('adminUsersList').addEventListener('click',e=>{const button=e.target.closest('[data-admin-action]');if(button)adminSetBan(button.dataset.userId,button.dataset.adminAction)});
 
 function currentCloudState(){return {data:personalProjects(),projectMeta:personalMeta(),standaloneTasks,pins:pinnedTasks,quickNotes,projectOrder,members,backups:projectBackups||[]}}
-async function cloudRequest(path,options={}){const response=await fetch(CLOUD_URL+path,{...options,headers:cloudHeaders(options.headers||{})});const body=await response.text();let parsed=null;try{parsed=body?JSON.parse(body):null}catch(e){}if(!response.ok)throw new Error(parsed?.msg||parsed?.message||parsed?.error_description||(typeof parsed?.error==='string'?parsed.error:'')||body||('HTTP '+response.status));return parsed}
+let cloudRenewing=null;
+/* Токен доступа живёт около часа: при «JWT expired» обновляем сессию по refresh_token и повторяем запрос один раз. */
+function renewCloudSession(){
+ if(!cloudSession?.refresh_token)return Promise.resolve(false);
+ if(!cloudRenewing)cloudRenewing=(async()=>{try{const response=await fetch(CLOUD_URL+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:CLOUD_KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:cloudSession.refresh_token})});const text=await response.text();let renewed=null;try{renewed=text?JSON.parse(text):null}catch(e){}if(!response.ok||!renewed?.access_token)return false;cloudSession=renewed;try{localStorage.setItem('fintech-kanban-session',JSON.stringify(renewed))}catch(e){}try{renderAccountChip()}catch(e){}return true}catch(e){return false}finally{setTimeout(()=>{cloudRenewing=null},0)}})();
+ return cloudRenewing}
+async function cloudRequest(path,options={},retried=false){const response=await fetch(CLOUD_URL+path,{...options,headers:cloudHeaders(options.headers||{})});const body=await response.text();let parsed=null;try{parsed=body?JSON.parse(body):null}catch(e){}if(!response.ok){const msg=parsed?.msg||parsed?.message||parsed?.error_description||(typeof parsed?.error==='string'?parsed.error:'')||body||('HTTP '+response.status);if(!retried&&!path.startsWith('/auth/v1/token')&&/jwt expired|token has expired|invalid jwt/i.test(String(msg))&&await renewCloudSession())return cloudRequest(path,options,true);throw new Error(msg)}return parsed}
 async function cloudAuth(mode){const email=($('authEmail')?.value||$('cloudEmail').value).trim(),password=$('authPassword')?.value||$('cloudPassword').value;if(!email||!password){authMessage('Укажи email и пароль.');return}if(mode==='signup'&&!passwordMeetsPolicy(password)){authMessage('Пароль должен быть не короче 8 символов и содержать буквы и цифры.');return}
  authMessage(mode==='signup'?'Создаём аккаунт…':'Входим…');
  try{
@@ -2029,6 +2035,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.10.29-14',date:'29.10.2026',title:'Сессия обновляется сама',items:['Если токен входа истёк («JWT expired»), приложение само обновляет сессию и повторяет запрос: встречи из Meeting Hub и другие облачные данные не пропадают, пока вы не перезайдёте.']},
  {v:'2026.10.29-13',date:'29.10.2026',title:'Быстрые заметки по ширине списка',items:['«Мои задачи»: быстрые заметки снова той же ширины, что и список задач (и по умолчанию, и после изменения ширины).']},
  {v:'2026.10.29-12',date:'29.10.2026',title:'Встречи: объединить с Meeting Hub',items:['В своей встрече есть кнопка «Объединить с Meeting Hub»: итог, решения, задачи и расшифровка из Meeting Hub добавляются к вашим заметкам, отдельная запись скрывается. Можно отменить сразу после.']},
  {v:'2026.10.29-11',date:'29.10.2026',title:'Ширина списка и кнопка CRM',items:['«Мои задачи»: при изменении ширины списка быстрые заметки больше не растягиваются.','Кнопки «Внешняя CRM» в карточке и в фильтре стали короче — «CRM».']},
