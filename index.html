@@ -2019,6 +2019,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.10.29-07',date:'29.10.2026',title:'CRM: удаление карточки',items:['При удалении связанной карточки в канбане задача в CRM отменяется и уходит в архив (после подтверждения). Обратно в канбан она не возвращается.']},
  {v:'2026.10.29-06',date:'29.10.2026',title:'CRM: кнопки «Выполнено» и «Отмена»',items:['В карточке связанной задачи есть кнопки «Выполнено в CRM» и «Отмена в CRM (в архив)». Карточка остаётся в канбане со статусом «Готово», без лишних вопросов.']},
  {v:'2026.10.29-05',date:'29.10.2026',title:'CRM: свои действия без вопросов',items:['Если задачу завершили или отменили вы сами в канбане, а CRM её заархивировала, окно «Задача закрыта в CRM» больше не появляется. Вопрос задаётся только когда задачу закрыли в самой CRM.']},
  {v:'2026.10.29-04',date:'29.10.2026',title:'Телефон: вкладки и создание задачи',items:['На телефоне у вкладок проекта появилась кнопка «⋯» со списком всех вкладок (Ссылки, Релизы, Завершённые), а «Встречи» открываются из панели «Ещё».','Кнопка «Задача без проекта» в «Мои задачи»: новая задача сразу появляется в списке.']},
@@ -3762,6 +3763,22 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     }catch(e){toast('CRM не создала задачу: '+e.message)}
     finally{S.busy=false;setTimeout(()=>sync(false),300)}}
   const unlinkTask=t=>{delete t.crm;if(t.source==='crm')delete t.source;(t.checklist||[]).forEach(i=>{delete i.cid;delete i.csnap;delete i.rk;delete i.cerr})};
+  // Удаление карточки в канбане: задача в CRM отменяется и уходит в архив (после подтверждения).
+  let delPass=false;
+  $('deleteTask')?.addEventListener('click',e=>{
+    if(delPass)return;const t=currentDrawerTask();
+    if(!t?.crm||t.crm.cancelled||t.crm.gone||t.crm.st==='done')return;
+    e.preventDefault();e.stopImmediatePropagation();
+    friendlyConfirm('Удалить карточку и отменить задачу в CRM?','Карточка удалится из канбана, а задача №'+t.crm.id+' в CRM получит статус «Отменена» и уйдёт в архив.',async()=>{
+      if(S.busy)return;S.busy=true;
+      try{
+        const c=t.crm;
+        try{await call({action:'update',productId:c.productId,id:c.id,base:{version:c.version,dueTime:c.dueTime,dueTz:c.dueTz},fields:{status:'cancelled'}})}
+        catch(err){toast(err.status===409?'Задачу изменили в CRM — карточка не удалена, повторите':'CRM не приняла, карточка не удалена: '+err.message);return}
+        delPass=true;try{$('deleteTask').click()}finally{delPass=false}
+        toast('Карточка удалена, задача в CRM отменена')
+      }finally{S.busy=false}},'Удалить и отменить');
+  },true);
   // Закрыть задачу в CRM кнопкой: «Выполнено» или «Отмена» (в архив). Карточка остаётся в канбане со статусом «Готово».
   async function closeCrm(status){
     const t=currentDrawerTask();if(!t?.crm||t.crm.cancelled||t.crm.gone||S.busy)return;
