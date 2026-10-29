@@ -128,6 +128,12 @@ try {
   await page.locator('#standaloneTitle').fill('Создана из списка');
   await page.locator('#confirmStandaloneTask').click();
   await page.locator('#myTasksView .mytask-row', { hasText: 'Создана из списка' }).waitFor({ timeout: 3000 });
+  // Перенос в новый проект: создаётся проект, задача переезжает в него.
+  await page.evaluate(() => openMoveTaskModal(standaloneTasks.find((x) => x.title === 'Создана из списка').id));
+  await page.locator('.move-new-project').click();
+  await page.locator('.move-modal-search').fill('Проект из переноса');
+  await page.locator('.move-new-project').click();
+  await page.waitForFunction(() => data.some((p) => p.name === 'Проект из переноса' && p.tasks.some((t) => t.title === 'Создана из списка')) && !standaloneTasks.some((x) => x.title === 'Создана из списка'), null, { timeout: 3000 });
   assert(!errors.length, `Browser page errors: ${errors.join('; ')}`);
   console.log('My tasks focus OK: no-project first, pinned, hot/overdue, rest; pin + important saved; subtask form');
 } finally {
