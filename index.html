@@ -2019,6 +2019,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.10.29-05',date:'29.10.2026',title:'CRM: свои действия без вопросов',items:['Если задачу завершили или отменили вы сами в канбане, а CRM её заархивировала, окно «Задача закрыта в CRM» больше не появляется. Вопрос задаётся только когда задачу закрыли в самой CRM.']},
  {v:'2026.10.29-04',date:'29.10.2026',title:'Телефон: вкладки и создание задачи',items:['На телефоне у вкладок проекта появилась кнопка «⋯» со списком всех вкладок (Ссылки, Релизы, Завершённые), а «Встречи» открываются из панели «Ещё».','Кнопка «Задача без проекта» в «Мои задачи»: новая задача сразу появляется в списке.']},
  {v:'2026.10.29-03',date:'29.10.2026',title:'Задачи CRM переезжают в «Мои задачи»',items:['Старые проекты «Этажи · …» можно одним согласием перенести в «Мои задачи»: комментарии, чек-листы и связь с CRM сохраняются, пустые проекты убираются, затем идёт свежая синхронизация.']},
  {v:'2026.10.29-02',date:'29.10.2026',title:'Статус задачи в CRM',items:['В карточке и на метке «CRM №…» видно статус задачи в CRM и пометка «в архиве» или «отменена».','Если задача закрыта или снята с вас в CRM, приложение спрашивает: продолжить работать (связь снимается), завершить и убрать в архив или решить позже.','Личные задачи CRM, которых нет в общем списке, больше не считаются «снятыми с вас»: карточка проверяется напрямую.']},
@@ -3531,7 +3532,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     const off=r.status==='cancelled'||!!r.archived;
     if(r.status==='cancelled'&&!was.cancelled){t.status='Готово';if(!t.completedAt)t.completedAt=new Date().toISOString()}
     if(r.assignee)t.owner=r.assignee;
-    t.crm={sent:was.sent||[],cids:was.cids||[],cseen:was.cseen||0,cl:was.cl,pn:was.pn||'',cancelled:off,why:r.status==='cancelled'?'cancelled':(r.archived?'archived':''),st:r.status||'',asked:was.asked||false,id:r.id,productId:r.productId,version:r.version,dueTime:r.dueTime||'',dueTz:r.dueTz||'',requester:r.requester||'',protocolId:r.protocolId||'',comments:r.comments||0,updatedAt:r.updatedAt||'',snap:{title:v.title,description:v.description,status:v.status||t.status,end:v.end,start:v.start!==undefined?v.start:(t.start||'')}}}
+    t.crm={sent:was.sent||[],cids:was.cids||[],cseen:was.cseen||0,cl:was.cl,mine:!!was.mine,pn:was.pn||'',cancelled:off,why:r.status==='cancelled'?'cancelled':(r.archived?'archived':''),st:r.status||'',asked:was.asked||false,id:r.id,productId:r.productId,version:r.version,dueTime:r.dueTime||'',dueTz:r.dueTz||'',requester:r.requester||'',protocolId:r.protocolId||'',comments:r.comments||0,updatedAt:r.updatedAt||'',snap:{title:v.title,description:v.description,status:v.status||t.status,end:v.end,start:v.start!==undefined?v.start:(t.start||'')}}}
   // Чек-лист: пункты CRM ↔ чек-лист карточки. Связь — cid и снимок csnap у пункта; c.cl.ids — какие пункты CRM мы уже знаем.
   function mergeCl(t,r){
     const c=t.crm;if(!Array.isArray(r.checklist))return false;
@@ -3610,7 +3611,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     let changed=false;
     for(const t of crmTasks()){
       const f=diff(t);if(!f)continue;
-      try{const r=await call({action:'update',productId:t.crm.productId,id:t.crm.id,base:{version:t.crm.version,dueTime:t.crm.dueTime,dueTz:t.crm.dueTz},fields:f});if(r.task){merge(t,r.task);changed=true}}
+      try{const r=await call({action:'update',productId:t.crm.productId,id:t.crm.id,base:{version:t.crm.version,dueTime:t.crm.dueTime,dueTz:t.crm.dueTz},fields:f});if(r.task){merge(t,r.task);if(f.status)t.crm.mine=(f.status==='done'||f.status==='cancelled');changed=true}}
       catch(e){if(e.status===409){if(e.body?.task){merge(t,e.body.task);changed=true}toast(`«${t.title}» изменили в CRM — подтянул свежую версию, проверьте`)}else if(e.status===400||e.status===403||e.status===404){toast('CRM не приняла изменение «'+t.title+'»: '+e.message);t.crm.snap={...t.crm.snap,...{title:t.title,description:t.description||'',status:t.status,end:t.end||'',start:t.start||''}};changed=true}else throw e}}
     for(const t of crmTasks())if(await pushCl(t))changed=true;
     for(const t of crmTasks())if(await pushComments(t))changed=true;
@@ -3674,6 +3675,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
   // Задача закрыта, отменена или снята с вас в CRM: спрашиваем, что делать с карточкой.
   function askOff(){
     if(S.dlg||document.querySelector('.friendly-dialog'))return;
+    for(const x of crmTasks())if(x.crm.mine&&(x.crm.cancelled||x.crm.gone)&&!x.crm.asked){x.crm.asked=true;save()}
     const t=crmTasks().find(x=>(x.crm.cancelled||x.crm.gone)&&!x.crm.asked&&!S.later.has(x.crm.id));if(!t)return;
     S.dlg=true;S.picked=false;
     dialog({title:'Задача закрыта в CRM',description:`«${t.title}» (№${t.crm.id}): ${offText(t.crm)}. Что сделать с карточкой?`,fields:[{label:'Карточка',value:'keep',options:[{value:'keep',label:'Продолжить работать (снять связь с CRM)'},{value:'archive',label:'Завершить и убрать в архив'},{value:'later',label:'Решить позже'}]}],submitLabel:'Применить',

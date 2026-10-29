@@ -276,6 +276,17 @@ try {
   if (arch.length !== 1 || arch[0].status !== 'Готово' || !arch[0].completed) throw new Error('Exactly one card archived: ' + JSON.stringify(arch));
   if (await page.evaluate(() => standaloneTasks.filter((t) => t.crm && (t.crm.id === '221' || t.crm.id === '220')).length) !== 1) throw new Error('The other card must be unlinked');
   if (await page.evaluate(() => !standaloneTasks.some((t) => t.title === 'Организовать встречу' || t.title === 'Изменено в CRM') && !standaloneTasks.some((t) => t.title === 'Провести встречу'))) throw new Error('Cards must not be deleted');
+  // Завершили сами в канбане, CRM заархивировала — окно вопроса не появляется.
+  await page.evaluate(() => { standaloneTasks.push({ id: 9400, title: 'Закрою сам', status: 'В работе', start: '', end: '', crm: { id: '240', productId: 7, version: 1, sent: [], cids: [], cseen: 0, cl: { ids: [], tot: 0, done: 0 }, cancelled: false, snap: { title: 'Закрою сам', description: '', status: 'В работе', end: '', start: '' } } }); });
+  crm.tasks.push(T({ id: '240', title: 'Закрою сам', status: 'active', version: 1 }));
+  await page.evaluate(() => { standaloneTasks.find((t) => t.id === 9400).status = 'Готово'; save(); });
+  await until(() => crm.calls.some((c) => c.action === 'update' && c.id === '240' && c.fields.status === 'done'), 10000);
+  crm.tasks.find((x) => x.id === '240').archived = true; crm.tasks = crm.tasks.filter((x) => x.id !== '240');
+  crm.tasks.push(T({ id: '240', title: 'Закрою сам', status: 'done', version: 3, archived: true, hidden: true }));
+  await syncNow();
+  await wait(1500);
+  if (await page.locator('.friendly-dialog', { hasText: 'Задача закрыта в CRM' }).count()) throw new Error('No prompt for a closure made in the kanban');
+  if (!(await ST('240')).crm.asked) throw new Error('Own closure is marked as handled');
   // Метка на своей карточке: проект CRM → исполнитель → задача создаётся в CRM со статусом, сроками и чек-листом.
   await page.evaluate(() => { standaloneTasks.push({ id: 9100, title: 'Сверить смету', start: '20.10.2026', end: '10.11.2026', status: 'В работе', owner: '', description: 'Материалы и работы', comment: '', checklist: [{ text: 'Материалы', done: false }, { text: 'Работы', done: true }] }); openStandaloneTask(9100); });
   await page.locator('[data-crm-attach]').click();
