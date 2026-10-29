@@ -331,6 +331,30 @@ try {
   await wait(1200);
   if (await page.locator('.friendly-dialog', { hasText: 'Задача закрыта в CRM' }).count()) throw new Error('No prompt after closing from the kanban');
   await page.evaluate(() => closeDrawer());
+  // Новое из CRM: синяя точка и блок сверху; снимается при открытии; «изменена» — оранжевая точка, наши правки не считаются.
+  crm.tasks.push(T({ id: '280', title: 'Свежая из CRM', status: 'active', version: 1, createdAt: new Date().toISOString() }));
+  await syncNow();
+  await until(async () => (await ST('280')).crm.seen === false, 10000);
+  await page.evaluate(() => { window.myTasksFilter = 'focus'; switchView('mytasks'); });
+  await page.locator('#myTasksView .mytask-group-crmnew .mytask-row', { hasText: 'Свежая из CRM' }).waitFor({ timeout: 5000 });
+  if (await page.evaluate(() => document.querySelector('#myTasksView .mytask-group h4').textContent.indexOf('Новое из CRM') < 0)) throw new Error('Fresh block must be first');
+  await page.locator('#myTasksView .mytask-row', { hasText: 'Свежая из CRM' }).locator('.crm-fresh:not(.upd)').waitFor();
+  await page.evaluate((id) => openStandaloneTask(id), (await ST('280')).id);
+  await until(async () => (await ST('280')).crm.seen === true, 5000);
+  await page.evaluate(() => closeDrawer());
+  // Наша правка заголовка, вернувшаяся из CRM, не помечает «изменена».
+  await page.evaluate((id) => { const t = standaloneTasks.find((x) => x.id === id); t.title = 'Моя правка 280'; save(); }, (await ST('280')).id);
+  await until(() => crm.calls.some((c) => c.action === 'update' && c.id === '280' && c.fields.title === 'Моя правка 280'), 10000);
+  await wait(800);
+  if ((await ST('280')).crm.upd) throw new Error('Own edit must not mark the task as changed');
+  // Изменение в CRM — «изменена».
+  const c280 = crm.tasks.find((x) => x.id === '280'); c280.title = 'Правка из CRM'; c280.version += 5;
+  await syncNow();
+  await until(async () => (await ST('280')).crm.upd === true, 10000);
+  await page.evaluate(() => { window.myTasksFilter = 'focus'; switchView('mytasks'); });
+  await page.locator('#myTasksView .mytask-row', { hasText: 'Правка из CRM' }).locator('.crm-fresh.upd').waitFor({ timeout: 5000 });
+  await page.locator('[data-crm-seen-all]').click();
+  await until(async () => (await ST('280')).crm.upd === false, 5000);
   // Метка на своей карточке: проект CRM → исполнитель → задача создаётся в CRM со статусом, сроками и чек-листом.
   await page.evaluate(() => { standaloneTasks.push({ id: 9100, title: 'Сверить смету', start: '20.10.2026', end: '10.11.2026', status: 'В работе', owner: '', description: 'Материалы и работы', comment: '', checklist: [{ text: 'Материалы', done: false }, { text: 'Работы', done: true }] }); openStandaloneTask(9100); });
   await page.locator('[data-crm-attach]').click();
