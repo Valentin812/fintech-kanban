@@ -1293,7 +1293,7 @@ html.list-w-set[data-layout="rows"] .board .column{max-width:var(--list-w)}
 .crm-mark{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.02em;color:#fff;background:#e2453a;border-radius:6px;padding:1px 6px}
 .crm-badge.off{background:#7b8798;border-color:#7b8798}.crm-badge{display:inline-block;font-size:10.5px;font-weight:700;color:#fff;background:#e2453a;border:1px solid #e2453a;border-radius:6px;padding:0 5px;margin-right:2px;vertical-align:1px;white-space:nowrap}
 .crm-info{margin:6px 0 10px;padding:8px 10px;border-left:3px solid #e2453a;border-radius:6px;background:rgba(226,69,58,.07);font-size:13px;line-height:1.45}
-.crm-fresh{display:inline-block;width:9px;height:9px;border-radius:50%;background:#1f7aec;margin-right:6px;vertical-align:middle;flex:none}.crm-fresh.upd{background:#f08c00}.mytask-group-crmnew h4 .smallbtn{margin-left:8px;font-weight:400}.crm-create-row{display:flex;align-items:center;gap:8px;margin:2px 0 10px;font-size:14px}.crm-create-row input{width:auto}.crm-info a{color:inherit}
+.mytask-dot{display:none}.crm-fresh{display:inline-block;width:9px;height:9px;border-radius:50%;background:#1f7aec;margin-right:6px;vertical-align:middle;flex:none}.crm-fresh.upd{background:#f08c00}.mytask-group-crmnew h4 .smallbtn{margin-left:8px;font-weight:400}.crm-create-row{display:flex;align-items:center;gap:8px;margin:2px 0 10px;font-size:14px}.crm-create-row input{width:auto}.crm-info a{color:inherit}
 .crm-info a{color:inherit}.crm-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 /* Телефон: кнопка «⋯» у вкладок проекта открывает список всех вкладок, «Встречи» — в панели «Ещё» */
 #meetingsTopButton,#tabsMore,#tabsMoreMenu{display:none}
@@ -1320,7 +1320,7 @@ const original=[{"name": "Автооплата ГП", "tasks": [{"id": 33, "titl
 const projects=original.map(p=>p.name);
 let data=JSON.parse(JSON.stringify(original)),activeProject='Автооплата ГП',selectedId=null,dragId=null,activeView='tasks';
 let projectMeta={};
-let standaloneTasks=[];let pinnedTasks=[],quickNotes=[],projectOrder=[];
+let standaloneTasks=[];let pinnedTasks=[],quickNotes=[],projectOrder=[],archivedProjects=[];
 const pinKey=(project,id)=>`${project}\u0001${id}`;const isPinned=(project,id)=>pinnedTasks.includes(pinKey(project,id));
 function togglePin(project,id){const k=pinKey(project,id),i=pinnedTasks.indexOf(k);if(i>=0)pinnedTasks.splice(i,1);else pinnedTasks.push(k);save();return i<0}
 let members=[];
@@ -1457,10 +1457,10 @@ function undoToast(message,onUndo){document.getElementById('undoToast')?.remove(
 (function projectMenu(){const actions=document.querySelector('.side-actions');if(!actions||$('projectMenuButton'))return;
  const btn=document.createElement('button');btn.id='projectMenuButton';btn.type='button';btn.title='Действия с проектом';btn.setAttribute('aria-label','Действия с проектом');btn.setAttribute('aria-haspopup','menu');btn.setAttribute('aria-expanded','false');btn.textContent='⋯';actions.appendChild(btn);
  const menu=document.createElement('div');menu.id='projectMenu';menu.className='project-menu';menu.setAttribute('role','menu');menu.hidden=true;document.body.appendChild(menu);
- const itemsFor=p=>{const shared=p?.shared;const list=[];if(shared){list.push(['__members','Участники проекта…'],['exportBtn','Экспорт данных (JSON)']);list.push(shared.role==='owner'?['deleteProject','Удалить общий проект','danger']:['__leave','Выйти из проекта','danger'])}else{list.push(['__share','Сделать проект общим…'],['exportBtn','Экспорт данных (JSON)'],['importBtn','Импорт задач из JSON'],['projectToTask','Превратить проект в задачу'],['deleteProject','Удалить проект','danger'])}if((projectBackups||[]).length)list.push(['__backups','Резервные копии…']);return list.filter(([id])=>id.startsWith('__')||$(id))};
+ const itemsFor=p=>{const shared=p?.shared;const list=[];if(shared){list.push(['__members','Участники проекта…'],['exportBtn','Экспорт данных (JSON)']);list.push(shared.role==='owner'?['deleteProject','Удалить общий проект','danger']:['__leave','Выйти из проекта','danger'])}else{list.push(['__share','Сделать проект общим…'],['exportBtn','Экспорт данных (JSON)'],['importBtn','Импорт задач из JSON'],['projectToTask','Превратить проект в задачу'],['__archive','В архив'],['deleteProject','Удалить проект','danger'])}if((archivedProjects||[]).length)list.push(['__archived','Архив проектов · '+archivedProjects.length]);if((projectBackups||[]).length)list.push(['__backups','Резервные копии…']);return list.filter(([id])=>id.startsWith('__')||$(id))};
  const close=()=>{menu.hidden=true;btn.setAttribute('aria-expanded','false')};
  btn.addEventListener('click',e=>{e.stopPropagation();if(!menu.hidden){close();return}menu.innerHTML=itemsFor(active()).map(([id,label,cls])=>`<button type="button" role="menuitem" data-project-action="${id}"${cls?` class="${cls}"`:''}>${label}</button>`).join('');const r=btn.getBoundingClientRect();menu.hidden=false;menu.style.top=(r.bottom+4)+'px';menu.style.left=Math.max(8,Math.min(r.left,window.innerWidth-menu.offsetWidth-8))+'px';btn.setAttribute('aria-expanded','true');menu.querySelector('button')?.focus()});
- menu.addEventListener('click',e=>{const b=e.target.closest('[data-project-action]');if(!b)return;close();const id=b.dataset.projectAction;if(id==='__share')shareActiveProject();else if(id==='__members')openSharedMembers(active());else if(id==='__leave')deleteOrLeaveSharedProject(active());else if(id==='__backups')openBackups();else $(id)?.click()});
+ menu.addEventListener('click',e=>{const b=e.target.closest('[data-project-action]');if(!b)return;close();const id=b.dataset.projectAction;if(id==='__share')shareActiveProject();else if(id==='__members')openSharedMembers(active());else if(id==='__leave')deleteOrLeaveSharedProject(active());else if(id==='__backups')openBackups();else if(id==='__archive')archiveActiveProject();else if(id==='__archived')openArchive();else $(id)?.click()});
  document.addEventListener('click',e=>{if(!menu.hidden&&!e.target.closest('#projectMenu'))close()});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!menu.hidden){close();btn.focus()}})})();
 
 (function themeIntoAccountMenu(){const select=$('themeToggle'),security=$('cloudSecurityGroup');if(!select||!security||$('cloudThemeGroup'))return;const group=document.createElement('section');group.className='cloud-action-group';group.id='cloudThemeGroup';group.innerHTML='<label class="cloud-group-title" for="themeToggle">Оформление</label>';security.parentNode.insertBefore(group,security);group.appendChild(select);select.classList.add('cloud-theme-select')})();
@@ -1538,6 +1538,24 @@ async function openSharedMembers(p){if(!p?.shared)return;const el=sharedModal();
 function openBackups(){const list=projectBackups||[];if(!list.length){toast('Резервных копий нет');return}const el=sharedModal();$('sharedTitle').textContent='Резервные копии проектов';const why={'before-share':'перед тем как сделать общим','before-delete':'перед удалением общего проекта'};
  $('sharedBody').innerHTML=`<p class="mini">Последние ${list.length} копий. Восстановленная копия появится как отдельный личный проект — текущие проекты не изменятся.</p><div class="shared-members">${list.map((b,i)=>`<div class="admin-user"><div class="admin-user-main"><div class="admin-user-name">${esc(b.name)}</div><div class="admin-user-meta">${esc(new Date(b.at).toLocaleString('ru-RU'))} · ${esc(why[b.reason]||'копия')} · задач: ${b.tasks?.length||0}</div></div><button class="btn" type="button" data-restore-backup="${i}">Восстановить</button></div>`).reverse().join('')}</div>`;
  el.classList.add('show');document.querySelectorAll('[data-restore-backup]').forEach(b=>b.onclick=()=>{const bk=list[Number(b.dataset.restoreBackup)];if(!bk)return;const stamp=new Date(bk.at).toLocaleDateString('ru-RU');let name=`${bk.name} (копия от ${stamp})`,n=2;while(data.some(p=>p.name===name))name=`${bk.name} (копия от ${stamp}, ${n++})`;data.push({name,tasks:cloneJson(bk.tasks)});projectMeta[name]=cloneJson(bk.meta||defaultMeta());activeProject=name;save();renderAll();switchView('tasks');el.classList.remove('show');toast(`Восстановлено: «${name}»`)})}
+/* Архив проектов: проект уходит из списка вместе с задачами (в «Мои задачи» и поиске их нет); можно вернуть или удалить навсегда. */
+function archiveActiveProject(){
+ const p=active();if(!p||p.shared)return;
+ if(data.length<2){toast('Нельзя архивировать единственный проект');return}
+ friendlyConfirm('Убрать проект в архив?',`Проект «${p.name}» (${p.tasks.length} задач) скроется из списка, его задачи пропадут из «Мои задачи». Вернуть можно в меню проекта → «Архив проектов».`,()=>{
+  const i=data.indexOf(p);if(i<0)return;data.splice(i,1);archivedProjects.push({name:p.name,tasks:p.tasks,at:new Date().toISOString()});
+  activeProject=data[Math.min(i,data.length-1)].name;save();renderAll();switchView('tasks');toast(`Проект «${p.name}» в архиве`)},'В архив')}
+function openArchive(){
+ const el=sharedModal();$('sharedTitle').textContent='Архив проектов';
+ const draw=()=>{
+  if(!archivedProjects.length){el.classList.remove('show');return}
+  $('sharedBody').innerHTML=`<p class="mini">Вернуть — проект снова появится в списке со всеми задачами. «Удалить навсегда» стирает его без возврата (перед этим сохраняется резервная копия).</p><div class="shared-members">${archivedProjects.map((a,i)=>`<div class="admin-user"><div class="admin-user-main"><div class="admin-user-name">${esc(a.name)}</div><div class="admin-user-meta">${esc(a.at?new Date(a.at).toLocaleDateString('ru-RU'):'')} · задач: ${a.tasks?.length||0}</div></div><button class="btn" type="button" data-arch-restore="${i}">Вернуть</button><button class="btn danger" type="button" data-arch-del="${i}">Удалить навсегда</button></div>`).join('')}</div>`;
+  $('sharedBody').querySelectorAll('[data-arch-restore]').forEach(b=>b.onclick=()=>{const a=archivedProjects[Number(b.dataset.archRestore)];if(!a)return;let name=a.name,n=2;while(data.some(p=>p.name===name))name=`${a.name} (из архива${n>2?' '+n:''})`,n++;
+   if(name!==a.name&&!projectMeta[name]&&projectMeta[a.name])projectMeta[name]=cloneJson(projectMeta[a.name]);
+   data.push({name,tasks:a.tasks||[]});if(!projectMeta[name])projectMeta[name]=defaultMeta();archivedProjects.splice(Number(b.dataset.archRestore),1);activeProject=name;save();renderAll();switchView('tasks');draw();toast(`Проект «${name}» возвращён`)});
+  $('sharedBody').querySelectorAll('[data-arch-del]').forEach(b=>b.onclick=()=>{const a=archivedProjects[Number(b.dataset.archDel)];if(!a)return;
+   friendlyConfirm('Удалить проект навсегда?',`Проект «${a.name}» и его задачи будут удалены. Резервная копия сохранится в «Резервных копиях» (последние 5).`,()=>{addBackup(a,'before-delete');archivedProjects.splice(archivedProjects.indexOf(a),1);if(!data.some(p=>p.name===a.name))delete projectMeta[a.name];save();draw();toast('Проект удалён навсегда')},'Удалить навсегда')})};
+ draw();el.classList.add('show')}
 var telegramImporting=false,cloudStateReady=false;
 function myDisplayName(){const email=String(cloudSession?.user?.email||'').trim().toLocaleLowerCase();try{const linked=allParticipants().find(p=>email&&String(p.email||'').trim().toLocaleLowerCase()===email&&p.linked)||allParticipants().find(p=>email&&String(p.email||'').trim().toLocaleLowerCase()===email);if(linked?.name)return linked.name}catch(e){}const meta=cloudSession?.user?.user_metadata||{};return String(meta.full_name||meta.name||meta.display_name||email.split('@')[0]||'Я').trim()}
 function normProjectName(v){return String(v||'').toLocaleLowerCase('ru').replace(/ё/g,'е').replace(/[^\p{L}\p{N}]+/gu,'')}
@@ -1648,7 +1666,7 @@ function openNew(st='Очередь'){const ns=projectStatuses().filter(s=>s!=='
 function closeNew(){$('modal').classList.remove('show')}
 function getMeta(){if(!projectMeta[activeProject])projectMeta[activeProject]={milestones:[],docs:[],links:[]};let m=projectMeta[activeProject];if(!Array.isArray(m.milestones))m.milestones=[];if(!Array.isArray(m.docs))m.docs=[];if(!Array.isArray(m.links))m.links=[];for(const k of ['projectDescription','projectEssence','expectedResult','keyMetrics','currentFocus'])if(typeof m[k]!=='string')m[k]='';return m}
 function renderOverview(){const m=getMeta();const fields=[['projectDescription','Описание проекта','Что делаем, для кого и в каком контуре?'],['projectEssence','Суть и цель','Какую проблему решаем и зачем?'],['expectedResult','Ожидаемый результат','Что должно измениться после реализации?'],['keyMetrics','Ключевые показатели','Например: выручка, количество операций, охват сети, конверсия, затраты.'],['currentFocus','Текущий фокус','На чём команда сосредоточена сейчас?']];$('overviewView').innerHTML=`<div class="overview-head"><div><h3>Обзор проекта</h3><div class="mini">Паспорт проекта «${esc(activeProject)}». Заполни ключевую информацию — она сохранится в этом браузере.</div></div><button class="btn primary" id="saveProjectOverview">Сохранить обзор</button></div><div class="overview-grid">${fields.map(([key,label,placeholder])=>`<label class="overview-field"><span>${label}</span><textarea data-overview-field="${key}" placeholder="${placeholder}">${esc(m[key])}</textarea></label>`).join('')}</div><div class="overview-note">Задачи, сроки и материалы остаются в своих разделах. Здесь хранится общий контекст проекта.</div>`;$('saveProjectOverview').onclick=()=>{const meta=getMeta();document.querySelectorAll('[data-overview-field]').forEach(el=>meta[el.dataset.overviewField]=el.value.trim());save();renderOverview();toast('Обзор проекта сохранён')}}
-function save(){try{localStorage.setItem('fintech-kanban-v6',JSON.stringify({data:personalProjects(),projectMeta:personalMeta(),standaloneTasks,pins:pinnedTasks,quickNotes,projectOrder}))}catch(e){};scheduleCloudSave();try{scheduleSharedPush()}catch(e){}try{renderNotifBadge()}catch(e){}}
+function save(){try{localStorage.setItem('fintech-kanban-v6',JSON.stringify({data:personalProjects(),projectMeta:personalMeta(),standaloneTasks,pins:pinnedTasks,quickNotes,projectOrder,archived:archivedProjects}))}catch(e){};scheduleCloudSave();try{scheduleSharedPush()}catch(e){}try{renderNotifBadge()}catch(e){}}
 const CLOUD_URL='https://vdlfdnhfiiltdyrucdtn.supabase.co';
 const CLOUD_KEY='sb_publishable_uXYluucSC1Grq-Tub20S6Q_rvDJj7HH';
 let cloudSession=null,cloudSaveTimer=null,cloudBusy=false;
@@ -1673,7 +1691,7 @@ $('adminClose').addEventListener('click',closeAdminUsers);
 $('adminModal').addEventListener('click',e=>{if(e.target===$('adminModal'))closeAdminUsers()});
 $('adminUsersList').addEventListener('click',e=>{const button=e.target.closest('[data-admin-action]');if(button)adminSetBan(button.dataset.userId,button.dataset.adminAction)});
 
-function currentCloudState(){return {data:personalProjects(),projectMeta:personalMeta(),standaloneTasks,pins:pinnedTasks,quickNotes,projectOrder,members,backups:projectBackups||[]}}
+function currentCloudState(){return {data:personalProjects(),projectMeta:personalMeta(),standaloneTasks,pins:pinnedTasks,quickNotes,projectOrder,members,backups:projectBackups||[],archived:archivedProjects||[]}}
 let cloudRenewing=null;
 /* Токен доступа живёт около часа: при «JWT expired» обновляем сессию по refresh_token и повторяем запрос один раз. */
 function renewCloudSession(){
@@ -1690,7 +1708,7 @@ async function cloudAuth(mode){const email=($('authEmail')?.value||$('cloudEmail
   document.querySelector('.app').hidden=false;$('authScreen').classList.remove('show');try{await cloudSyncOnLogin();$('cloudLogout').hidden=false;toast('Ты вошёл в свой Kanban')}catch(syncErr){console.error('Cloud sync failed',syncErr);document.querySelector('.app').hidden=true;$('authScreen').classList.add('show');authMessage('Вход выполнен, но не удалось синхронизировать данные: '+syncErr.message)}
  }catch(err){authMessage('Не удалось войти: '+err.message)}
 }
-async function cloudAutoRestore(){if(!cloudSession?.access_token||!cloudSession?.user?.id)return false;try{await cloudRequest('/auth/v1/user',{method:'GET'});const userId=cloudSession.user.id;const rows=await cloudRequest('/rest/v1/kanban_state?select=state&user_id=eq.'+encodeURIComponent(userId),{method:'GET'});if(rows&&rows.length&&rows[0].state){const s=rows[0].state;if(Array.isArray(s.data)&&s.data.length)data=s.data;projectMeta=s.projectMeta||{};standaloneTasks=s.standaloneTasks||[];pinnedTasks=Array.isArray(s.pins)?s.pins:[];quickNotes=Array.isArray(s.quickNotes)?s.quickNotes:[];projectOrder=Array.isArray(s.projectOrder)?s.projectOrder.map(String):[];members=Array.isArray(s.members)?s.members:[];projectBackups=Array.isArray(s.backups)?s.backups:[];if(!data.some(p=>p.name===activeProject))activeProject=data[0]?.name||'Мой Kanban';localStorage.setItem('fintech-kanban-v6',JSON.stringify(currentCloudState()));renderAll();}else{data=[{name:'Мой Kanban',tasks:[]}];activeProject='Мой Kanban';projectMeta={};standaloneTasks=[];members=[];renderAll();await cloudWriteNow()}await loadRegisteredParticipants().catch(err=>console.warn('Participants unavailable',err));cloudStateReady=true;setTimeout(importTelegramInbox,300);return true}catch(err){console.error('Cloud restore failed',err);await clearLocalCloudSession('Сессия не подтверждена. Войди в аккаунт.');return false}}
+async function cloudAutoRestore(){if(!cloudSession?.access_token||!cloudSession?.user?.id)return false;try{await cloudRequest('/auth/v1/user',{method:'GET'});const userId=cloudSession.user.id;const rows=await cloudRequest('/rest/v1/kanban_state?select=state&user_id=eq.'+encodeURIComponent(userId),{method:'GET'});if(rows&&rows.length&&rows[0].state){const s=rows[0].state;if(Array.isArray(s.data)&&s.data.length)data=s.data;projectMeta=s.projectMeta||{};standaloneTasks=s.standaloneTasks||[];pinnedTasks=Array.isArray(s.pins)?s.pins:[];quickNotes=Array.isArray(s.quickNotes)?s.quickNotes:[];projectOrder=Array.isArray(s.projectOrder)?s.projectOrder.map(String):[];members=Array.isArray(s.members)?s.members:[];archivedProjects=Array.isArray(s.archived)?s.archived:[];projectBackups=Array.isArray(s.backups)?s.backups:[];if(!data.some(p=>p.name===activeProject))activeProject=data[0]?.name||'Мой Kanban';localStorage.setItem('fintech-kanban-v6',JSON.stringify(currentCloudState()));renderAll();}else{data=[{name:'Мой Kanban',tasks:[]}];activeProject='Мой Kanban';projectMeta={};standaloneTasks=[];members=[];renderAll();await cloudWriteNow()}await loadRegisteredParticipants().catch(err=>console.warn('Participants unavailable',err));cloudStateReady=true;setTimeout(importTelegramInbox,300);return true}catch(err){console.error('Cloud restore failed',err);await clearLocalCloudSession('Сессия не подтверждена. Войди в аккаунт.');return false}}
 function cloudChooseVersion(hasRemote=true){return new Promise(resolve=>{const modal=$('cloudChoiceModal');$('cloudChoiceTitle').textContent=hasRemote?'Данные уже есть в облаке':'С чего начнём?';$('cloudChoiceDescription').textContent=hasRemote?'Выбери, какую версию проектов и задач использовать.':'Это твой личный Kanban. Можно начать с пустой доски или перенести данные из этого браузера.';$('cloudUseRemote').hidden=!hasRemote;$('cloudStartClean').hidden=hasRemote;const finish=value=>{modal.classList.remove('show');$('cloudUseRemote').onclick=null;$('cloudUseLocal').onclick=null;$('cloudStartClean').onclick=null;$('cloudChoiceCancel').onclick=null;resolve(value)};$('cloudUseRemote').onclick=()=>finish('remote');$('cloudUseLocal').onclick=()=>finish('local');$('cloudStartClean').onclick=()=>finish('clean');$('cloudChoiceCancel').onclick=()=>finish('cancel');modal.classList.add('show')})}
 async function cloudSyncOnLogin(){
  const userId=cloudSession.user?.id;if(!userId)throw new Error('Не удалось определить пользователя.');
@@ -1701,7 +1719,7 @@ async function cloudSyncOnLogin(){
   if(Array.isArray(s.data)&&s.data.length)data=s.data;
   projectMeta=s.projectMeta||{};
   standaloneTasks=s.standaloneTasks||[];pinnedTasks=Array.isArray(s.pins)?s.pins:[];quickNotes=Array.isArray(s.quickNotes)?s.quickNotes:[];projectOrder=Array.isArray(s.projectOrder)?s.projectOrder.map(String):[];
-  members=Array.isArray(s.members)?s.members:[];projectBackups=Array.isArray(s.backups)?s.backups:[];
+  members=Array.isArray(s.members)?s.members:[];archivedProjects=Array.isArray(s.archived)?s.archived:[];projectBackups=Array.isArray(s.backups)?s.backups:[];
   await loadRegisteredParticipants().catch(err=>console.warn('Participants unavailable',err));
   if(!data.some(p=>p.name===activeProject))activeProject=data[0]?.name||'Мой Kanban';
   selectedId=null;selectedStandaloneId=null;
@@ -1709,7 +1727,7 @@ async function cloudSyncOnLogin(){
   renderAll();
   toast('Последняя версия из облака загружена');
  }else{
-  data=[{name:'Мой Kanban',tasks:[]}];activeProject='Мой Kanban';projectMeta={};standaloneTasks=[];pinnedTasks=[];members=[];registeredParticipants=[];selectedId=null;
+  data=[{name:'Мой Kanban',tasks:[]}];activeProject='Мой Kanban';projectMeta={};standaloneTasks=[];pinnedTasks=[];archivedProjects=[];members=[];registeredParticipants=[];selectedId=null;
   localStorage.setItem('fintech-kanban-v6',JSON.stringify(currentCloudState()));
   await loadRegisteredParticipants();
   renderAll();await cloudWriteNow();toast('Создан чистый Kanban');
@@ -2008,7 +2026,7 @@ try{
  if(saved){
   const candidate=Array.isArray(saved)?saved:saved.data;
   if(Array.isArray(candidate)&&candidate.length>0)data=candidate;
-  if(!Array.isArray(saved)){projectMeta=saved.projectMeta||{};standaloneTasks=saved.standaloneTasks||[];pinnedTasks=Array.isArray(saved.pins)?saved.pins:[];quickNotes=Array.isArray(saved.quickNotes)?saved.quickNotes:[];projectOrder=Array.isArray(saved.projectOrder)?saved.projectOrder.map(String):[];members=Array.isArray(saved.members)?saved.members:[];}
+  if(!Array.isArray(saved)){projectMeta=saved.projectMeta||{};standaloneTasks=saved.standaloneTasks||[];pinnedTasks=Array.isArray(saved.pins)?saved.pins:[];quickNotes=Array.isArray(saved.quickNotes)?saved.quickNotes:[];projectOrder=Array.isArray(saved.projectOrder)?saved.projectOrder.map(String):[];members=Array.isArray(saved.members)?saved.members:[];archivedProjects=Array.isArray(saved.archived)?saved.archived:[];}
  }
 }catch(e){}
 if(!Array.isArray(data)||data.length===0)data=JSON.parse(JSON.stringify(original));
@@ -2038,6 +2056,7 @@ new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).
 
 const CHANGELOG=[
  {v:'2026.10.29-17',date:'29.10.2026',title:'Встречи: компактный выбор проектов',items:['В карточке встречи вместо списка из всех проектов — выбранные проекты и выпадающий список «＋ Добавить проект…».']},
+ {v:'2026.10.29-16',date:'29.10.2026',title:'Архив проектов',items:['В меню проекта (⋯) появился пункт «В архив»: проект скрывается вместе с задачами. «Архив проектов» — вернуть проект или удалить навсегда (перед удалением остаётся резервная копия).','«Мои задачи»: серые точки статуса убраны (статус уже виден справа) — остались только синяя и оранжевая точки CRM.']},
  {v:'2026.10.29-15',date:'29.10.2026',title:'CRM: новое сверху и цветная точка',items:['В «Мои задачи» новые задачи из CRM собираются вверху в блоке «Новое из CRM» с синей точкой; оранжевая точка — задача или комментарии изменились в CRM. Точка пропадает, когда вы открыли карточку; есть кнопка «Отметить просмотренным», а на фильтре «CRM» — число новых.']},
  {v:'2026.10.29-14',date:'29.10.2026',title:'Сессия обновляется сама',items:['Если токен входа истёк («JWT expired»), приложение само обновляет сессию и повторяет запрос: встречи из Meeting Hub и другие облачные данные не пропадают, пока вы не перезайдёте.']},
  {v:'2026.10.29-13',date:'29.10.2026',title:'Быстрые заметки по ширине списка',items:['«Мои задачи»: быстрые заметки снова той же ширины, что и список задач (и по умолчанию, и после изменения ширины).']},
@@ -2914,7 +2933,7 @@ function fmtDone(iso){const d=new Date(iso);return isNaN(d)?'':d.toLocaleDateStr
       if(Array.isArray(remote.data)&&remote.data.length)data=remote.data.concat(shared);
       projectMeta=Object.assign({},remote.projectMeta||{},sharedMeta);
       standaloneTasks=remote.standaloneTasks||[];pinnedTasks=Array.isArray(remote.pins)?remote.pins:[];quickNotes=Array.isArray(remote.quickNotes)?remote.quickNotes:[];
-      projectOrder=Array.isArray(remote.projectOrder)?remote.projectOrder.map(String):[];members=Array.isArray(remote.members)?remote.members:members;
+      projectOrder=Array.isArray(remote.projectOrder)?remote.projectOrder.map(String):[];members=Array.isArray(remote.members)?remote.members:members;archivedProjects=Array.isArray(remote.archived)?remote.archived:archivedProjects;
       if(!data.some(x=>x.name===activeProject))activeProject=data[0]?.name||'Мой Kanban';
       stamp=row.updated_at;
       try{localStorage.setItem('fintech-kanban-v6',JSON.stringify({data:personalProjects(),projectMeta:personalMeta(),standaloneTasks,pins:pinnedTasks,quickNotes,projectOrder}))}catch(e){}

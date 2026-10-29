@@ -53,6 +53,26 @@ try {
   await page.locator('#projects .project[data-project="Альфа"]').focus();
   await page.keyboard.press('Alt+ArrowDown');
   assert((await order()).join() === 'Гамма,Бета,Альфа', 'Alt+Down moves: ' + (await order()));
+  // Архив проектов: скрыть, пережить перезагрузку, вернуть, удалить навсегда.
+  await page.evaluate(() => { activeProject = 'Бета'; renderAll(); archiveActiveProject(); });
+  await page.locator('.friendly-dialog .btn.primary').click();
+  assert(!(await order()).includes('Бета'), 'Archived project must leave the list: ' + (await order()));
+  await page.evaluate(() => cloudWriteNow());
+  await page.waitForTimeout(300);
+  const st2 = Array.isArray(lastState) ? lastState[0] : lastState;
+  assert(st2?.state?.archived?.some((a) => a.name === 'Бета'), 'Archive saved to the cloud');
+  await page.reload();
+  await page.locator('.app').waitFor({ state: 'visible' });
+  assert(!(await order()).includes('Бета') && await page.evaluate(() => archivedProjects.some((a) => a.name === 'Бета')), 'Archive survives reload');
+  await page.evaluate(() => openArchive());
+  await page.locator('[data-arch-restore="0"]').click();
+  assert((await order()).includes('Бета') && await page.evaluate(() => archivedProjects.length === 0), 'Restored project is back');
+  await page.evaluate(() => { activeProject = 'Бета'; renderAll(); archiveActiveProject(); });
+  await page.locator('.friendly-dialog .btn.primary').click();
+  await page.evaluate(() => openArchive());
+  await page.locator('[data-arch-del="0"]').click();
+  await page.locator('.friendly-dialog .btn.primary').click();
+  assert(await page.evaluate(() => archivedProjects.length === 0 && !data.some((p) => p.name === 'Бета') && projectBackups.some((b) => b.name === 'Бета')), 'Deleted forever, backup kept');
   assert(!errors.length, 'Page errors: ' + errors.join('; '));
   console.log('Project order OK: drag, keyboard, saved, remembered');
 } finally {
