@@ -2036,7 +2036,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
- {v:'2026.10.29-19',date:'29.10.2026',title:'Встречи: все задачи в один проект',items:['У задачи из встречи ссылка называется «Встреча «название»» и открывается в этом же окне, а не в новой вкладке.','Над списком задач встречи (своей и из Meeting Hub) есть выбор «Все задачи в проект»: один выбор проставляет проект всем ещё не добавленным задачам, дальше «Добавить все». В Meeting Hub «Все задачи на доску» теперь учитывает выбранный у каждой задачи проект.']},
+ {v:'2026.10.29-19',date:'29.10.2026',title:'Встречи: все задачи в один проект',items:['Ассистент больше не создаёт дубли: если задача с таким названием уже есть на доске (например, из этой встречи), он её пропускает, а в запрос «Разобрать с ИИ» добавляется список уже созданных задач.','У задачи из встречи ссылка называется «Встреча «название»» и открывается в этом же окне, а не в новой вкладке.','Над списком задач встречи (своей и из Meeting Hub) есть выбор «Все задачи в проект»: один выбор проставляет проект всем ещё не добавленным задачам, дальше «Добавить все». В Meeting Hub «Все задачи на доску» теперь учитывает выбранный у каждой задачи проект.']},
  {v:'2026.10.29-18',date:'29.10.2026',title:'Ассистент: понятный список действий',items:['В блоке «Предлагаю сделать» задачи встречи, подзадачи и изменения встречи теперь идут отдельными строками, а не одной длинной строкой через «;».']},
  {v:'2026.10.29-15',date:'29.10.2026',title:'CRM: новое сверху и цветная точка',items:['В «Мои задачи» новые задачи из CRM собираются вверху в блоке «Новое из CRM» с синей точкой; оранжевая точка — задача или комментарии изменились в CRM. Точка пропадает, когда вы открыли карточку; есть кнопка «Отметить просмотренным», а на фильтре «CRM» — число новых.']},
  {v:'2026.10.29-14',date:'29.10.2026',title:'Сессия обновляется сама',items:['Если токен входа истёк («JWT expired»), приложение само обновляет сессию и повторяет запрос: встречи из Meeting Hub и другие облачные данные не пропадают, пока вы не перезайдёте.']},
@@ -3171,8 +3171,12 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
   $('aiClose').addEventListener('click',()=>open(false));
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&panel.classList.contains('show')&&!document.querySelector('.modal.show')){open(false)}});
   $('aiClear').addEventListener('click',()=>{history=[];log.innerHTML='';open(true)});
+  // Дубли: задача с таким же названием уже есть на доске (например, созданная из этой встречи) — ассистент её не создаёт повторно.
+  const normT=v=>String(v||'').toLowerCase().replace(/ё/g,'е').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+  const boardDup=title=>{const k=normT(title);return !!k&&[...data.map(p=>p.tasks||[]),standaloneTasks||[]].some(l=>l.some(t=>normT(t.title)===k))};
   const findTask=id=>{for(const p of data){const t=(p.tasks||[]).find(x=>Number(x.id)===Number(id));if(t)return {t,p}}const t=(standaloneTasks||[]).find(x=>Number(x.id)===Number(id));return t?{t,p:null}:null};
   const describe=a=>{
+    if(a.type==='create_task'&&boardDup(a.title))return `Уже есть, пропущу: «${a.title}»`;
     if(a.type==='create_task')return `Создать задачу «${a.title}»${a.project?` в проекте «${a.project}»`:' в «Моих задачах»'}${a.end?`, срок ${a.end}`:''}`;
     if(a.type==='update_task'){const f=findTask(a.id);const ch=Object.entries(a.fields).map(([k,v])=>({status:'статус',end:'срок',owner:'ответственный',title:'название'}[k]+' → '+v)).join(', ');return `Изменить «${f?f.t.title:'#'+a.id}»: ${ch}`}
     if(a.type==='add_subtasks'){const f=findTask(a.parent_id);return `Подзадачи к «${f?f.t.title:'#'+a.parent_id}»:\n${a.titles.join('\n')}`}
@@ -3183,6 +3187,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     return ''};
   const apply=a=>{
     if(a.type==='create_task'){
+      if(boardDup(a.title))return false;
       const name=a.project?matchProjectName(a.project,data.map(p=>p.name)):null;const project=name?data.find(p=>p.name===name):null;
       const task={id:freshTaskId(),title:a.title,start:todayRu(),end:a.end?normalizeDateText(a.end):'',status:'Очередь',owner:a.owner||'',description:a.description||'',comment:`${new Date().toLocaleString('ru-RU')} — Создано ассистентом`,link:'',mt:'',documents:[],extraLinks:[],source:'assistant'};
       if(project){const meta=projectMeta[project.name]||{};const all=[...defaultStatuses(),...(meta.extraStatuses||[])];const order=Array.isArray(meta.statusOrder)?meta.statusOrder.filter(x=>all.includes(x)):[];task.status=[...order,...all.filter(x=>!order.includes(x))][0]||'Очередь';project.tasks.push(task)}else standaloneTasks.push(task);
@@ -3194,7 +3199,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     if(a.type==='add_note'){quickNotes.unshift({id:'n'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),text:a.text,created:Date.now(),done:false});return true}
     if(a.type==='create_meeting')return !!window.__meetings?.create(a);
     if(a.type==='set_meeting')return !!window.__meetings?.setFields(a.id,a.fields);
-    if(a.type==='meeting_tasks')return !!window.__meetings?.addPlanned(a.meeting_id,a.tasks);
+    if(a.type==='meeting_tasks')return !!window.__meetings?.addPlanned(a.meeting_id,a.tasks.filter(t=>!boardDup(t.title)));
     return false};
   const showActions=actions=>{
     if(!actions.length)return;const box=document.createElement('div');box.className='ai-actions';
@@ -3561,9 +3566,11 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     setFields:(id,f)=>{const m=byId(id);if(!m||m.hub)return false;if(f.summary)m.summary=cut(f.summary,20000);if(f.prep)m.prep=cut(f.prep,20000);if(f.projects)m.projects=[...new Set([...(m.projects||[]),...f.projects.filter(n=>projNames().includes(n))])];save();render();return true},
     addPlanned:(id,tasks)=>{const m=byId(id);if(!m||m.hub)return false;const have=new Set((m.tasks||[]).map(t=>t.title));for(const t of tasks){const title=one(t.title,300);if(title&&!have.has(title)){m.tasks.push({id:rid('t'),title,project:projNames().includes(t.project)?t.project:((m.projects||[])[0]||''),state:'new'});have.add(title)}}save();render();return true},
     analyzeText:id=>{const m=byId(id);if(!m)return '';
+      const onBoard=[...data.flatMap(p=>(p.tasks||[]).filter(t=>String(t.meetingId)===String(m.id)).map(t=>({id:t.id,title:t.title,project:p.name}))),...(standaloneTasks||[]).filter(t=>String(t.meetingId)===String(m.id)).map(t=>({id:t.id,title:t.title,project:''}))];
+      const have=onBoard.length?`\nУже созданы на доске из этой встречи (НЕ создавай их заново; если нужно изменить — update_task по id): ${onBoard.map(t=>`#${t.id} «${t.title}»${t.project?' ['+t.project+']':''}`).join('; ')}.`:'';
       const head=`Разбери встречу «${m.title}»${m.date?' от '+ruDate(m.date):''}. Проекты встречи: ${(m.projects||[]).join(', ')||'не указаны'}.`;
-      if(m.hub){const ev=x=>x.evidence?` («${x.evidence}»)`:'';return `${head}\nИтог: ${m.summaryList.join('; ')||'—'}\nРешения: ${m.decisions.map(d=>d.text).join('; ')||'—'}\nЗадачи: ${m.tasks.map(t=>t.task+(t.owner?' — '+t.owner:'')+(t.deadline?', срок '+t.deadline:'')+ev(t)).join('; ')||'—'}\nОткрытые вопросы: ${m.questions.map(q=>q.question).join('; ')||'—'}\n\nСкажи, что здесь главное, какие задачи в какие проекты стоит завести (предложи create_task с проектом из списка) и какие вопросы остались открытыми.`.slice(0,12000)}
-      return `Разбери встречу ${m.id} «${m.title}»${m.date?' от '+ruDate(m.date):''}. Проекты встречи: ${(m.projects||[]).join(', ')||'не указаны'}.\nПодготовка: ${m.prep||'—'}\nИтог: ${m.summary||'—'}\nРасшифровка:\n${(m.transcript||'').trim().slice(0,9000)||'—'}\n\nСделай краткий итог (set_meeting), привяжи к проектам из списка и предложи задачи (meeting_tasks), каждую с подходящим проектом.`}
+      if(m.hub){const ev=x=>x.evidence?` («${x.evidence}»)`:'';return `${head}\nИтог: ${m.summaryList.join('; ')||'—'}\nРешения: ${m.decisions.map(d=>d.text).join('; ')||'—'}\nЗадачи: ${m.tasks.map(t=>t.task+(t.owner?' — '+t.owner:'')+(t.deadline?', срок '+t.deadline:'')+ev(t)).join('; ')||'—'}\nОткрытые вопросы: ${m.questions.map(q=>q.question).join('; ')||'—'}\n\nСкажи, что здесь главное, какие задачи в какие проекты стоит завести (предложи create_task с проектом из списка только для тех, которых ещё нет на доске) и какие вопросы остались открытыми.${have}`.slice(0,12000)}
+      return `Разбери встречу ${m.id} «${m.title}»${m.date?' от '+ruDate(m.date):''}. Проекты встречи: ${(m.projects||[]).join(', ')||'не указаны'}.\nПодготовка: ${m.prep||'—'}\nИтог: ${m.summary||'—'}\nРасшифровка:\n${(m.transcript||'').trim().slice(0,9000)||'—'}\n\nСделай краткий итог (set_meeting), привяжи к проектам из списка и предложи задачи (meeting_tasks), каждую с подходящим проектом.${have}`}
   };
   window.__meetings=Object.assign({list,open:id=>{S.openId=id;S.q='';S.filter='all';S.proj='';switchView('meetings')},forProject:name=>{let kOpen=false;try{kOpen=localStorage.getItem('fintech-kanban-keynotes-open:'+name)==='1'}catch(e){}if(kOpen&&!S.hubAt&&signedIn())loadHub(false).then(()=>{try{const h=document.getElementById('keyNotes');const busy=h&&(h.contains(document.activeElement)&&/^(TEXTAREA|INPUT)$/.test(document.activeElement.tagName)||[...h.querySelectorAll('textarea')].some(t=>t.value.trim()));if(!busy&&S.hub.some(m=>(m.projects||[]).includes(name))&&window.renderKeyNotes)window.renderKeyNotes()}catch(e){}});return[...list(),...S.hub].filter(m=>(m.projects||[]).includes(name)).sort((a,b)=>(b.date||'').localeCompare(a.date||''))},addTask,importFiles,parseTasks,render},api);
 })();

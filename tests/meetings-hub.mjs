@@ -195,6 +195,12 @@ try {
   await view.locator('[data-mt-hdel]').click();
   await page.waitForTimeout(300);
   if (!String(globalThis.__del || '').includes('id=eq.22222222')) throw new Error('DELETE of the meeting expected');
+  // «Разобрать с ИИ» знает, какие задачи из этой встречи уже на доске, и просит не создавать их заново.
+  await page.evaluate(() => { window.__ai = { ask: (txt) => { window.__askedText2 = txt; } }; switchView('meetings'); });
+  if (!(await view.locator('.mt-card.hub.open').count())) await view.locator('.mt-card.hub', { hasText: 'Созвон с банком' }).locator('.mt-head').click();
+  await view.locator('.mt-card.hub.open [data-mt-hai]').click();
+  const asked2 = await page.evaluate(() => window.__askedText2 || '');
+  if (!asked2.includes('Уже созданы на доске') || !asked2.includes('Подготовить договор')) throw new Error('Existing meeting tasks must be listed for the assistant: ' + asked2);
   // Объединение своей встречи (заметки) с записью из Meeting Hub.
   await page.evaluate(() => { const m = projectMeta.__meetings__ = projectMeta.__meetings__ || {}; m.list = m.list || []; m.list.push({ id: 'mloc1', title: 'Моя встреча с банком', date: '2026-10-27', time: '', status: 'planned', prep: 'Вопросы по тарифам', summary: 'Мои заметки', transcript: '', projects: [], tasks: [], created: Date.now() }); window.__meetings?.open?.('mloc1'); switchView('meetings'); });
   await view.locator('.mt-card.open[data-mt="mloc1"]').waitFor();
