@@ -287,6 +287,15 @@ try {
   await wait(1500);
   if (await page.locator('.friendly-dialog', { hasText: 'Задача закрыта в CRM' }).count()) throw new Error('No prompt for a closure made in the kanban');
   if (!(await ST('240')).crm.asked) throw new Error('Own closure is marked as handled');
+  // Объединение имён: после слияния ответственный из CRM не возвращается к старому имени.
+  crm.tasks.push(T({ id: '270', title: 'Имя из CRM', status: 'active', version: 1, assignee: 'Лимарь А.' }));
+  await syncNow();
+  await until(async () => (await ST('270')).owner === 'Лимарь А.', 10000);
+  await page.evaluate(() => { members.push({ name: 'Лимарь Андрей', email: '', linked: true }); mergePeople('Лимарь А.', 'Лимарь Андрей', 'Лимарь Андрей'); save(); });
+  crm.tasks.find((x) => x.id === '270').version = 2; crm.tasks.find((x) => x.id === '270').title = 'Имя из CRM 2';
+  await syncNow();
+  await until(async () => (await ST('270')).title === 'Имя из CRM 2', 10000);
+  if ((await ST('270')).owner !== 'Лимарь Андрей') throw new Error('Owner must keep merged name: ' + (await ST('270')).owner);
   // Новая задача без проекта: календарь у срока и галочка «Передать во внешнюю CRM».
   await page.evaluate(() => openStandaloneTaskCreate());
   if (!(await page.locator('#standaloneTaskModal .date-btn').count())) throw new Error('Calendar button missing for due date');
