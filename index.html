@@ -1203,7 +1203,8 @@ html[data-layout="rows"] .board .cards>.task .pin-btn{order:6}
 html[data-layout="rows"] .board .cards>.task .subtask-add{display:inline-block;flex:0 0 auto;width:auto;margin:0;padding:0;border:0;font-size:12px;white-space:nowrap}
 html[data-layout="rows"] .board .cards>.task .archive-task{position:static;flex:0 0 auto;margin:0}
 #listWidthGrip{position:fixed;width:9px;margin-left:-4px;cursor:ew-resize;z-index:30;display:none;background:transparent;touch-action:none}#listWidthGrip:hover,#listWidthGrip.drag{background:rgba(100,120,170,.35)}
-html.list-w-set #myTasksView .mytask-list,html.list-w-set #myTasksView .mytasks-head,html.list-w-set #completedView .cp-list{max-width:var(--list-w)}
+#myTasksView .qn-panel{max-width:960px}
+html.list-w-set #myTasksView .mytask-list,html.list-w-set #myTasksView .qn-panel,html.list-w-set #myTasksView .mytasks-head,html.list-w-set #completedView .cp-list{max-width:var(--list-w)}
 html.list-w-set[data-layout="rows"] .board .column{max-width:var(--list-w)}
 /* ===== ИИ-ассистент ===== */
 .ai-panel{position:fixed;right:16px;bottom:16px;width:min(420px,calc(100vw - 32px));height:min(620px,calc(100vh - 32px));display:none;flex-direction:column;background:var(--panel,#fff);color:inherit;border:1px solid var(--line,#d7deea);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.25);z-index:60}
@@ -2034,7 +2035,8 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
- {v:'2026.10.29-13',date:'29.10.2026',title:'Сессия обновляется сама',items:['Если токен входа истёк («JWT expired»), приложение само обновляет сессию и повторяет запрос: встречи из Meeting Hub и другие облачные данные не пропадают, пока вы не перезайдёте.']},
+ {v:'2026.10.29-14',date:'29.10.2026',title:'Сессия обновляется сама',items:['Если токен входа истёк («JWT expired»), приложение само обновляет сессию и повторяет запрос: встречи из Meeting Hub и другие облачные данные не пропадают, пока вы не перезайдёте.']},
+ {v:'2026.10.29-13',date:'29.10.2026',title:'Быстрые заметки по ширине списка',items:['«Мои задачи»: быстрые заметки снова той же ширины, что и список задач (и по умолчанию, и после изменения ширины).']},
  {v:'2026.10.29-12',date:'29.10.2026',title:'Встречи: объединить с Meeting Hub',items:['В своей встрече есть кнопка «Объединить с Meeting Hub»: итог, решения, задачи и расшифровка из Meeting Hub добавляются к вашим заметкам, отдельная запись скрывается. Можно отменить сразу после.']},
  {v:'2026.10.29-11',date:'29.10.2026',title:'Ширина списка и кнопка CRM',items:['«Мои задачи»: при изменении ширины списка быстрые заметки больше не растягиваются.','Кнопки «Внешняя CRM» в карточке и в фильтре стали короче — «CRM».']},
  {v:'2026.10.29-10',date:'29.10.2026',title:'Перенос задачи: новый проект',items:['В окне «Перенести задачу в проект» есть «＋ Новый проект…»: введите название — проект создастся, и задача перенесётся в него.']},
