@@ -179,7 +179,7 @@ try {
   if (crm.calls.some((c) => c.action === 'update' || c.action === 'checklist')) throw new Error('Nothing must be pushed back right after the pull: ' + JSON.stringify(crm.calls.filter((c) => c.action === 'update' || c.action === 'checklist')));
   // Метка «внешняя CRM» в списке задач без проекта, фильтр и карточка.
   await page.evaluate(() => { switchView('inbox'); renderMyTasks(); });
-  await page.locator('#myTasksView .crm-badge', { hasText: 'внешняя CRM №220' }).waitFor();
+  await page.locator('#myTasksView .crm-badge', { hasText: 'CRM №220' }).waitFor();
   if (await page.locator('#myTasksView .crm-badge', { hasText: 'Этажи' }).count()) throw new Error('Old name must not be shown');
   await page.evaluate(() => { standaloneTasks.push({ id: 9001, title: 'Личная', status: 'Очередь' }); renderMyTasks(); });
   if (await page.locator('#myTasksView .mytask-row:visible').count() !== 3) throw new Error('All three rows expected');

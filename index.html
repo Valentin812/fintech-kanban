@@ -1289,7 +1289,7 @@ html.list-w-set[data-layout="rows"] .board .column{max-width:var(--list-w)}
 .crm-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px;padding:6px 10px;border:1px solid var(--line,#d7deea);border-radius:10px;background:var(--card,#fff)}
 .crm-bar .mini{flex:1;min-width:160px;opacity:.75}
 .crm-mark{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.02em;color:#fff;background:#e2453a;border-radius:6px;padding:1px 6px}
-.crm-badge{display:inline-block;font-size:10.5px;font-weight:700;color:#e2453a;border:1px solid #e2453a;border-radius:6px;padding:0 5px;margin-right:2px;vertical-align:1px;white-space:nowrap}
+.crm-badge{display:inline-block;font-size:10.5px;font-weight:700;color:#fff;background:#e2453a;border:1px solid #e2453a;border-radius:6px;padding:0 5px;margin-right:2px;vertical-align:1px;white-space:nowrap}
 .crm-info{margin:6px 0 10px;padding:8px 10px;border-left:3px solid #e2453a;border-radius:6px;background:rgba(226,69,58,.07);font-size:13px;line-height:1.45}
 .crm-info a{color:inherit}
 </style></head><body>
@@ -2013,6 +2013,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.10.29-01',date:'29.10.2026',title:'Метка CRM заметнее',items:['На карточках и в «Мои задачи» у связанных с CRM задач красная метка «CRM №…».','Кнопка-фильтр «Внешняя CRM» с числом задач всегда есть в «Мои задачи», когда CRM подключена.']},
  {v:'2026.10.28-08',date:'28.10.2026',title:'Метка «внешняя CRM»',items:['В карточке задачи появилась метка «Внешняя CRM»: при её включении выбираете проект CRM и исполнителя, и задача создаётся в CRM, а дальше названия, статус, срок, дата начала, описание, комментарии и чек-лист идут в обе стороны.','Чек-лист карточки сопоставлен с чек-листом (подзадачами) CRM: пункты, отметки «готово» и удаление синхронизируются. Важность не передаётся.','Задачи из CRM приходят в «Мои задачи» (без проекта) с пометкой «внешняя CRM», дальше вы переносите их по проектам сами; там же кнопка-фильтр «Внешняя CRM».','Снятие метки спрашивает, закрыть задачу в CRM как «Исполнено» или «Отмена» (в архив); карточка остаётся в канбане. Отменённая в CRM задача больше не уходит в архив канбана, а получает статус «Готово».']},
  {v:'2026.10.28-07',date:'28.10.2026',title:'Комментарии с CRM «Этажи»',items:['Комментарии к задачам из CRM теперь ходят в обе стороны: написанный в канбане уходит в CRM (один раз, без дублей), новые из CRM появляются в задаче с именем автора.']},
  {v:'2026.10.28-06',date:'28.10.2026',title:'Задачи из CRM «Этажи»',items:['Задачи из CRM «Этажи», где вы основной или дополнительный ответственный, приходят в проекты «Этажи · …» с пометкой и номером задачи CRM. Статус, срок, название и описание, изменённые здесь, уходят обратно в CRM, а изменения из CRM подтягиваются каждые 5 минут. Отменённые в CRM задачи уходят в архив. Кнопка «＋ Поручить в CRM» ставит задачу другому сотруднику.']},
@@ -3632,7 +3633,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
   const os=window.save;
   if(typeof os==='function')window.save=function(){const r=os.apply(this,arguments);if(enabled()&&cloudStateReady&&signed()){clearTimeout(S.pt);S.pt=setTimeout(()=>{if(S.busy)return;S.busy=true;pushAll().catch(e=>toast('CRM: '+e.message)).finally(()=>{S.busy=false})},4000)}return r};
   // Пометки: значок «внешняя CRM» на карточке и в «Мои задачи», сведения и кнопка метки в карточке.
-  const badge=t=>`<span class="crm-badge" title="${esc(t.crm.pn?'Проект CRM: '+t.crm.pn:'Задача из внешней CRM')}">внешняя CRM №${esc(t.crm.id)}</span> `;
+  const badge=t=>`<span class="crm-badge" title="${esc('Внешняя CRM'+(t.crm.pn?' · проект '+t.crm.pn:''))}">CRM №${esc(t.crm.id)}</span> `;
   function decorate(){
     label();
     const p=typeof active==='function'?active():null;
@@ -3649,8 +3650,8 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
         row.style.display=(S.only&&!has)?'none':''});
       my.querySelectorAll('.mytask-group').forEach(g=>{g.style.display=[...g.querySelectorAll('.mytask-row')].every(r=>r.style.display==='none')?'none':''});
       const fl=my.querySelector('.mytask-filters');
-      if(fl&&!fl.querySelector('[data-crm-only]')&&(any||S.only)){const b=document.createElement('button');b.type='button';b.className='btn quick-filter';b.dataset.crmOnly='1';fl.appendChild(b)}
-      const ob=fl?.querySelector('[data-crm-only]');if(ob){ob.textContent='Внешняя CRM';ob.classList.toggle('active',S.only);ob.setAttribute('aria-pressed',String(S.only))}}}
+      if(fl&&!fl.querySelector('[data-crm-only]')&&(enabled()||any||S.only)){const b=document.createElement('button');b.type='button';b.className='btn quick-filter';b.dataset.crmOnly='1';fl.appendChild(b)}
+      const ob=fl?.querySelector('[data-crm-only]');if(ob){ob.textContent='🔗 Внешняя CRM · '+crmTasks().length;ob.classList.toggle('active',S.only);ob.setAttribute('aria-pressed',String(S.only))}}}
   const reasons={cancelled:'отменена в CRM',archived:'в архиве CRM'};
   function drawerInfo(t,shared){
     let box=$('crmInfo');const head=document.querySelector('#drawer .drawerhead');
