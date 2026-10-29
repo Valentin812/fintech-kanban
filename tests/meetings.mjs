@@ -106,7 +106,8 @@ try {
   await view.locator('[data-mt-new]').click();
   await view.locator('[data-mt-f="title"]').fill('Планёрка по автооплате');
   const projectName = await page.evaluate(() => data[0].name);
-  await view.locator(`[data-mt-proj="${projectName}"]`).check();
+  await view.locator('select[data-mt-padd]').selectOption(projectName);
+  await view.locator(`[data-mt-premove="${projectName}"]`).waitFor();
   await view.locator('[data-mt-f="prep"]').fill('Обсудить сроки\nПодготовить цифры');
   await view.locator('[data-mt-f="summary"]').fill('Договорились о запуске в декабре');
   await view.locator('[data-mt-f="status"]').selectOption('done');
