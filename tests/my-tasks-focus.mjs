@@ -121,6 +121,13 @@ try {
   assert(await page.locator('.subtask-inline-editor').count() === 0, 'Cancel closes the inline form');
 
   assert(!unexpected.length, `Unexpected requests: ${unexpected.join('; ')}`);
+  // «＋ Задача без проекта» в «Мои задачи»: новая задача сразу видна в списке без перезагрузки.
+  await page.evaluate(() => { window.myTasksFilter = 'noproject'; switchView('mytasks'); });
+  await page.locator('#addInboxTask').click();
+  await page.locator('#standaloneTaskModal.show').waitFor();
+  await page.locator('#standaloneTitle').fill('Создана из списка');
+  await page.locator('#confirmStandaloneTask').click();
+  await page.locator('#myTasksView .mytask-row', { hasText: 'Создана из списка' }).waitFor({ timeout: 3000 });
   assert(!errors.length, `Browser page errors: ${errors.join('; ')}`);
   console.log('My tasks focus OK: no-project first, pinned, hot/overdue, rest; pin + important saved; subtask form');
 } finally {
