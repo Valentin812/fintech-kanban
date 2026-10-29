@@ -1802,12 +1802,14 @@ function ownerMatches(m,query){const q=String(query||'').trim();if(!q)return tru
 function ownerCandidates(){const list=allParticipants().slice(),seen=new Set();list.forEach(m=>{seen.add(personKey(m.name));if(m.email)seen.add(personKey(m.email))});const counts=new Map();const openTaskObj=document.getElementById('drawer')?.classList.contains('open')&&typeof currentDrawerTask==='function'?currentDrawerTask():null;eachTaskForOwners(t=>{if(t===openTaskObj)return;splitOwners(t.owner).forEach(n=>{const k=personKey(n);if(!k||seen.has(k))return;const c=counts.get(k);if(c)c.n++;else counts.set(k,{name:n,n:1})})});[...counts.values()].sort((a,b)=>b.n-a.n||a.name.localeCompare(b.name,'ru')).forEach(c=>list.push({name:c.name,email:'',taskOnly:true}));return list}
 function mergeCandidates(){const byKey=new Map();allParticipants().forEach(p=>byKey.set(personKey(p.name),{name:p.name,email:p.email||'',registered:!!p.registered}));eachTaskForOwners(t=>splitOwners(t.owner).forEach(n=>{if(!byKey.has(personKey(n)))byKey.set(personKey(n),{name:n,email:'',registered:false,taskOnly:true})}));return [...byKey.values()].sort((a,b)=>a.name.localeCompare(b.name,'ru'))}
 function countTasksFor(keys){let n=0;eachTaskForOwners(t=>{if(splitOwners(t.owner).some(o=>keys.has(personKey(o))))n++});return n}
+function rememberNames(list,finalName){const m=projectMeta.__crmNames__=projectMeta.__crmNames__||{};list.forEach(n=>{const k=personKey(n);if(k&&k!==personKey(finalName))m[k]=finalName;else delete m[k]})}
 function mergePeople(sourceName,targetName,finalName){
  const people=mergeCandidates(),a=people.find(p=>personKey(p.name)===personKey(sourceName)),b=people.find(p=>personKey(p.name)===personKey(targetName));
  if(!a||!b||personKey(a.name)===personKey(b.name))return {tasks:0};
  const email=(b.registered&&b.email)||(a.registered&&a.email)||a.email||b.email||'';
  const keys=new Set([personKey(a.name),personKey(b.name)]);let changed=0;
  eachTaskForOwners(t=>{const owners=splitOwners(t.owner);if(!owners.some(o=>keys.has(personKey(o))))return;const next=[];owners.forEach(o=>{const v=keys.has(personKey(o))?finalName:o;if(!next.some(x=>personKey(x)===personKey(v)))next.push(v)});t.owner=next.join(', ');changed++});
+ rememberNames([a.name,b.name],finalName);
  members=members.filter(m=>!keys.has(personKey(m.name))&&!(email&&String(m.email||'').trim().toLocaleLowerCase()===email.toLocaleLowerCase()));
  members.push({name:finalName,email,linked:true});
  return {tasks:changed,email};
@@ -1822,6 +1824,7 @@ function renamePerson(oldName,newName){
  const people=mergeCandidates(),a=people.find(p=>personKey(p.name)===ok);const email=a?.email||'';
  let changed=0;
  eachTaskForOwners(t=>{const owners=splitOwners(t.owner);if(!owners.some(o=>personKey(o)===ok))return;const next=[];owners.forEach(o=>{const v=personKey(o)===ok?newName:o;if(!next.some(x=>personKey(x)===personKey(v)))next.push(v)});t.owner=next.join(', ');changed++});
+ rememberNames([oldName],newName);
  const mail=email.toLocaleLowerCase();
  const mi=members.findIndex(m=>personKey(m.name)===ok||(mail&&String(m.email||'').trim().toLocaleLowerCase()===mail));
  if(mi>=0)members[mi]=Object.assign({},members[mi],{name:newName,linked:true});else members.push({name:newName,email,linked:true});
@@ -2019,6 +2022,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.10.29-07',date:'29.10.2026',title:'CRM: объединение имён',items:['Если объединить или переименовать человека (например, «Лимарь А.» из CRM и из канбана), задачи из CRM дальше приходят уже с выбранным именем.']},
  {v:'2026.10.29-05',date:'29.10.2026',title:'CRM: свои действия без вопросов',items:['Если задачу завершили или отменили вы сами в канбане, а CRM её заархивировала, окно «Задача закрыта в CRM» больше не появляется. Вопрос задаётся только когда задачу закрыли в самой CRM.']},
  {v:'2026.10.29-04',date:'29.10.2026',title:'Телефон: вкладки и создание задачи',items:['На телефоне у вкладок проекта появилась кнопка «⋯» со списком всех вкладок (Ссылки, Релизы, Завершённые), а «Встречи» открываются из панели «Ещё».','Кнопка «Задача без проекта» в «Мои задачи»: новая задача сразу появляется в списке.']},
  {v:'2026.10.29-03',date:'29.10.2026',title:'Задачи CRM переезжают в «Мои задачи»',items:['Старые проекты «Этажи · …» можно одним согласием перенести в «Мои задачи»: комментарии, чек-листы и связь с CRM сохраняются, пустые проекты убираются, затем идёт свежая синхронизация.']},
@@ -3531,7 +3535,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     if(v.status&&(!s||v.status!==s.status))t.status=v.status;
     const off=r.status==='cancelled'||!!r.archived;
     if(r.status==='cancelled'&&!was.cancelled){t.status='Готово';if(!t.completedAt)t.completedAt=new Date().toISOString()}
-    if(r.assignee)t.owner=r.assignee;
+    if(r.assignee)t.owner=(projectMeta.__crmNames__||{})[personKey(r.assignee)]||r.assignee;
     t.crm={sent:was.sent||[],cids:was.cids||[],cseen:was.cseen||0,cl:was.cl,mine:!!was.mine,pn:was.pn||'',cancelled:off,why:r.status==='cancelled'?'cancelled':(r.archived?'archived':''),st:r.status||'',asked:was.asked||false,id:r.id,productId:r.productId,version:r.version,dueTime:r.dueTime||'',dueTz:r.dueTz||'',requester:r.requester||'',protocolId:r.protocolId||'',comments:r.comments||0,updatedAt:r.updatedAt||'',snap:{title:v.title,description:v.description,status:v.status||t.status,end:v.end,start:v.start!==undefined?v.start:(t.start||'')}}}
   // Чек-лист: пункты CRM ↔ чек-лист карточки. Связь — cid и снимок csnap у пункта; c.cl.ids — какие пункты CRM мы уже знаем.
   function mergeCl(t,r){

@@ -287,6 +287,15 @@ try {
   await wait(1500);
   if (await page.locator('.friendly-dialog', { hasText: 'Задача закрыта в CRM' }).count()) throw new Error('No prompt for a closure made in the kanban');
   if (!(await ST('240')).crm.asked) throw new Error('Own closure is marked as handled');
+  // Объединение имён: после слияния ответственный из CRM не возвращается к старому имени.
+  crm.tasks.push(T({ id: '270', title: 'Имя из CRM', status: 'active', version: 1, assignee: 'Лимарь А.' }));
+  await syncNow();
+  await until(async () => (await ST('270')).owner === 'Лимарь А.', 10000);
+  await page.evaluate(() => { members.push({ name: 'Лимарь Андрей', email: '', linked: true }); mergePeople('Лимарь А.', 'Лимарь Андрей', 'Лимарь Андрей'); save(); });
+  crm.tasks.find((x) => x.id === '270').version = 2; crm.tasks.find((x) => x.id === '270').title = 'Имя из CRM 2';
+  await syncNow();
+  await until(async () => (await ST('270')).title === 'Имя из CRM 2', 10000);
+  if ((await ST('270')).owner !== 'Лимарь Андрей') throw new Error('Owner must keep merged name: ' + (await ST('270')).owner);
   // Метка на своей карточке: проект CRM → исполнитель → задача создаётся в CRM со статусом, сроками и чек-листом.
   await page.evaluate(() => { standaloneTasks.push({ id: 9100, title: 'Сверить смету', start: '20.10.2026', end: '10.11.2026', status: 'В работе', owner: '', description: 'Материалы и работы', comment: '', checklist: [{ text: 'Материалы', done: false }, { text: 'Работы', done: true }] }); openStandaloneTask(9100); });
   await page.locator('[data-crm-attach]').click();
