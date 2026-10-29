@@ -297,6 +297,31 @@ try {
   await until(() => page.locator('.friendly-dialog').count());
   await page.keyboard.press('Escape');
   await page.evaluate(() => { document.querySelectorAll('.friendly-dialog').forEach((d) => d.closest('.modal,.friendly-back,body>div')?.remove()); });
+  // Удаление карточки: задача в CRM отменяется, карточка не возвращается.
+  crm.tasks.push(T({ id: '260', title: 'Удалить с CRM', status: 'active', version: 1 }));
+  await page.evaluate(() => { standaloneTasks.push({ id: 9600, title: 'Удалить с CRM', status: 'В работе', start: '', end: '', crm: { id: '260', productId: 7, version: 1, st: 'active', sent: [], cids: [], cseen: 0, cl: { ids: [], tot: 0, done: 0 }, cancelled: false, snap: { title: 'Удалить с CRM', description: '', status: 'В работе', end: '', start: '' } } }); });
+  await page.evaluate(() => openStandaloneTask(9600));
+  await page.locator('#deleteTask').click();
+  await page.locator('.friendly-dialog .btn.primary').click();
+  await until(() => crm.calls.some((c) => c.action === 'update' && c.id === '260' && c.fields.status === 'cancelled'));
+  await until(() => page.evaluate(() => !standaloneTasks.some((x) => x.id === 9600)));
+  // Кнопки в карточке: «Выполнено» и «Отмена» закрывают задачу в CRM, карточка остаётся.
+  crm.tasks.push(T({ id: '250', title: 'Закрыть кнопкой', status: 'active', version: 1 }), T({ id: '251', title: 'Отменить кнопкой', status: 'active', version: 1 }));
+  await page.evaluate(() => { const mk = (id, cid, title) => ({ id, title, status: 'В работе', start: '', end: '', crm: { id: cid, productId: 7, version: 1, st: 'active', sent: [], cids: [], cseen: 0, cl: { ids: [], tot: 0, done: 0 }, cancelled: false, snap: { title, description: '', status: 'В работе', end: '', start: '' } } }); standaloneTasks.push(mk(9500, '250', 'Закрыть кнопкой'), mk(9501, '251', 'Отменить кнопкой')); });
+  await page.evaluate(() => openStandaloneTask(9500));
+  await page.locator('[data-crm-done]').click();
+  await until(() => crm.calls.some((c) => c.action === 'update' && c.id === '250' && c.fields.status === 'done'));
+  await until(() => page.evaluate(() => { const t = standaloneTasks.find((x) => x.id === 9500); return t.status === 'Готово' && t.crm.mine === true && !t.archived; }));
+  if (await page.locator('[data-crm-done]').count()) throw new Error('Buttons are gone once the task is done in CRM');
+  await page.evaluate(() => closeDrawer());
+  await page.evaluate(() => openStandaloneTask(9501));
+  await page.locator('[data-crm-cancel]').click();
+  await page.locator('.friendly-dialog .btn.primary').click();
+  await until(() => crm.calls.some((c) => c.action === 'update' && c.id === '251' && c.fields.status === 'cancelled'));
+  await until(() => page.evaluate(() => { const t = standaloneTasks.find((x) => x.id === 9501); return t.status === 'Готово' && t.crm.cancelled === true && t.crm.mine === true && !t.archived; }));
+  await wait(1200);
+  if (await page.locator('.friendly-dialog', { hasText: 'Задача закрыта в CRM' }).count()) throw new Error('No prompt after closing from the kanban');
+  await page.evaluate(() => closeDrawer());
   // Метка на своей карточке: проект CRM → исполнитель → задача создаётся в CRM со статусом, сроками и чек-листом.
   await page.evaluate(() => { standaloneTasks.push({ id: 9100, title: 'Сверить смету', start: '20.10.2026', end: '10.11.2026', status: 'В работе', owner: '', description: 'Материалы и работы', comment: '', checklist: [{ text: 'Материалы', done: false }, { text: 'Работы', done: true }] }); openStandaloneTask(9100); });
   await page.locator('[data-crm-attach]').click();
