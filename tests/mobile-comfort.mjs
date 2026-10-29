@@ -106,6 +106,23 @@ try {
   await page.locator('#mobileBar [data-mb="tasks"]').click();
   await page.waitForFunction(() => activeView === 'tasks');
 
+  // Phone portrait: every project tab is reachable (they wrap instead of hiding off-screen) and «Встречи» lives under «Ещё».
+  await page.locator('#tabsMore').waitFor({ state: 'visible' });
+  await page.locator('#tabsMore').click();
+  const items = await page.locator('#tabsMoreMenu [data-go]').allTextContents();
+  assert(['Задачи', 'Ссылки', 'Релизы', 'Завершённые'].every((n) => items.some((i) => i.startsWith(n))), 'Menu lists every project tab: ' + items.join(', '));
+  await page.locator('#tabsMoreMenu [data-go="releases"]').click();
+  await page.waitForFunction(() => activeView === 'releases');
+  assert(await page.locator('#tabsMoreMenu').isHidden(), 'Menu closes after choosing a tab');
+  await page.evaluate(() => switchView('tasks'));
+  await page.locator('#mobileBar [data-mb="more"]').click();
+  await page.locator('#meetingsTopButton').waitFor({ state: 'visible' });
+  await page.locator('#meetingsTopButton').click();
+  await page.waitForFunction(() => !document.getElementById('meetingsView').hidden);
+  assert(!(await page.evaluate(() => document.body.classList.contains('mb-top-open'))), 'The top panel closes after choosing «Встречи»');
+  await page.locator('#mobileBar [data-mb="tasks"]').click();
+  await page.waitForFunction(() => activeView === 'tasks');
+
   // Space: the board gets most of the screen; the top bar lives under «Ещё».
   const room = await page.evaluate(() => {
     const col = document.querySelector('.column').getBoundingClientRect();
