@@ -102,7 +102,7 @@ try {
       const b = JSON.parse(request.postData() || '{}');
       crm.calls.push(b);
       const ok = (o, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
-      if (b.action === 'pull') { await ok({ me: { id: '101', name: 'Валентин' }, crmUrl: 'https://crm.example.test', products: [{ id: 7, name: 'Ремонты', complete: true, tasks: crm.tasks.map(listView) }, { id: 8, name: 'Продажи', complete: true, tasks: [] }] }); return; }
+      if (b.action === 'pull') { await ok({ me: { id: '101', name: 'Валентин' }, crmUrl: 'https://crm.example.test', products: [{ id: 7, name: 'Ремонты', complete: true, tasks: crm.tasks.filter((x) => !x.hidden).map(listView) }, { id: 8, name: 'Продажи', complete: true, tasks: [] }] }); return; }
       if (b.action === 'products') { await ok({ products: [{ id: 7, name: 'Ремонты' }, { id: 8, name: 'Продажи' }] }); return; }
       if (b.action === 'task') { await ok({ task: crm.tasks.find((x) => x.id === b.id) }); return; }
       if (b.action === 'update') {
@@ -179,7 +179,7 @@ try {
   if (crm.calls.some((c) => c.action === 'update' || c.action === 'checklist')) throw new Error('Nothing must be pushed back right after the pull: ' + JSON.stringify(crm.calls.filter((c) => c.action === 'update' || c.action === 'checklist')));
   // Метка «внешняя CRM» в списке задач без проекта, фильтр и карточка.
   await page.evaluate(() => { switchView('inbox'); renderMyTasks(); });
-  await page.locator('#myTasksView .crm-badge', { hasText: 'внешняя CRM №220' }).waitFor();
+  await page.locator('#myTasksView .crm-badge', { hasText: 'CRM №220' }).waitFor();
   if (await page.locator('#myTasksView .crm-badge', { hasText: 'Этажи' }).count()) throw new Error('Old name must not be shown');
   await page.evaluate(() => { standaloneTasks.push({ id: 9001, title: 'Личная', status: 'Очередь' }); renderMyTasks(); });
   if (await page.locator('#myTasksView .mytask-row:visible').count() !== 3) throw new Error('All three rows expected');
@@ -240,6 +240,13 @@ try {
   crm.conflictNext = true;
   await page.evaluate((id) => { const t = standaloneTasks.find((x) => x.id === id); t.title = 'Локальное название'; save(); }, t221.id);
   await until(async () => (await ST('221')).title === 'Изменено в CRM', 10000);
+  // Личная задача CRM, которой нет в общем списке, остаётся связанной: карточку проверяем напрямую.
+  crm.tasks.push(T({ id: '230', title: 'Личная в CRM', status: 'active', version: 2, hidden: true }));
+  await page.evaluate(() => { standaloneTasks.push({ id: 9200, title: 'Личная в CRM', status: 'В работе', start: '', end: '', crm: { id: '230', productId: 7, version: 1, sent: [], cids: [], cseen: 0, cl: { ids: [], tot: 0, done: 0 }, cancelled: false, snap: { title: 'Личная в CRM', description: '', status: 'В работе', end: '', start: '' } } }); });
+  await syncNow();
+  await wait(800);
+  const hid = await ST('230');
+  if (hid.crm.gone || hid.crm.cancelled || hid.crm.st !== 'active') throw new Error('Hidden personal task must stay linked: ' + JSON.stringify(hid.crm));
   // Отменена в CRM — «Готово», но не в архиве; снята с меня — остаётся, помечена, ничего не удаляется.
   crm.tasks = crm.tasks.filter((t) => t.id !== '220');
   crm.tasks.find((t) => t.id === '221').status = 'cancelled';
@@ -247,11 +254,28 @@ try {
   await syncNow();
   await until(async () => (await ST('221')).crm.cancelled && (await ST('220')).crm.gone);
   const c221 = await ST('221'), c220 = await ST('220');
-  if (c221.status !== 'Готово' || c221.archived || c220.archived || c221.crm.why !== 'cancelled') throw new Error('Cancelled/gone must not be archived: ' + JSON.stringify([c221.status, c221.archived, c220.archived]));
-  if (await page.evaluate(() => standaloneTasks.filter((t) => t.crm).length) !== 2) throw new Error('Tasks must not be deleted');
+  if (c221.status !== 'Готово' || c221.archived || c220.archived || c221.crm.why !== 'cancelled') throw new Error('Cancelled/gone must not be archived before asking: ' + JSON.stringify([c221.status, c221.archived, c220.archived]));
   await page.evaluate((id) => openStandaloneTask(id), c221.id);
-  if (!(await page.locator('#crmInfo').textContent()).includes('отменена в CRM')) throw new Error('Cancelled mark in drawer');
+  const cinfo = await page.locator('#crmInfo').textContent();
+  if (!cinfo.includes('отменена в CRM') || !cinfo.includes('статус в CRM: отменена')) throw new Error('Drawer must show the CRM state: ' + cinfo);
   await page.evaluate(() => closeDrawer());
+  if (await page.evaluate(() => standaloneTasks.filter((t) => t.crm).length) < 3) throw new Error('Tasks must not be deleted');
+  // Приложение спрашивает, что делать с закрытой в CRM карточкой.
+  const ask = page.locator('.friendly-dialog', { hasText: 'Задача закрыта в CRM' });
+  await ask.waitFor();
+  const first = (await ask.locator('.mini').textContent());
+  const which = first.includes('№221') ? '221' : '220';
+  await ask.locator('[name=f0]').selectOption(which === '221' ? 'archive' : 'keep');
+  await ask.locator('button[type=submit]').click();
+  const ask2 = page.locator('.friendly-dialog', { hasText: 'Задача закрыта в CRM' });
+  await ask2.waitFor();
+  await ask2.locator('[name=f0]').selectOption(which === '221' ? 'keep' : 'archive');
+  await ask2.locator('button[type=submit]').click();
+  await until(async () => { const a = await ST('221'), b = await ST('220'); return (which === '221' ? a?.archived && !b : !a && b?.archived) || (which === '221' ? (a?.archived && !b) : false); }, 5000).catch(() => {});
+  const arch = await page.evaluate(() => standaloneTasks.filter((t) => t.archived).map((t) => ({ id: t.crm?.id, status: t.status, completed: !!t.completedAt })));
+  if (arch.length !== 1 || arch[0].status !== 'Готово' || !arch[0].completed) throw new Error('Exactly one card archived: ' + JSON.stringify(arch));
+  if (await page.evaluate(() => standaloneTasks.filter((t) => t.crm && (t.crm.id === '221' || t.crm.id === '220')).length) !== 1) throw new Error('The other card must be unlinked');
+  if (await page.evaluate(() => !standaloneTasks.some((t) => t.title === 'Организовать встречу' || t.title === 'Изменено в CRM') && !standaloneTasks.some((t) => t.title === 'Провести встречу'))) throw new Error('Cards must not be deleted');
   // Метка на своей карточке: проект CRM → исполнитель → задача создаётся в CRM со статусом, сроками и чек-листом.
   await page.evaluate(() => { standaloneTasks.push({ id: 9100, title: 'Сверить смету', start: '20.10.2026', end: '10.11.2026', status: 'В работе', owner: '', description: 'Материалы и работы', comment: '', checklist: [{ text: 'Материалы', done: false }, { text: 'Работы', done: true }] }); openStandaloneTask(9100); });
   await page.locator('[data-crm-attach]').click();
@@ -281,6 +305,16 @@ try {
   if (await page.evaluate(() => standaloneTasks.find((x) => x.id === 9100).checklist.some((i) => i.cid || i.csnap))) throw new Error('Checklist links must be removed');
   if (!(await page.locator('[data-crm-attach]').count())) throw new Error('Label button must be available again after detaching');
   await page.evaluate(() => closeDrawer());
+  // Старые проекты «Этажи · …»: задачи переезжают в «Мои задачи», проекты убираются, остальные данные не теряются.
+  await page.evaluate(() => { data.push({ name: 'Этажи · Старый', tasks: [{ id: 9300, title: 'Старая из CRM', status: 'Очередь', comment: '28.10.2026, 10:00:00 — привет', checklist: [{ text: 'п1', done: false, cid: '1', csnap: { text: 'п1', done: false } }], crm: { id: '231', productId: 7, version: 1, sent: [], cids: [], cseen: 0, cancelled: false, snap: { title: 'Старая из CRM', description: '', status: 'Очередь', end: '', start: '' } } }, { id: 9301, title: 'Локальная в проекте', status: 'В работе' }] }); projectMeta['Этажи · Старый'] = { crm: { productId: 7 } }; });
+  crm.tasks.push(T({ id: '231', title: 'Старая из CRM', status: 'new', version: 1 }));
+  await syncNow();
+  const mv = page.locator('.friendly-dialog', { hasText: 'Перенести задачи CRM' });
+  await mv.waitFor();
+  await mv.locator('.btn.primary').click();
+  await until(() => page.evaluate(() => !data.some((p) => p.name === 'Этажи · Старый')));
+  const moved = await page.evaluate(() => ({ crm: standaloneTasks.find((t) => t.id === 9300), loc: standaloneTasks.find((t) => t.title === 'Локальная в проекте'), meta: 'Этажи · Старый' in projectMeta }));
+  if (!moved.crm || moved.crm.crm.id !== '231' || !moved.crm.comment.includes('привет') || moved.crm.checklist[0].cid !== '1' || !moved.loc || moved.meta) throw new Error('Legacy move: ' + JSON.stringify(moved));
   // Отключение: синхронизация останавливается.
   await page.evaluate(() => document.getElementById('crmConnectButton').click());
   await page.locator('.friendly-dialog .btn.primary').click();
