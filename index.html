@@ -1289,7 +1289,7 @@ html.list-w-set[data-layout="rows"] .board .column{max-width:var(--list-w)}
 .crm-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px;padding:6px 10px;border:1px solid var(--line,#d7deea);border-radius:10px;background:var(--card,#fff)}
 .crm-bar .mini{flex:1;min-width:160px;opacity:.75}
 .crm-mark{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.02em;color:#fff;background:#e2453a;border-radius:6px;padding:1px 6px}
-.crm-badge{display:inline-block;font-size:10.5px;font-weight:700;color:#e2453a;border:1px solid #e2453a;border-radius:6px;padding:0 5px;margin-right:2px;vertical-align:1px;white-space:nowrap}
+.crm-badge.off{background:#7b8798;border-color:#7b8798}.crm-badge{display:inline-block;font-size:10.5px;font-weight:700;color:#fff;background:#e2453a;border:1px solid #e2453a;border-radius:6px;padding:0 5px;margin-right:2px;vertical-align:1px;white-space:nowrap}
 .crm-info{margin:6px 0 10px;padding:8px 10px;border-left:3px solid #e2453a;border-radius:6px;background:rgba(226,69,58,.07);font-size:13px;line-height:1.45}
 .crm-info a{color:inherit}
 /* Телефон: кнопка «⋯» у вкладок проекта открывает список всех вкладок, «Встречи» — в панели «Ещё» */
@@ -2020,6 +2020,9 @@ new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).
 
 const CHANGELOG=[
  {v:'2026.10.29-04',date:'29.10.2026',title:'Телефон: вкладки и создание задачи',items:['На телефоне у вкладок проекта появилась кнопка «⋯» со списком всех вкладок (Ссылки, Релизы, Завершённые), а «Встречи» открываются из панели «Ещё».','Кнопка «Задача без проекта» в «Мои задачи»: новая задача сразу появляется в списке.']},
+ {v:'2026.10.29-03',date:'29.10.2026',title:'Задачи CRM переезжают в «Мои задачи»',items:['Старые проекты «Этажи · …» можно одним согласием перенести в «Мои задачи»: комментарии, чек-листы и связь с CRM сохраняются, пустые проекты убираются, затем идёт свежая синхронизация.']},
+ {v:'2026.10.29-02',date:'29.10.2026',title:'Статус задачи в CRM',items:['В карточке и на метке «CRM №…» видно статус задачи в CRM и пометка «в архиве» или «отменена».','Если задача закрыта или снята с вас в CRM, приложение спрашивает: продолжить работать (связь снимается), завершить и убрать в архив или решить позже.','Личные задачи CRM, которых нет в общем списке, больше не считаются «снятыми с вас»: карточка проверяется напрямую.']},
+ {v:'2026.10.29-01',date:'29.10.2026',title:'Метка CRM заметнее',items:['На карточках и в «Мои задачи» у связанных с CRM задач красная метка «CRM №…».','Кнопка-фильтр «Внешняя CRM» с числом задач всегда есть в «Мои задачи», когда CRM подключена.']},
  {v:'2026.10.28-08',date:'28.10.2026',title:'Метка «внешняя CRM»',items:['В карточке задачи появилась метка «Внешняя CRM»: при её включении выбираете проект CRM и исполнителя, и задача создаётся в CRM, а дальше названия, статус, срок, дата начала, описание, комментарии и чек-лист идут в обе стороны.','Чек-лист карточки сопоставлен с чек-листом (подзадачами) CRM: пункты, отметки «готово» и удаление синхронизируются. Важность не передаётся.','Задачи из CRM приходят в «Мои задачи» (без проекта) с пометкой «внешняя CRM», дальше вы переносите их по проектам сами; там же кнопка-фильтр «Внешняя CRM».','Снятие метки спрашивает, закрыть задачу в CRM как «Исполнено» или «Отмена» (в архив); карточка остаётся в канбане. Отменённая в CRM задача больше не уходит в архив канбана, а получает статус «Готово».']},
  {v:'2026.10.28-07',date:'28.10.2026',title:'Комментарии с CRM «Этажи»',items:['Комментарии к задачам из CRM теперь ходят в обе стороны: написанный в канбане уходит в CRM (один раз, без дублей), новые из CRM появляются в задаче с именем автора.']},
  {v:'2026.10.28-06',date:'28.10.2026',title:'Задачи из CRM «Этажи»',items:['Задачи из CRM «Этажи», где вы основной или дополнительный ответственный, приходят в проекты «Этажи · …» с пометкой и номером задачи CRM. Статус, срок, название и описание, изменённые здесь, уходят обратно в CRM, а изменения из CRM подтягиваются каждые 5 минут. Отменённые в CRM задачи уходят в архив. Кнопка «＋ Поручить в CRM» ставит задачу другому сотруднику.']},
@@ -3502,7 +3505,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
 /* ===== CRM «Этажи»: мои задачи из CRM, двусторонняя синхронизация, поручения ===== */
 (function crmModule(){
   const FN='/functions/v1/crm-sync',EVERY=5*60e3;
-  const S={off:false,busy:false,last:0,url:'',warned:false,pt:0,ops:{},only:false};
+  const S={off:false,busy:false,last:0,url:'',warned:false,pt:0,ops:{},only:false,chk:new Set(),later:new Set(),dlg:false,picked:false};
   const L2C={'Очередь':'new','В работе':'active','На анализе':'waiting','Готово':'done'};
   const C2L={new:'Очередь',active:'В работе',waiting:'На анализе',done:'Готово'};
   const ru=d=>{const m=String(d||'').match(/^(\d{4})-(\d{2})-(\d{2})/);return m?`${m[3]}.${m[2]}.${m[1]}`:''};
@@ -3528,7 +3531,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     const off=r.status==='cancelled'||!!r.archived;
     if(r.status==='cancelled'&&!was.cancelled){t.status='Готово';if(!t.completedAt)t.completedAt=new Date().toISOString()}
     if(r.assignee)t.owner=r.assignee;
-    t.crm={sent:was.sent||[],cids:was.cids||[],cseen:was.cseen||0,cl:was.cl,pn:was.pn||'',cancelled:off,why:r.status==='cancelled'?'cancelled':(r.archived?'archived':''),id:r.id,productId:r.productId,version:r.version,dueTime:r.dueTime||'',dueTz:r.dueTz||'',requester:r.requester||'',protocolId:r.protocolId||'',comments:r.comments||0,updatedAt:r.updatedAt||'',snap:{title:v.title,description:v.description,status:v.status||t.status,end:v.end,start:v.start!==undefined?v.start:(t.start||'')}}}
+    t.crm={sent:was.sent||[],cids:was.cids||[],cseen:was.cseen||0,cl:was.cl,pn:was.pn||'',cancelled:off,why:r.status==='cancelled'?'cancelled':(r.archived?'archived':''),st:r.status||'',asked:was.asked||false,id:r.id,productId:r.productId,version:r.version,dueTime:r.dueTime||'',dueTz:r.dueTz||'',requester:r.requester||'',protocolId:r.protocolId||'',comments:r.comments||0,updatedAt:r.updatedAt||'',snap:{title:v.title,description:v.description,status:v.status||t.status,end:v.end,start:v.start!==undefined?v.start:(t.start||'')}}}
   // Чек-лист: пункты CRM ↔ чек-лист карточки. Связь — cid и снимок csnap у пункта; c.cl.ids — какие пункты CRM мы уже знаем.
   function mergeCl(t,r){
     const c=t.crm;if(!Array.isArray(r.checklist))return false;
@@ -3616,7 +3619,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     if(S.busy||!enabled()||!cloudStateReady||!signed())return;S.busy=true;
     try{
       await pushAll();
-      const r=await call({action:'pull'});S.url=r.crmUrl||S.url;let changed=false;const need=[];
+      const r=await call({action:'pull'});S.url=r.crmUrl||S.url;let changed=false;const need=[];let checks=0;
       for(const prod of Array.isArray(r.products)?r.products:[]){
         const tasks=Array.isArray(prod.tasks)?prod.tasks:[];
         const byId=new Map(crmTasks().filter(t=>Number(t.crm.productId)===Number(prod.id)).map(t=>[String(t.crm.id),t]));
@@ -3630,20 +3633,62 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
             if(!t.crm.cl&&!rt.clTotal){t.crm.cl={ids:[],tot:0,done:0};changed=true}
             else if(!t.crm.cl||t.crm.cl.tot!==rt.clTotal||t.crm.cl.done!==rt.clDone)need.push(t)}}
         // Пропала из полной выборки: в архиве или снята с меня — оставляем в канбане, но больше не синхронизируем.
-        if(prod.complete)for(const t of byId.values())if(!t.crm.gone){t.crm.gone=true;changed=true}}
+        // Нет в списке: личные задачи CRM могут не попадать в выборку, поэтому проверяем карточку напрямую.
+        if(prod.complete)for(const t of byId.values()){
+          if(t.crm.cancelled||checks>=10||(t.crm.gone&&S.chk.has(t.crm.id)))continue;checks++;S.chk.add(t.crm.id);
+          try{const f=await call({action:'task',productId:t.crm.productId,id:t.crm.id}),rt=f.task;
+            if(!rt){if(!t.crm.gone){t.crm.gone=true;changed=true}continue}
+            if(rt.archived||rt.status==='cancelled'){if(t.crm.version!==rt.version||!t.crm.cancelled){merge(t,rt);changed=true}}
+            else if(t.crm.version!==rt.version||t.crm.gone){merge(t,rt,t.crm.gone);mergeCl(t,rt);changed=true}}
+          catch(e){if(e.status===404||e.status===403){if(!t.crm.gone){t.crm.gone=true;changed=true}}else console.warn('CRM check failed',e)}}}
       let fetched=0;
       for(const t of need){if(fetched>=10)break;fetched++;try{const f=await call({action:'task',productId:t.crm.productId,id:t.crm.id});if(f.task){merge(t,f.task);mergeCl(t,f.task);changed=true}}catch(e){console.warn('CRM checklist failed',e)}}
       for(const t of crmTasks()){if(fetched>=10)break;if(t.crm.gone||t.crm.cancelled||(t.crm.comments||0)===(t.crm.cseen||0))continue;fetched++;try{if(await pullComments(t))changed=true;else changed=true}catch(e){console.warn('CRM comments failed',e)}}
       if(changed){save();renderAll()}
-      S.last=Date.now();if(manual)toast('CRM: обновлено')
+      S.last=Date.now();if(manual)toast('CRM: обновлено');setTimeout(()=>{if(!askLegacy())askOff()},500)
     }catch(e){
       if(e.body?.disabled){projectMeta.__crm__={enabled:false};save();label();toast('CRM: '+e.message);return}
       if(manual||!S.warned){S.warned=true;toast('CRM: '+e.message)}
     }finally{S.busy=false;decorate()}}
+  // Старые проекты «Этажи · …» (до метки): переносим задачи в «Мои задачи» целиком, пустые проекты убираем.
+  const legacy=()=>data.filter(p=>!p.shared&&projectMeta[p.name]?.crm);
+  function askLegacy(){
+    if(S.dlg||S.legacyAsked||document.querySelector('.friendly-dialog'))return false;
+    const ps=legacy();if(!ps.length)return false;S.legacyAsked=true;
+    const n=ps.reduce((a,p)=>a+(p.tasks||[]).length,0);
+    friendlyConfirm('Перенести задачи CRM в «Мои задачи»?',`${n} задач из проектов «${ps.map(p=>p.name).join('», «')}» переедут в «Мои задачи» без потерь: комментарии, чек-листы и связь с CRM сохранятся. Сами проекты будут убраны.`,moveLegacy,'Перенести');
+    return true}
+  function moveLegacy(){
+    const ps=legacy(),names=new Set(ps.map(p=>p.name));let n=0;
+    for(const p of ps){
+      for(const t of p.tasks||[]){
+        if((standaloneTasks||[]).some(x=>x.id===t.id))t.id=freshTaskId();
+        delete t.parent;standaloneTasks.push(t);n++}
+      p.tasks=[]}
+    data=data.filter(p=>!names.has(p.name));
+    names.forEach(nm=>{delete projectMeta[nm]});
+    if(Array.isArray(projectOrder))projectOrder=projectOrder.filter(x=>!names.has(x));
+    if(Array.isArray(pinnedTasks))pinnedTasks=pinnedTasks.filter(x=>!names.has(x?.project));
+    if(!data.some(p=>p.name===activeProject))activeProject=data[0]?.name||activeProject;
+    save();renderAll();toast(`Перенесено в «Мои задачи»: ${n}`);S.last=0;sync(false)}
+  // Задача закрыта, отменена или снята с вас в CRM: спрашиваем, что делать с карточкой.
+  function askOff(){
+    if(S.dlg||document.querySelector('.friendly-dialog'))return;
+    const t=crmTasks().find(x=>(x.crm.cancelled||x.crm.gone)&&!x.crm.asked&&!S.later.has(x.crm.id));if(!t)return;
+    S.dlg=true;S.picked=false;
+    dialog({title:'Задача закрыта в CRM',description:`«${t.title}» (№${t.crm.id}): ${offText(t.crm)}. Что сделать с карточкой?`,fields:[{label:'Карточка',value:'keep',options:[{value:'keep',label:'Продолжить работать (снять связь с CRM)'},{value:'archive',label:'Завершить и убрать в архив'},{value:'later',label:'Решить позже'}]}],submitLabel:'Применить',
+      onClose:()=>{S.dlg=false;if(!S.picked)S.later.add(t.crm.id)},
+      onSubmit:v=>{
+        if(v[0]==='keep'){unlinkTask(t);toast('Связь с CRM снята, карточка осталась')}
+        else if(v[0]==='archive'){t.status='Готово';t.archived=true;if(!t.completedAt)t.completedAt=new Date().toISOString();t.crm.asked=true;toast('Карточка завершена и убрана в архив')}
+        else{S.later.add(t.crm.id);return}
+        save();refreshAfterTaskChange();setTimeout(askOff,300)}})}
   const os=window.save;
   if(typeof os==='function')window.save=function(){const r=os.apply(this,arguments);if(enabled()&&cloudStateReady&&signed()){clearTimeout(S.pt);S.pt=setTimeout(()=>{if(S.busy)return;S.busy=true;pushAll().catch(e=>toast('CRM: '+e.message)).finally(()=>{S.busy=false})},4000)}return r};
   // Пометки: значок «внешняя CRM» на карточке и в «Мои задачи», сведения и кнопка метки в карточке.
-  const badge=t=>`<span class="crm-badge" title="${esc(t.crm.pn?'Проект CRM: '+t.crm.pn:'Задача из внешней CRM')}">внешняя CRM №${esc(t.crm.id)}</span> `;
+  const SL={new:'новая',active:'в работе',waiting:'на анализе',done:'исполнена',cancelled:'отменена'};
+  const offText=c=>c.why==='cancelled'?'отменена в CRM':c.why==='archived'?'в архиве CRM':c.gone?'не у вас в CRM':'';
+  const badge=t=>{const off=offText(t.crm);return `<span class="crm-badge${off?' off':''}" title="${esc('Внешняя CRM'+(t.crm.pn?' · проект '+t.crm.pn:'')+(SL[t.crm.st]?' · статус в CRM: '+SL[t.crm.st]:'')+(off?' · '+off:''))}">CRM №${esc(t.crm.id)}${off?' · '+esc(off):''}</span> `};
   function decorate(){
     label();
     const p=typeof active==='function'?active():null;
@@ -3660,9 +3705,8 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
         row.style.display=(S.only&&!has)?'none':''});
       my.querySelectorAll('.mytask-group').forEach(g=>{g.style.display=[...g.querySelectorAll('.mytask-row')].every(r=>r.style.display==='none')?'none':''});
       const fl=my.querySelector('.mytask-filters');
-      if(fl&&!fl.querySelector('[data-crm-only]')&&(any||S.only)){const b=document.createElement('button');b.type='button';b.className='btn quick-filter';b.dataset.crmOnly='1';fl.appendChild(b)}
-      const ob=fl?.querySelector('[data-crm-only]');if(ob){ob.textContent='Внешняя CRM';ob.classList.toggle('active',S.only);ob.setAttribute('aria-pressed',String(S.only))}}}
-  const reasons={cancelled:'отменена в CRM',archived:'в архиве CRM'};
+      if(fl&&!fl.querySelector('[data-crm-only]')&&(enabled()||any||S.only)){const b=document.createElement('button');b.type='button';b.className='btn quick-filter';b.dataset.crmOnly='1';fl.appendChild(b)}
+      const ob=fl?.querySelector('[data-crm-only]');if(ob){ob.textContent='🔗 Внешняя CRM · '+crmTasks().length;ob.classList.toggle('active',S.only);ob.setAttribute('aria-pressed',String(S.only))}}}
   function drawerInfo(t,shared){
     let box=$('crmInfo');const head=document.querySelector('#drawer .drawerhead');
     const canLink=!!t&&!t.crm&&enabled()&&signed()&&!shared&&!t.parent;
@@ -3670,7 +3714,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     if(!box){box=document.createElement('div');box.id='crmInfo';box.className='crm-info';head?.insertAdjacentElement('afterend',box)}
     if(!t.crm){box.innerHTML=`<button type="button" class="btn" data-crm-attach="1" aria-pressed="false">☐ Внешняя CRM</button> <span class="mini">Отправить задачу в CRM и держать её в синхроне</span>`;return}
     const c=t.crm;
-    box.innerHTML=`<button type="button" class="btn" data-crm-detach="1" aria-pressed="true" title="Снять метку">☑ Внешняя CRM</button> Задача №${esc(c.id)}${c.pn?` · проект CRM: ${esc(c.pn)}`:''}${c.requester?` · от кого: ${esc(c.requester)}`:''}${c.protocolId?` · протокол №${esc(c.protocolId)}`:''}${c.dueTime?` · время срока ${esc(c.dueTime)}`:''}${c.comments?` · комментариев: ${c.comments}`:''}${c.why&&reasons[c.why]?` · <b>${reasons[c.why]}</b>`:''}${c.gone?' · <b>больше не назначена на вас или в архиве CRM</b>':''}${S.url?` · <a href="${esc(S.url)}" target="_blank" rel="noopener">открыть CRM ↗</a>`:''}`}
+    box.innerHTML=`<button type="button" class="btn" data-crm-detach="1" aria-pressed="true" title="Снять метку">☑ Внешняя CRM</button> Задача №${esc(c.id)}${c.pn?` · проект CRM: ${esc(c.pn)}`:''}${c.requester?` · от кого: ${esc(c.requester)}`:''}${c.protocolId?` · протокол №${esc(c.protocolId)}`:''}${SL[c.st]?` · статус в CRM: ${SL[c.st]}`:''}${c.dueTime?` · время срока ${esc(c.dueTime)}`:''}${c.comments?` · комментариев: ${c.comments}`:''}${offText(c)?` · <b>${offText(c)}</b>`:''}${S.url?` · <a href="${esc(S.url)}" target="_blank" rel="noopener">открыть CRM ↗</a>`:''}`}
   const showInfo=()=>{try{const t=currentDrawerTask();const sh=selectedStandaloneId===null&&!!active()?.shared;drawerInfo(t,sh)}catch(e){}};
   const ot=window.openTask;if(typeof ot==='function')window.openTask=function(){const r=ot.apply(this,arguments);showInfo();return r};
   const os2=window.openStandaloneTask;if(typeof os2==='function')window.openStandaloneTask=function(){const r=os2.apply(this,arguments);showInfo();return r};
@@ -3678,12 +3722,12 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
   const rb=window.renderBoard;if(typeof rb==='function')window.renderBoard=function(){const r=rb.apply(this,arguments);try{decorate()}catch(e){console.warn('CRM decorate failed',e)}return r};
   const rm=window.renderMyTasks;if(typeof rm==='function')window.renderMyTasks=function(){const r=rm.apply(this,arguments);try{decorate()}catch(e){console.warn('CRM decorate failed',e)}return r};
   // Свой диалог: закрытие по фону не отправляет форму (в общем диалоге оно сохраняет введённое).
-  function dialog({title,description,fields,submitLabel,onSubmit}){
+  function dialog({title,description,fields,submitLabel,onSubmit,onClose}){
     const w=document.createElement('div');w.className='modal show friendly-dialog';
     w.innerHTML=`<div class="modalcard" role="dialog" aria-modal="true"><h3>${esc(title)}</h3><p class="mini">${esc(description)}</p><form class="friendly-form">${fields.map((f,i)=>`<div class="field"><label>${esc(f.label)}</label><select name="f${i}">${f.options.map(o=>`<option value="${esc(o.value)}" ${String(o.value)===String(f.value)?'selected':''}>${esc(o.label)}</option>`).join('')}</select></div>`).join('')}<div class="friendly-actions"><button type="button" class="btn friendly-cancel">Отмена</button><button type="submit" class="btn primary">${esc(submitLabel)}</button></div></form></div>`;
-    document.body.appendChild(w);const close=()=>{document.removeEventListener('keydown',key);w.remove()};const key=e=>{if(e.key==='Escape'){e.preventDefault();close()}};document.addEventListener('keydown',key);
+    document.body.appendChild(w);const close=()=>{document.removeEventListener('keydown',key);w.remove();if(onClose)onClose()};const key=e=>{if(e.key==='Escape'){e.preventDefault();close()}};document.addEventListener('keydown',key);
     w.querySelector('.friendly-cancel').onclick=close;
-    w.querySelector('form').onsubmit=e=>{e.preventDefault();const vals=[...w.querySelectorAll('select')].map(x=>x.value);close();onSubmit(vals)}}
+    w.querySelector('form').onsubmit=e=>{e.preventDefault();const vals=[...w.querySelectorAll('select')].map(x=>x.value);S.picked=true;close();onSubmit(vals)}}
   async function operators(productId){
     if(!S.ops[productId]){S.ops[productId]=(await call({action:'operators',productId})).operators||[]}
     return S.ops[productId]}
@@ -3714,10 +3758,11 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
       save();refreshAfterTaskChange();showInfo();S.last=0;
     }catch(e){toast('CRM не создала задачу: '+e.message)}
     finally{S.busy=false;setTimeout(()=>sync(false),300)}}
+  const unlinkTask=t=>{delete t.crm;if(t.source==='crm')delete t.source;(t.checklist||[]).forEach(i=>{delete i.cid;delete i.csnap;delete i.rk;delete i.cerr})};
   // Снять метку: задачу в CRM закрыть («Исполнено» или «Отмена» в архив), карточку отвязать, но оставить в канбане.
   function detach(){
     const t=currentDrawerTask();if(!t?.crm)return;
-    const unlink=()=>{delete t.crm;if(t.source==='crm')delete t.source;(t.checklist||[]).forEach(i=>{delete i.cid;delete i.csnap;delete i.rk;delete i.cerr});save();refreshAfterTaskChange();showInfo()};
+    const unlink=()=>{unlinkTask(t);save();refreshAfterTaskChange();showInfo()};
     if(t.crm.gone||t.crm.cancelled){friendlyConfirm('Снять метку «внешняя CRM»?','Задача в CRM уже закрыта или не ваша. Карточка останется в канбане без связи с CRM.',unlink,'Снять');return}
     dialog({title:'Снять метку «внешняя CRM»',description:'Что сделать с задачей в CRM? Карточка останется в канбане, и с ней можно работать дальше.',fields:[{label:'В CRM',value:'done',options:[{value:'done',label:'Исполнено'},{value:'cancelled',label:'Отмена (в архив)'}]}],submitLabel:'Снять метку',onSubmit:async v=>{
       if(S.busy)return;S.busy=true;
