@@ -1266,6 +1266,7 @@ html.list-w-set[data-layout="rows"] .board .column{max-width:var(--list-w)}
 .mt-grid input,.mt-grid select,.mt-field textarea,.mt-addrow input,.mt-tasks select{border:1px solid var(--line,#d7deea);border-radius:8px;padding:7px 9px;font:inherit;font-size:14px;color:inherit;background:transparent;box-sizing:border-box;width:100%}
 .mt-field textarea{resize:vertical;line-height:1.4}
 .mt-projs{display:flex;flex-wrap:wrap;gap:6px}
+.mt-pchip-x{border:0;background:transparent;cursor:pointer;font-size:15px;line-height:1;padding:0 2px;color:inherit;opacity:.6}.mt-pchip-x:hover{opacity:1}.mt-padd{max-width:230px}
 .mt-pchip{display:inline-flex;flex-direction:row!important;align-items:center;gap:4px!important;border:1px solid var(--line,#d7deea);border-radius:999px;padding:2px 9px;font-size:12px;cursor:pointer}
 .mt-tasks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 .mt-tasks li{display:flex;gap:6px;align-items:center;flex-wrap:wrap;border:1px solid var(--line,#e3e8f1);border-radius:8px;padding:5px 8px}
@@ -2036,6 +2037,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.10.29-17',date:'29.10.2026',title:'Встречи: компактный выбор проектов',items:['В карточке встречи вместо списка из всех проектов — выбранные проекты и выпадающий список «＋ Добавить проект…».']},
  {v:'2026.10.29-15',date:'29.10.2026',title:'CRM: новое сверху и цветная точка',items:['В «Мои задачи» новые задачи из CRM собираются вверху в блоке «Новое из CRM» с синей точкой; оранжевая точка — задача или комментарии изменились в CRM. Точка пропадает, когда вы открыли карточку; есть кнопка «Отметить просмотренным», а на фильтре «CRM» — число новых.']},
  {v:'2026.10.29-14',date:'29.10.2026',title:'Сессия обновляется сама',items:['Если токен входа истёк («JWT expired»), приложение само обновляет сессию и повторяет запрос: встречи из Meeting Hub и другие облачные данные не пропадают, пока вы не перезайдёте.']},
  {v:'2026.10.29-13',date:'29.10.2026',title:'Быстрые заметки по ширине списка',items:['«Мои задачи»: быстрые заметки снова той же ширины, что и список задач (и по умолчанию, и после изменения ширины).']},
@@ -3406,6 +3408,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     place({id:freshTaskId(),title:one(t.task,200),start:todayRu(),end:deadline(t.deadline),status:'Очередь',owner:one(t.owner,100),description:desc,comment:'',link:link(m.id),mt:'',documents:[],extraLinks:[],source:'meeting',meetingId:m.id},projName);
     const ha=hubAdded();(ha[m.id]=arr(ha[m.id])).push(t.task);return true;
   }
+  function setMtProjects(m,projects){m.projects=projects;m.tasks.forEach(tk=>{if(tk.state!=='added'&&!tk.project&&m.projects.length===1)tk.project=m.projects[0]});save();render()}
   // ---- объединение своей встречи (заметки) с записью из Meeting Hub ----
   async function mergeWithHub(m,h){
     const before=JSON.stringify({summary:m.summary,transcript:m.transcript,tasks:m.tasks,hubId:m.hubId,status:m.status,time:m.time,projects:m.projects});
@@ -3458,7 +3461,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     const pending=(m.tasks||[]).filter(t=>t.state!=='added').length;
     return`<article class="mt-card open" data-mt="${esc(m.id)}">${head}<div class="mt-body">
       <div class="mt-grid"><label>Название<input data-mt-f="title" value="${esc(m.title)}" maxlength="200"></label><label>Дата<input type="date" data-mt-f="date" value="${esc(m.date)}"></label><label>Время<input type="time" data-mt-f="time" value="${esc(m.time)}"></label><label>Статус<select data-mt-f="status"><option value="planned"${m.status!=='done'?' selected':''}>Предстоит</option><option value="done"${m.status==='done'?' selected':''}>Прошла</option></select></label></div>
-      <div class="mt-field"><span>Проекты</span><div class="mt-projs">${projNames().map(n=>`<label class="mt-pchip"><input type="checkbox" data-mt-proj="${esc(n)}"${(m.projects||[]).includes(n)?' checked':''}>${esc(n)}</label>`).join('')||'<em>Нет проектов</em>'}</div></div>
+      <div class="mt-field"><span>Проекты</span><div class="mt-projs">${(m.projects||[]).map(n=>`<span class="mt-pchip on">${esc(n)}<button type="button" class="mt-pchip-x" data-mt-premove="${esc(n)}" aria-label="Убрать проект ${esc(n)}" title="Убрать">×</button></span>`).join('')}${projNames().some(n=>!(m.projects||[]).includes(n))?`<select class="mt-padd" data-mt-padd="1" aria-label="Добавить проект"><option value="">＋ Добавить проект…</option>${projNames().filter(n=>!(m.projects||[]).includes(n)).map(n=>`<option>${esc(n)}</option>`).join('')}</select>`:''}${!projNames().length?'<em>Нет проектов</em>':''}</div></div>
       <label class="mt-field"><span>Подготовка к встрече</span><textarea data-mt-f="prep" rows="4" maxlength="20000" placeholder="Что обсудить, вопросы, цифры, что нужно подготовить">${esc(m.prep)}</textarea></label>
       <label class="mt-field"><span>Краткий итог</span><textarea data-mt-f="summary" rows="5" maxlength="20000" placeholder="О чём договорились, решения, следующие шаги">${esc(m.summary)}</textarea></label>
       <details class="mt-field"${m.transcript?'':' hidden'}><summary>Расшифровка (${(m.transcript||'').length} симв.)</summary><textarea data-mt-f="transcript" rows="8" maxlength="60000">${esc(m.transcript)}</textarea></details>
@@ -3502,6 +3505,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
       if(t.closest('[data-mt-hdel]')){if(confirm('Удалить встречу из Meeting Hub? Она исчезнет и из Канбана.')){cloudRequest('/rest/v1/meetings?id=eq.'+encodeURIComponent(m.id),{method:'DELETE'}).then(()=>{S.hub=S.hub.filter(x=>x.id!==m.id);S.openId=null;render();toast('Встреча удалена')}).catch(err=>toast('Не удалось удалить: '+err.message))}return}
       const trd=t.closest('summary');if(trd&&trd.parentElement?.dataset.mtTr&&S.tr[m.id]===undefined){S.tr[m.id]=null;cloudRequest('/rest/v1/meetings?id=eq.'+encodeURIComponent(m.id)+'&select=transcript',{method:'GET'}).then(r=>{S.tr[m.id]=String(arr(r)[0]?.transcript||'');const pre=view.querySelector(`[data-mt-tr="${CSS.escape(m.id)}"] pre`);if(pre)pre.textContent=S.tr[m.id]||'Расшифровки нет'}).catch(err=>{S.tr[m.id]=undefined;toast('Не удалось загрузить расшифровку: '+err.message)})}
       return}
+    const prm=t.closest('[data-mt-premove]');if(prm){setMtProjects(m,(m.projects||[]).filter(x=>x!==prm.dataset.mtPremove));return}
     if(t.closest('[data-mt-merge]')){mergeDialog(m);return}
     if(t.closest('[data-mt-ai]')){if(window.__ai){window.__ai.ask(api.analyzeText(m.id))}else toast('Ассистент недоступен');return}
     const del=t.closest('[data-mt-del]');
@@ -3527,7 +3531,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     if(m&&m.hub){if(t.dataset?.mtHproj!==undefined){const v=t.value;cloudRequest('/rest/v1/meetings?id=eq.'+encodeURIComponent(m.id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({project_name:v})}).then(()=>{m.project=v;m.projects=v?[v]:[];render();toast(v?'Встреча привязана к проекту':'Привязка снята')}).catch(err=>toast('Не удалось сохранить: '+err.message))}return}
     if(t.dataset?.mtF==='status'||t.dataset?.mtF==='date'||t.dataset?.mtF==='time'){if(m){m[t.dataset.mtF]=t.value;save();render()}return}
     if(!m)return;
-    if(t.dataset?.mtProj!==undefined){const n=t.dataset.mtProj;m.projects=t.checked?[...new Set([...(m.projects||[]),n])]:(m.projects||[]).filter(x=>x!==n);m.tasks.forEach(tk=>{if(tk.state!=='added'&&!tk.project&&m.projects.length===1)tk.project=m.projects[0]});save();render();return}
+    if(t.dataset?.mtPadd!==undefined){if(t.value)setMtProjects(m,[...new Set([...(m.projects||[]),t.value])]);return}
     if(t.dataset?.mtTproj!==undefined){const tk=m.tasks.find(x=>x.id===t.dataset.mtTproj);if(tk){tk.project=t.value;save()}}
   });
   view.addEventListener('keydown',e=>{
