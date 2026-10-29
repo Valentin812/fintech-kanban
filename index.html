@@ -1203,7 +1203,7 @@ html[data-layout="rows"] .board .cards>.task .pin-btn{order:6}
 html[data-layout="rows"] .board .cards>.task .subtask-add{display:inline-block;flex:0 0 auto;width:auto;margin:0;padding:0;border:0;font-size:12px;white-space:nowrap}
 html[data-layout="rows"] .board .cards>.task .archive-task{position:static;flex:0 0 auto;margin:0}
 #listWidthGrip{position:fixed;width:9px;margin-left:-4px;cursor:ew-resize;z-index:30;display:none;background:transparent;touch-action:none}#listWidthGrip:hover,#listWidthGrip.drag{background:rgba(100,120,170,.35)}
-html.list-w-set #myTasksView .mytask-list,html.list-w-set #myTasksView .mytasks-head,html.list-w-set #myTasksView .qn-panel,html.list-w-set #completedView .cp-list{max-width:var(--list-w)}
+html.list-w-set #myTasksView .mytask-list,html.list-w-set #myTasksView .mytasks-head,html.list-w-set #completedView .cp-list{max-width:var(--list-w)}
 html.list-w-set[data-layout="rows"] .board .column{max-width:var(--list-w)}
 /* ===== ИИ-ассистент ===== */
 .ai-panel{position:fixed;right:16px;bottom:16px;width:min(420px,calc(100vw - 32px));height:min(620px,calc(100vh - 32px));display:none;flex-direction:column;background:var(--panel,#fff);color:inherit;border:1px solid var(--line,#d7deea);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.25);z-index:60}
@@ -2029,6 +2029,7 @@ new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).
 
 const CHANGELOG=[
  {v:'2026.10.29-12',date:'29.10.2026',title:'Встречи: объединить с Meeting Hub',items:['В своей встрече есть кнопка «Объединить с Meeting Hub»: итог, решения, задачи и расшифровка из Meeting Hub добавляются к вашим заметкам, отдельная запись скрывается. Можно отменить сразу после.']},
+ {v:'2026.10.29-11',date:'29.10.2026',title:'Ширина списка и кнопка CRM',items:['«Мои задачи»: при изменении ширины списка быстрые заметки больше не растягиваются.','Кнопки «Внешняя CRM» в карточке и в фильтре стали короче — «CRM».']},
  {v:'2026.10.29-10',date:'29.10.2026',title:'Перенос задачи: новый проект',items:['В окне «Перенести задачу в проект» есть «＋ Новый проект…»: введите название — проект создастся, и задача перенесётся в него.']},
  {v:'2026.10.29-09',date:'29.10.2026',title:'CRM: объединение имён',items:['Если объединить или переименовать человека (например, «Лимарь А.» из CRM и из канбана), задачи из CRM дальше приходят уже с выбранным именем.']},
  {v:'2026.10.29-08',date:'29.10.2026',title:'Новая задача: календарь и передача в CRM',items:['В окне «Новая задача без проекта» у срока появился календарь, а при подключённой CRM — галочка «Передать во внешнюю CRM» (дальше спросит проект и исполнителя).']},
@@ -3750,15 +3751,15 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
       my.querySelectorAll('.mytask-group').forEach(g=>{g.style.display=[...g.querySelectorAll('.mytask-row')].every(r=>r.style.display==='none')?'none':''});
       const fl=my.querySelector('.mytask-filters');
       if(fl&&!fl.querySelector('[data-crm-only]')&&(enabled()||any||S.only)){const b=document.createElement('button');b.type='button';b.className='btn quick-filter';b.dataset.crmOnly='1';fl.appendChild(b)}
-      const ob=fl?.querySelector('[data-crm-only]');if(ob){ob.textContent='🔗 Внешняя CRM · '+crmTasks().length;ob.classList.toggle('active',S.only);ob.setAttribute('aria-pressed',String(S.only))}}}
+      const ob=fl?.querySelector('[data-crm-only]');if(ob){ob.textContent='🔗 CRM · '+crmTasks().length;ob.classList.toggle('active',S.only);ob.setAttribute('aria-pressed',String(S.only))}}}
   function drawerInfo(t,shared){
     let box=$('crmInfo');const head=document.querySelector('#drawer .drawerhead');
     const canLink=!!t&&!t.crm&&enabled()&&signed()&&!shared&&!t.parent;
     if(!t||(!t.crm&&!canLink)){if(box)box.remove();return}
     if(!box){box=document.createElement('div');box.id='crmInfo';box.className='crm-info';head?.insertAdjacentElement('afterend',box)}
-    if(!t.crm){box.innerHTML=`<button type="button" class="btn" data-crm-attach="1" aria-pressed="false">☐ Внешняя CRM</button> <span class="mini">Отправить задачу в CRM и держать её в синхроне</span>`;return}
+    if(!t.crm){box.innerHTML=`<button type="button" class="btn" data-crm-attach="1" aria-pressed="false">☐ CRM</button> <span class="mini">Отправить задачу в CRM и держать её в синхроне</span>`;return}
     const c=t.crm,open=!c.cancelled&&!c.gone&&c.st!=='done';
-    box.innerHTML=`<button type="button" class="btn" data-crm-detach="1" aria-pressed="true" title="Снять метку">☑ Внешняя CRM</button> Задача №${esc(c.id)}${c.pn?` · проект CRM: ${esc(c.pn)}`:''}${c.requester?` · от кого: ${esc(c.requester)}`:''}${c.protocolId?` · протокол №${esc(c.protocolId)}`:''}${SL[c.st]?` · статус в CRM: ${SL[c.st]}`:''}${c.dueTime?` · время срока ${esc(c.dueTime)}`:''}${c.comments?` · комментариев: ${c.comments}`:''}${offText(c)?` · <b>${offText(c)}</b>`:''}${S.url?` · <a href="${esc(S.url)}" target="_blank" rel="noopener">открыть CRM ↗</a>`:''}${open?`<div class="crm-actions"><button type="button" class="btn" data-crm-done="1">✓ Выполнено в CRM</button><button type="button" class="btn" data-crm-cancel="1">Отмена в CRM (в архив)</button></div>`:''}`}
+    box.innerHTML=`<button type="button" class="btn" data-crm-detach="1" aria-pressed="true" title="Снять метку">☑ CRM</button> Задача №${esc(c.id)}${c.pn?` · проект CRM: ${esc(c.pn)}`:''}${c.requester?` · от кого: ${esc(c.requester)}`:''}${c.protocolId?` · протокол №${esc(c.protocolId)}`:''}${SL[c.st]?` · статус в CRM: ${SL[c.st]}`:''}${c.dueTime?` · время срока ${esc(c.dueTime)}`:''}${c.comments?` · комментариев: ${c.comments}`:''}${offText(c)?` · <b>${offText(c)}</b>`:''}${S.url?` · <a href="${esc(S.url)}" target="_blank" rel="noopener">открыть CRM ↗</a>`:''}${open?`<div class="crm-actions"><button type="button" class="btn" data-crm-done="1">✓ Выполнено в CRM</button><button type="button" class="btn" data-crm-cancel="1">Отмена в CRM (в архив)</button></div>`:''}`}
   const showInfo=()=>{try{const t=currentDrawerTask();const sh=selectedStandaloneId===null&&!!active()?.shared;drawerInfo(t,sh)}catch(e){}};
   const ot=window.openTask;if(typeof ot==='function')window.openTask=function(){const r=ot.apply(this,arguments);showInfo();return r};
   const os2=window.openStandaloneTask;if(typeof os2==='function')window.openStandaloneTask=function(){const r=os2.apply(this,arguments);showInfo();return r};
