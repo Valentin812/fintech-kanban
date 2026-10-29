@@ -195,6 +195,16 @@ try {
   await view.locator('[data-mt-hdel]').click();
   await page.waitForTimeout(300);
   if (!String(globalThis.__del || '').includes('id=eq.22222222')) throw new Error('DELETE of the meeting expected');
+  // Объединение своей встречи (заметки) с записью из Meeting Hub.
+  await page.evaluate(() => { const m = projectMeta.__meetings__ = projectMeta.__meetings__ || {}; m.list = m.list || []; m.list.push({ id: 'mloc1', title: 'Моя встреча с банком', date: '2026-10-27', time: '', status: 'planned', prep: 'Вопросы по тарифам', summary: 'Мои заметки', transcript: '', projects: [], tasks: [], created: Date.now() }); window.__meetings?.open?.('mloc1'); switchView('meetings'); });
+  await view.locator('.mt-card.open[data-mt="mloc1"]').waitFor();
+  await view.locator('[data-mt-merge]').click();
+  await page.locator('.friendly-dialog select').selectOption('11111111-1111-4111-8111-111111111111');
+  await page.locator('.friendly-dialog button[type="submit"], .friendly-dialog .btn.primary').first().click();
+  await page.waitForFunction(() => projectMeta.__meetings__.list.find((x) => x.id === 'mloc1')?.hubId, null, { timeout: 3000 });
+  const mm = await page.evaluate(() => projectMeta.__meetings__.list.find((x) => x.id === 'mloc1'));
+  if (!mm.summary.includes('Мои заметки') || !mm.summary.includes('Обсудили тарифы') || !mm.transcript.includes('Здравствуйте') || !mm.tasks.some((x) => x.title.startsWith('Подготовить договор')) || mm.status !== 'done') throw new Error('Merge result: ' + JSON.stringify(mm));
+  if (await view.locator('.mt-card.hub', { hasText: 'Созвон с банком' }).count()) throw new Error('Merged Hub meeting must be hidden');
   // Phone.
   await page.setViewportSize({ width: 390, height: 800 });
   const fits = await page.evaluate(() => document.getElementById('meetingsView').scrollWidth <= document.getElementById('meetingsView').clientWidth + 1);

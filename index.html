@@ -2028,6 +2028,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.10.29-12',date:'29.10.2026',title:'Встречи: объединить с Meeting Hub',items:['В своей встрече есть кнопка «Объединить с Meeting Hub»: итог, решения, задачи и расшифровка из Meeting Hub добавляются к вашим заметкам, отдельная запись скрывается. Можно отменить сразу после.']},
  {v:'2026.10.29-10',date:'29.10.2026',title:'Перенос задачи: новый проект',items:['В окне «Перенести задачу в проект» есть «＋ Новый проект…»: введите название — проект создастся, и задача перенесётся в него.']},
  {v:'2026.10.29-09',date:'29.10.2026',title:'CRM: объединение имён',items:['Если объединить или переименовать человека (например, «Лимарь А.» из CRM и из канбана), задачи из CRM дальше приходят уже с выбранным именем.']},
  {v:'2026.10.29-08',date:'29.10.2026',title:'Новая задача: календарь и передача в CRM',items:['В окне «Новая задача без проекта» у срока появился календарь, а при подключённой CRM — галочка «Передать во внешнюю CRM» (дальше спросит проект и исполнителя).']},
@@ -3393,6 +3394,31 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     place({id:freshTaskId(),title:one(t.task,200),start:todayRu(),end:deadline(t.deadline),status:'Очередь',owner:one(t.owner,100),description:desc,comment:'',link:link(m.id),mt:'',documents:[],extraLinks:[],source:'meeting',meetingId:m.id},projName);
     const ha=hubAdded();(ha[m.id]=arr(ha[m.id])).push(t.task);return true;
   }
+  // ---- объединение своей встречи (заметки) с записью из Meeting Hub ----
+  async function mergeWithHub(m,h){
+    const before=JSON.stringify({summary:m.summary,transcript:m.transcript,tasks:m.tasks,hubId:m.hubId,status:m.status,time:m.time,projects:m.projects});
+    let tr='';
+    try{const r=await cloudRequest('/rest/v1/meetings?id=eq.'+encodeURIComponent(h.id)+'&select=transcript',{method:'GET'});tr=String(arr(r)[0]?.transcript||'')}catch(e){toast('Не удалось загрузить расшифровку: '+e.message);return}
+    const parts=[];
+    if(h.summaryList.length)parts.push('Итог:\n'+h.summaryList.map(x=>'• '+x).join('\n'));
+    if(h.decisions.length)parts.push('Решения:\n'+h.decisions.map(x=>'• '+x.text).join('\n'));
+    if(h.questions.length)parts.push('Открытые вопросы:\n'+h.questions.map(x=>'• '+x.question).join('\n'));
+    if(parts.length)m.summary=cut((m.summary?m.summary+'\n\n':'')+'— Из Meeting Hub —\n'+parts.join('\n\n'),20000);
+    if(tr)m.transcript=cut((m.transcript?m.transcript+'\n\n— Расшифровка Meeting Hub —\n':'')+tr,60000);
+    const have=new Set((m.tasks||[]).map(x=>one(x.title,300).toLowerCase()));if(!Array.isArray(m.tasks))m.tasks=[];
+    h.tasks.forEach(t=>{const title=one(t.task+(t.owner?' — '+t.owner:''),300);if(have.has(title.toLowerCase()))return;m.tasks.push({id:rid('t'),title,project:h.project||'',state:isAdded(h.id,t.task)?'added':''})});
+    m.hubId=h.id;m.status='done';if(!m.time&&h.time)m.time=h.time;
+    if(h.project&&!(m.projects||[]).includes(h.project)&&projNames().includes(h.project))m.projects=[...(m.projects||[]),h.project];
+    save();render();
+    undoToast('Встреча объединена с Meeting Hub',()=>{const b=JSON.parse(before);m.summary=b.summary;m.transcript=b.transcript;m.tasks=b.tasks;m.status=b.status;m.time=b.time;m.projects=b.projects;if(b.hubId===undefined)delete m.hubId;else m.hubId=b.hubId;save();render()});
+  }
+  function mergeDialog(m){
+    const used=new Set(list().map(x=>x.hubId).filter(Boolean));
+    const dist=h=>h.date&&m.date?Math.abs(new Date(h.date)-new Date(m.date)):9e15;
+    const c=S.hub.filter(h=>!used.has(h.id)).sort((a,b)=>dist(a)-dist(b));
+    if(!c.length){toast('Нет встреч из Meeting Hub для объединения');return}
+    friendlyFormDialog({title:'Объединить с Meeting Hub',description:'Итог, решения, задачи и расшифровка из Meeting Hub добавятся к вашей встрече (ваши заметки сохранятся), а отдельная запись из Meeting Hub скроется.',fields:[{label:'Встреча из Meeting Hub',type:'select',value:c[0].id,options:c.map(h=>({value:h.id,label:`${ruDate(h.date)||'без даты'}${h.time?' '+h.time:''} · ${h.title||'Без названия'}`}))}],submitLabel:'Объединить',onSubmit:vals=>{const h=c.find(x=>x.id===vals[0]);if(h)mergeWithHub(m,h);return true}});
+  }
   // ---- отображение ----
   const chips=m=>(m.projects||[]).filter(n=>projNames().includes(n)).map(n=>`<span class="mt-chip">${esc(n)}</span>`).join('');
   const conf={high:'уверенно',medium:'возможно',low:'неточно'};
@@ -3427,11 +3453,12 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
       <div class="mt-field"><span>Задачи из встречи${(m.tasks||[]).length?` · не добавлено: ${pending}`:''}</span>
         <ul class="mt-tasks">${(m.tasks||[]).map(t=>`<li class="${t.state==='added'?'added':''}" data-mt-task="${esc(t.id)}"><span class="mt-ttitle">${esc(t.title)}</span>${t.state==='added'?'<span class="mt-added">✓ добавлена</span>':`<select data-mt-tproj="${esc(t.id)}" aria-label="Проект"><option value="">Мои задачи</option>${projNames().map(n=>`<option${t.project===n?' selected':''}>${esc(n)}</option>`).join('')}</select><button class="btn" type="button" data-mt-tadd="${esc(t.id)}">Добавить</button><button class="mt-x" type="button" data-mt-tdel="${esc(t.id)}" aria-label="Убрать" title="Убрать">×</button>`}</li>`).join('')}</ul>
         <div class="mt-addrow"><input id="mtNewTask" placeholder="Новая задача из встречи · Enter" maxlength="300"><button class="btn" type="button" data-mt-tnew="1">＋</button>${pending?`<button class="btn primary" type="button" data-mt-tall="1">Добавить все (${pending})</button>`:''}${m.transcript?'':`<button class="btn" type="button" data-mt-showtr="1">＋ Расшифровка</button>`}</div></div>
-      <div class="mt-actions"><button class="btn primary" type="button" data-mt-ai="${esc(m.id)}" title="Джарвис прочитает подготовку, итог и расшифровку, предложит итог, проекты и задачи">🤖 Разобрать с ИИ</button><button class="btn" type="button" data-mt-del="${esc(m.id)}">Удалить встречу</button></div></div></article>`;
+      <div class="mt-actions"><button class="btn primary" type="button" data-mt-ai="${esc(m.id)}" title="Джарвис прочитает подготовку, итог и расшифровку, предложит итог, проекты и задачи">🤖 Разобрать с ИИ</button>${m.hubId?'<span class="mini">🔗 объединена с Meeting Hub</span>':'<button class="btn" type="button" data-mt-merge="1" title="Добавить итог, задачи и расшифровку из Meeting Hub к этой встрече">🔗 Объединить с Meeting Hub</button>'}<button class="btn" type="button" data-mt-del="${esc(m.id)}">Удалить встречу</button></div></div></article>`;
   }
   function visible(){
     const q=S.q.toLocaleLowerCase('ru');
-    const hubs=S.hub.filter(m=>(S.filter!=='plan')&&(!S.proj||m.project===S.proj));
+    const merged=new Set(list().map(x=>x.hubId).filter(Boolean));
+    const hubs=S.hub.filter(m=>!merged.has(m.id)&&(S.filter!=='plan')&&(!S.proj||m.project===S.proj));
     return [...hubs,...list().filter(m=>{
       if(S.filter==='plan'&&isPast(m))return false;if(S.filter==='done'&&!isPast(m))return false;
       if(S.proj&&!(m.projects||[]).includes(S.proj))return false;
@@ -3463,6 +3490,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
       if(t.closest('[data-mt-hdel]')){if(confirm('Удалить встречу из Meeting Hub? Она исчезнет и из Канбана.')){cloudRequest('/rest/v1/meetings?id=eq.'+encodeURIComponent(m.id),{method:'DELETE'}).then(()=>{S.hub=S.hub.filter(x=>x.id!==m.id);S.openId=null;render();toast('Встреча удалена')}).catch(err=>toast('Не удалось удалить: '+err.message))}return}
       const trd=t.closest('summary');if(trd&&trd.parentElement?.dataset.mtTr&&S.tr[m.id]===undefined){S.tr[m.id]=null;cloudRequest('/rest/v1/meetings?id=eq.'+encodeURIComponent(m.id)+'&select=transcript',{method:'GET'}).then(r=>{S.tr[m.id]=String(arr(r)[0]?.transcript||'');const pre=view.querySelector(`[data-mt-tr="${CSS.escape(m.id)}"] pre`);if(pre)pre.textContent=S.tr[m.id]||'Расшифровки нет'}).catch(err=>{S.tr[m.id]=undefined;toast('Не удалось загрузить расшифровку: '+err.message)})}
       return}
+    if(t.closest('[data-mt-merge]')){mergeDialog(m);return}
     if(t.closest('[data-mt-ai]')){if(window.__ai){window.__ai.ask(api.analyzeText(m.id))}else toast('Ассистент недоступен');return}
     const del=t.closest('[data-mt-del]');
     if(del){const arr=store(),i=arr.indexOf(m);arr.splice(i,1);S.openId=null;save();render();undoToast('Встреча удалена',()=>{store().splice(i,0,m);save();render()});return}
