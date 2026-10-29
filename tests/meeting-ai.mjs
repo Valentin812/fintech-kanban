@@ -107,6 +107,7 @@ try {
   if (!asked.includes('Созвон с банком') || !asked.includes('Обсудили запуск')) throw new Error('Meeting text must be sent to the assistant');
   const txt = await page.locator('.ai-actions').textContent();
   if (!txt.includes('Подготовить договор') || !txt.includes('Follow-up')) throw new Error('Actions should be described: ' + txt);
+  if ((await page.locator('.ai-actions .ai-sub li').count()) < 2 || /;\s/.test(txt)) throw new Error('Meeting tasks must be separate lines, not one run-on line: ' + txt);
   if ((await page.evaluate(() => window.__meetings.list().length)) !== 1) throw new Error('Nothing changes before confirmation');
   await page.locator('[data-ai-apply]').click();
   const res = await page.evaluate(() => { const l = window.__meetings.list(); const m = l.find((x) => x.title === 'Созвон с банком'); return { n: l.length, summary: m.summary, tasks: m.tasks.map((t) => [t.title, t.project]), projects: m.projects, fu: l.find((x) => x.title === 'Follow-up') }; });

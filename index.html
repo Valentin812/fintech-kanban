@@ -1215,7 +1215,7 @@ html.list-w-set[data-layout="rows"] .board .column{max-width:var(--list-w)}
 .ai-msg{max-width:88%;padding:8px 11px;border-radius:12px;font-size:14px;line-height:1.4;white-space:pre-wrap;word-break:break-word;background:rgba(127,127,127,.14)}
 .ai-msg.me{align-self:flex-end;background:#2f6df6;color:#fff}
 .ai-actions{align-self:stretch;border:1px dashed var(--line,#b9c3d6);border-radius:10px;padding:8px 10px;font-size:13px}
-.ai-actions ul{margin:4px 0 8px;padding-left:18px}
+.ai-actions ul{margin:4px 0 8px;padding-left:18px}.mt-allproj{display:flex;align-items:center;gap:8px;margin:2px 0 8px}.ai-actions li{margin:3px 0}.ai-actions .ai-sub{margin:3px 0 6px;padding-left:16px;list-style:disc}.ai-actions .ai-sub li{margin:2px 0}
 .ai-actions button{margin-right:6px}
 .ai-hint{font-size:12px;opacity:.7;padding:0 12px 6px}
 .ai-form{display:flex;gap:6px;padding:10px 12px;border-top:1px solid var(--line,#d7deea)}
@@ -2036,6 +2036,8 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.10.29-19',date:'29.10.2026',title:'Встречи: все задачи в один проект',items:['У задачи из встречи ссылка называется «Встреча «название»» и открывается в этом же окне, а не в новой вкладке.','Над списком задач встречи (своей и из Meeting Hub) есть выбор «Все задачи в проект»: один выбор проставляет проект всем ещё не добавленным задачам, дальше «Добавить все». В Meeting Hub «Все задачи на доску» теперь учитывает выбранный у каждой задачи проект.']},
+ {v:'2026.10.29-18',date:'29.10.2026',title:'Ассистент: понятный список действий',items:['В блоке «Предлагаю сделать» задачи встречи, подзадачи и изменения встречи теперь идут отдельными строками, а не одной длинной строкой через «;».']},
  {v:'2026.10.29-15',date:'29.10.2026',title:'CRM: новое сверху и цветная точка',items:['В «Мои задачи» новые задачи из CRM собираются вверху в блоке «Новое из CRM» с синей точкой; оранжевая точка — задача или комментарии изменились в CRM. Точка пропадает, когда вы открыли карточку; есть кнопка «Отметить просмотренным», а на фильтре «CRM» — число новых.']},
  {v:'2026.10.29-14',date:'29.10.2026',title:'Сессия обновляется сама',items:['Если токен входа истёк («JWT expired»), приложение само обновляет сессию и повторяет запрос: встречи из Meeting Hub и другие облачные данные не пропадают, пока вы не перезайдёте.']},
  {v:'2026.10.29-13',date:'29.10.2026',title:'Быстрые заметки по ширине списка',items:['«Мои задачи»: быстрые заметки снова той же ширины, что и список задач (и по умолчанию, и после изменения ширины).']},
@@ -3025,7 +3027,7 @@ function fmtDone(iso){const d=new Date(iso);return isNaN(d)?'':d.toLocaleDateStr
   };
   window.renderTaskLinks=function(t){
     const items=[];
-    if(t.link)items.push({kind:'link',key:'link',title:t.linkTitle||'Ссылка на материал',url:t.link});
+    if(t.link)items.push({kind:'link',key:'link',title:t.linkTitle||(t.meetingId&&window.__meetings?.get?.(t.meetingId)?.title?'Встреча «'+window.__meetings.get(t.meetingId).title+'»':'Ссылка на материал'),url:t.link});
     if(t.mt)items.push({kind:'link',key:'mt',title:t.mtTitle||'Задача в МТ',url:t.mt});
     (t.extraLinks||[]).forEach((x,i)=>items.push({kind:'link',key:String(i),title:x.title||x.url,url:x.url}));
     (t.documents||[]).forEach((x,i)=>items.push({kind:'doc',key:String(i),title:x.title||x.url,url:x.url}));
@@ -3173,11 +3175,11 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
   const describe=a=>{
     if(a.type==='create_task')return `Создать задачу «${a.title}»${a.project?` в проекте «${a.project}»`:' в «Моих задачах»'}${a.end?`, срок ${a.end}`:''}`;
     if(a.type==='update_task'){const f=findTask(a.id);const ch=Object.entries(a.fields).map(([k,v])=>({status:'статус',end:'срок',owner:'ответственный',title:'название'}[k]+' → '+v)).join(', ');return `Изменить «${f?f.t.title:'#'+a.id}»: ${ch}`}
-    if(a.type==='add_subtasks'){const f=findTask(a.parent_id);return `Подзадачи к «${f?f.t.title:'#'+a.parent_id}»: ${a.titles.join('; ')}`}
+    if(a.type==='add_subtasks'){const f=findTask(a.parent_id);return `Подзадачи к «${f?f.t.title:'#'+a.parent_id}»:\n${a.titles.join('\n')}`}
     if(a.type==='add_note')return `Быстрая заметка: ${a.text}`;
     if(a.type==='create_meeting')return `Создать встречу «${a.title}»${a.date?' на '+a.date.split('-').reverse().join('.'):''}${a.projects.length?' · '+a.projects.join(', '):''}`;
-    if(a.type==='set_meeting'){const m=window.__meetings?.get(a.id);const ch=[a.fields.summary?'краткий итог':'',a.fields.prep?'подготовка':'',a.fields.projects?'проекты → '+a.fields.projects.join(', '):''].filter(Boolean).join(', ');return `Встреча «${m?m.title:a.id}»: ${ch}`}
-    if(a.type==='meeting_tasks'){const m=window.__meetings?.get(a.meeting_id);return `Задачи встречи «${m?m.title:a.meeting_id}» (${a.tasks.length}): ${a.tasks.map(t=>t.title+(t.project?' → '+t.project:'')).join('; ')}`}
+    if(a.type==='set_meeting'){const m=window.__meetings?.get(a.id);const ch=[a.fields.summary?'краткий итог':'',a.fields.prep?'подготовка':'',a.fields.projects?'проекты → '+a.fields.projects.join(', '):''].filter(Boolean).join(', ');return `Встреча «${m?m.title:a.id}»:\n${ch.split(', ').join('\n')}`}
+    if(a.type==='meeting_tasks'){const m=window.__meetings?.get(a.meeting_id);return `Задачи встречи «${m?m.title:a.meeting_id}» (${a.tasks.length}):\n${a.tasks.map(t=>t.title+(t.project?' → '+t.project:'')).join('\n')}`}
     return ''};
   const apply=a=>{
     if(a.type==='create_task'){
@@ -3196,7 +3198,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     return false};
   const showActions=actions=>{
     if(!actions.length)return;const box=document.createElement('div');box.className='ai-actions';
-    box.innerHTML='<b>Предлагаю сделать:</b><ul>'+actions.map(a=>'<li>'+esc(describe(a))+'</li>').join('')+'</ul><button class="btn primary" type="button" data-ai-apply>Применить</button><button class="btn" type="button" data-ai-skip>Не нужно</button>';
+    box.innerHTML='<b>Предлагаю сделать:</b><ul>'+actions.map(a=>{const [head,...rest]=describe(a).split('\n');return '<li>'+esc(head)+(rest.length?'<ul class="ai-sub">'+rest.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':'')+'</li>'}).join('')+'</ul><button class="btn primary" type="button" data-ai-apply>Применить</button><button class="btn" type="button" data-ai-skip>Не нужно</button>';
     box.querySelector('[data-ai-apply]').onclick=()=>{let n=0;actions.forEach(a=>{try{if(apply(a))n++}catch(e){console.warn('AI action failed',e)}});save();renderAll();box.remove();add(n===actions.length?`Готово, выполнено: ${n}.`:`Выполнено ${n} из ${actions.length}.`)};
     box.querySelector('[data-ai-skip]').onclick=()=>box.remove();
     log.appendChild(box);log.scrollTop=log.scrollHeight};
@@ -3396,14 +3398,14 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
   const link=id=>location.origin+location.pathname+'#meeting='+id;
   function addTask(m,t){
     if(t.state==='added')return false;
-    place({id:freshTaskId(),title:one(t.title,200),start:todayRu(),end:'',status:'Очередь',owner:'',description:`Из встречи «${m.title}»${m.date?' · '+ruDate(m.date):''}`,comment:'',link:link(m.id),mt:'',documents:[],extraLinks:[],source:'meeting',meetingId:m.id},t.project);
+    place({id:freshTaskId(),title:one(t.title,200),start:todayRu(),end:'',status:'Очередь',owner:'',description:`Из встречи «${m.title}»${m.date?' · '+ruDate(m.date):''}`,comment:'',link:link(m.id),linkTitle:`Встреча «${one(m.title,120)}»`,mt:'',documents:[],extraLinks:[],source:'meeting',meetingId:m.id},t.project);
     t.state='added';return true;
   }
   function deadline(v){const x=String(v||'').trim();const iso=x.match(/^(\d{4})-(\d{2})-(\d{2})/);return iso?`${iso[3]}.${iso[2]}.${iso[1]}`:normalizeDateText(x)}
   function addHubTask(m,idx,projName){
     const t=m.tasks[idx];if(!t||isAdded(m.id,t.task))return false;
     const desc=[t.evidence?'Из разговора: '+t.evidence:'',`Встреча «${m.title}»${m.date?' · '+ruDate(m.date):''}`].filter(Boolean).join('\n');
-    place({id:freshTaskId(),title:one(t.task,200),start:todayRu(),end:deadline(t.deadline),status:'Очередь',owner:one(t.owner,100),description:desc,comment:'',link:link(m.id),mt:'',documents:[],extraLinks:[],source:'meeting',meetingId:m.id},projName);
+    place({id:freshTaskId(),title:one(t.task,200),start:todayRu(),end:deadline(t.deadline),status:'Очередь',owner:one(t.owner,100),description:desc,comment:'',link:link(m.id),linkTitle:`Встреча «${one(m.title,120)}»`,mt:'',documents:[],extraLinks:[],source:'meeting',meetingId:m.id},projName);
     const ha=hubAdded();(ha[m.id]=arr(ha[m.id])).push(t.task);return true;
   }
   // ---- объединение своей встречи (заметки) с записью из Meeting Hub ----
@@ -3445,7 +3447,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
       ${m.app||m.description?`<div class="mt-sub">${esc([m.app,m.description].filter(Boolean).join(' · '))}</div>`:''}
       ${sec('Резюме',m.summaryList.length?`<ul class="mt-ul">${m.summaryList.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'')}
       ${sec('Решения',m.decisions.length?`<ul class="mt-ul">${m.decisions.map(x=>`<li>${esc(x.text)}${x.evidence?`<div class="mt-ev">«${esc(x.evidence)}»</div>`:''}</li>`).join('')}</ul>`:'')}
-      ${sec('Задачи'+(m.tasks.length?` · не на доске: ${pending}`:''),m.tasks.length?`<ul class="mt-tasks">${m.tasks.map((t,i)=>`<li class="${isAdded(m.id,t.task)?'added':''}"><div class="mt-ttitle"><b>${esc(t.task)}</b><div class="mt-ev">${[t.owner?'ответственный: '+esc(t.owner):'',t.deadline?'срок: '+esc(t.deadline):'',t.confidence?esc(conf[t.confidence]):''].filter(Boolean).join(' · ')}</div>${t.evidence?`<div class="mt-ev">«${esc(t.evidence)}»</div>`:''}</div>${isAdded(m.id,t.task)?'<span class="mt-added">✓ на доске</span>':`<select data-mt-hsel="${i}" aria-label="Проект"><option value="">Мои задачи</option>${projNames().map(n=>`<option${(m.project||'')===n?' selected':''}>${esc(n)}</option>`).join('')}</select><button class="btn" type="button" data-mt-hadd="${i}">На доску</button>`}</li>`).join('')}</ul>`:'')}
+      ${sec('Задачи'+(m.tasks.length?` · не на доске: ${pending}`:''),m.tasks.length?`${pending>1?`<label class="mt-inline mt-allproj">Все задачи в проект <select data-mt-hallsel="1"><option value="">выбрать…</option><option value="__my">Мои задачи</option>${projNames().map(n=>`<option>${esc(n)}</option>`).join('')}</select></label>`:''}<ul class="mt-tasks">${m.tasks.map((t,i)=>`<li class="${isAdded(m.id,t.task)?'added':''}"><div class="mt-ttitle"><b>${esc(t.task)}</b><div class="mt-ev">${[t.owner?'ответственный: '+esc(t.owner):'',t.deadline?'срок: '+esc(t.deadline):'',t.confidence?esc(conf[t.confidence]):''].filter(Boolean).join(' · ')}</div>${t.evidence?`<div class="mt-ev">«${esc(t.evidence)}»</div>`:''}</div>${isAdded(m.id,t.task)?'<span class="mt-added">✓ на доске</span>':`<select data-mt-hsel="${i}" aria-label="Проект"><option value="">Мои задачи</option>${projNames().map(n=>`<option${(m.project||'')===n?' selected':''}>${esc(n)}</option>`).join('')}</select><button class="btn" type="button" data-mt-hadd="${i}">На доску</button>`}</li>`).join('')}</ul>`:'')}
       ${sec('Открытые вопросы',m.questions.length?`<ul class="mt-ul">${m.questions.map(x=>`<li>${esc(x.question)}${x.evidence?`<div class="mt-ev">«${esc(x.evidence)}»</div>`:''}</li>`).join('')}</ul>`:'')}
       <details class="mt-field" data-mt-tr="${esc(m.id)}"><summary>Расшифровка</summary><pre class="mt-tr">${S.tr[m.id]===undefined?'Откройте, чтобы загрузить…':esc(S.tr[m.id]||'Расшифровки нет')}</pre></details>
       <div class="mt-addrow"><label class="mt-inline">Проект встречи <select data-mt-hproj="1"><option value="">— не привязана —</option>${projNames().map(n=>`<option${m.project===n?' selected':''}>${esc(n)}</option>`).join('')}</select></label>${pending?`<button class="btn primary" type="button" data-mt-hall="1">Все задачи на доску (${pending})</button>`:''}<button class="btn" type="button" data-mt-hai="1" title="Джарвис прочитает итог, решения и задачи встречи">🤖 Разобрать с ИИ</button><button class="btn" type="button" data-mt-hdel="1">Удалить встречу</button></div></div></article>`;
@@ -3463,6 +3465,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
       <label class="mt-field"><span>Краткий итог</span><textarea data-mt-f="summary" rows="5" maxlength="20000" placeholder="О чём договорились, решения, следующие шаги">${esc(m.summary)}</textarea></label>
       <details class="mt-field"${m.transcript?'':' hidden'}><summary>Расшифровка (${(m.transcript||'').length} симв.)</summary><textarea data-mt-f="transcript" rows="8" maxlength="60000">${esc(m.transcript)}</textarea></details>
       <div class="mt-field"><span>Задачи из встречи${(m.tasks||[]).length?` · не добавлено: ${pending}`:''}</span>
+        ${pending>1?`<label class="mt-inline mt-allproj">Все задачи в проект <select data-mt-tallproj="1"><option value="">выбрать…</option><option value="__my">Мои задачи</option>${projNames().map(n=>`<option>${esc(n)}</option>`).join('')}</select></label>`:''}
         <ul class="mt-tasks">${(m.tasks||[]).map(t=>`<li class="${t.state==='added'?'added':''}" data-mt-task="${esc(t.id)}"><span class="mt-ttitle">${esc(t.title)}</span>${t.state==='added'?'<span class="mt-added">✓ добавлена</span>':`<select data-mt-tproj="${esc(t.id)}" aria-label="Проект"><option value="">Мои задачи</option>${projNames().map(n=>`<option${t.project===n?' selected':''}>${esc(n)}</option>`).join('')}</select><button class="btn" type="button" data-mt-tadd="${esc(t.id)}">Добавить</button><button class="mt-x" type="button" data-mt-tdel="${esc(t.id)}" aria-label="Убрать" title="Убрать">×</button>`}</li>`).join('')}</ul>
         <div class="mt-addrow"><input id="mtNewTask" placeholder="Новая задача из встречи · Enter" maxlength="300"><button class="btn" type="button" data-mt-tnew="1">＋</button>${pending?`<button class="btn primary" type="button" data-mt-tall="1">Добавить все (${pending})</button>`:''}${m.transcript?'':`<button class="btn" type="button" data-mt-showtr="1">＋ Расшифровка</button>`}</div></div>
       <div class="mt-actions"><button class="btn primary" type="button" data-mt-ai="${esc(m.id)}" title="Джарвис прочитает подготовку, итог и расшифровку, предложит итог, проекты и задачи">🤖 Разобрать с ИИ</button>${m.hubId?'<span class="mini">🔗 объединена с Meeting Hub</span>':'<button class="btn" type="button" data-mt-merge="1" title="Добавить итог, задачи и расшифровку из Meeting Hub к этой встрече">🔗 Объединить с Meeting Hub</button>'}<button class="btn" type="button" data-mt-del="${esc(m.id)}">Удалить встречу</button></div></div></article>`;
@@ -3497,7 +3500,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     if(m.hub){
       const ha=t.closest('[data-mt-hadd]');
       if(ha){const i=Number(ha.dataset.mtHadd),sel=ha.parentElement.querySelector('[data-mt-hsel]');if(addHubTask(m,i,sel?sel.value:'')){save();try{renderProjects();renderBoard();renderInbox()}catch(err){}render();toast('Задача добавлена · '+((sel&&sel.value)||'Мои задачи'))}return}
-      if(t.closest('[data-mt-hall]')){let n=0;m.tasks.forEach((tk,i)=>{if(addHubTask(m,i,m.project||''))n++});save();try{renderProjects();renderBoard();renderInbox()}catch(err){}render();toast('Добавлено задач: '+n);return}
+      if(t.closest('[data-mt-hall]')){let n=0;m.tasks.forEach((tk,i)=>{const sel=t.closest('[data-mt]')?.querySelector(`[data-mt-hsel="${i}"]`);if(addHubTask(m,i,sel?sel.value:(m.project||'')))n++});save();try{renderProjects();renderBoard();renderInbox()}catch(err){}render();toast('Добавлено задач: '+n);return}
       if(t.closest('[data-mt-hai]')){if(window.__ai){window.__ai.ask(api.analyzeText(m.id))}else toast('Ассистент недоступен');return}
       if(t.closest('[data-mt-hdel]')){if(confirm('Удалить встречу из Meeting Hub? Она исчезнет и из Канбана.')){cloudRequest('/rest/v1/meetings?id=eq.'+encodeURIComponent(m.id),{method:'DELETE'}).then(()=>{S.hub=S.hub.filter(x=>x.id!==m.id);S.openId=null;render();toast('Встреча удалена')}).catch(err=>toast('Не удалось удалить: '+err.message))}return}
       const trd=t.closest('summary');if(trd&&trd.parentElement?.dataset.mtTr&&S.tr[m.id]===undefined){S.tr[m.id]=null;cloudRequest('/rest/v1/meetings?id=eq.'+encodeURIComponent(m.id)+'&select=transcript',{method:'GET'}).then(r=>{S.tr[m.id]=String(arr(r)[0]?.transcript||'');const pre=view.querySelector(`[data-mt-tr="${CSS.escape(m.id)}"] pre`);if(pre)pre.textContent=S.tr[m.id]||'Расшифровки нет'}).catch(err=>{S.tr[m.id]=undefined;toast('Не удалось загрузить расшифровку: '+err.message)})}
@@ -3524,10 +3527,11 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     if(t.id==='mtFiles'){importFiles([...t.files]);t.value='';return}
     if(t.id==='mtFilter'){S.filter=t.value;render();return}if(t.id==='mtProj'){S.proj=t.value;render();return}
     const m=byId(t.closest('[data-mt]')?.dataset.mt);
-    if(m&&m.hub){if(t.dataset?.mtHproj!==undefined){const v=t.value;cloudRequest('/rest/v1/meetings?id=eq.'+encodeURIComponent(m.id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({project_name:v})}).then(()=>{m.project=v;m.projects=v?[v]:[];render();toast(v?'Встреча привязана к проекту':'Привязка снята')}).catch(err=>toast('Не удалось сохранить: '+err.message))}return}
+    if(m&&m.hub){if(t.dataset?.mtHallsel!==undefined){const v=t.value==='__my'?'':t.value;if(t.value)t.closest('[data-mt]').querySelectorAll('[data-mt-hsel]').forEach(x=>{x.value=v});return}if(t.dataset?.mtHproj!==undefined){const v=t.value;cloudRequest('/rest/v1/meetings?id=eq.'+encodeURIComponent(m.id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({project_name:v})}).then(()=>{m.project=v;m.projects=v?[v]:[];render();toast(v?'Встреча привязана к проекту':'Привязка снята')}).catch(err=>toast('Не удалось сохранить: '+err.message))}return}
     if(t.dataset?.mtF==='status'||t.dataset?.mtF==='date'||t.dataset?.mtF==='time'){if(m){m[t.dataset.mtF]=t.value;save();render()}return}
     if(!m)return;
     if(t.dataset?.mtProj!==undefined){const n=t.dataset.mtProj;m.projects=t.checked?[...new Set([...(m.projects||[]),n])]:(m.projects||[]).filter(x=>x!==n);m.tasks.forEach(tk=>{if(tk.state!=='added'&&!tk.project&&m.projects.length===1)tk.project=m.projects[0]});save();render();return}
+    if(t.dataset?.mtTallproj!==undefined){if(t.value){const v=t.value==='__my'?'':t.value;m.tasks.forEach(tk=>{if(tk.state!=='added')tk.project=v});save();render()}return}
     if(t.dataset?.mtTproj!==undefined){const tk=m.tasks.find(x=>x.id===t.dataset.mtTproj);if(tk){tk.project=t.value;save()}}
   });
   view.addEventListener('keydown',e=>{
@@ -3543,6 +3547,12 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     if(on){$('projectHeader').hidden=true;$('viewFooter').textContent='Подготовка, итоги и задачи по встречам · привязка к проектам';document.querySelectorAll('#projects .project.active').forEach(b=>b.classList.remove('active'));render();loadHub(true)}
     return r};
   nav.addEventListener('click',()=>{switchView('meetings')});
+  // Ссылка на встречу из карточки задачи открывается в этом же окне.
+  document.addEventListener('click',e=>{
+    const a=e.target.closest?.('a[href*="#meeting="]');if(!a||e.ctrlKey||e.metaKey||e.shiftKey||e.button)return;
+    let u;try{u=new URL(a.href,location.href)}catch(err){return}
+    const id=(u.hash.match(/^#meeting=([\w-]{6,60})/)||[])[1];if(!id||u.origin!==location.origin||u.pathname!==location.pathname)return;
+    e.preventDefault();try{closeDrawer()}catch(err){}window.__meetings.open(id)});
   {const h=String(location.hash||'').match(/^#meeting=([\w-]{6,60})/);if(h){let n=0;const iv=setInterval(()=>{n++;const app=document.querySelector('.app');if(app&&!app.hidden&&signedIn()){clearInterval(iv);try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}S.openId=h[1];switchView('meetings')}else if(n>60)clearInterval(iv)},500)}}
   const oa=window.renderAll;window.renderAll=function(){const r=oa.apply(this,arguments);if(activeView==='meetings'){document.querySelectorAll('#projects .project.active').forEach(b=>b.classList.remove('active'));render()}return r};
   const api={

@@ -205,6 +205,23 @@ try {
   const mm = await page.evaluate(() => projectMeta.__meetings__.list.find((x) => x.id === 'mloc1'));
   if (!mm.summary.includes('Мои заметки') || !mm.summary.includes('Обсудили тарифы') || !mm.transcript.includes('Здравствуйте') || !mm.tasks.some((x) => x.title.startsWith('Подготовить договор')) || mm.status !== 'done') throw new Error('Merge result: ' + JSON.stringify(mm));
   if (await view.locator('.mt-card.hub', { hasText: 'Созвон с банком' }).count()) throw new Error('Merged Hub meeting must be hidden');
+  // Все задачи встречи — в один проект одним выбором.
+  await page.evaluate(() => { projectMeta.__meetings__.list.push({ id: 'mlocal2', title: 'Много задач', date: '2026-10-28', time: '', status: 'done', prep: '', summary: '', transcript: '', projects: [], tasks: [{ id: 'k1', title: 'Первая из встречи', project: '', state: '' }, { id: 'k2', title: 'Вторая из встречи', project: '', state: '' }, { id: 'k3', title: 'Третья из встречи', project: '', state: '' }], created: Date.now() }); window.__meetings.open('mlocal2'); });
+  await view.locator('.mt-card.open[data-mt="mlocal2"]').waitFor();
+  await view.locator('select[data-mt-tallproj]').selectOption(proj);
+  await page.waitForFunction((p) => projectMeta.__meetings__.list.find((x) => x.id === 'mlocal2').tasks.every((t) => t.project === p), proj, { timeout: 3000 });
+  await view.locator('[data-mt-tall]').click();
+  const inProj = await page.evaluate((name) => data.find((p) => p.name === name).tasks.filter((t) => /из встречи$/.test(t.title)).length, proj);
+  if (inProj !== 3) throw new Error('All three tasks must land in the chosen project: ' + inProj);
+  // Задача из встречи: ссылка с названием встречи, открывается в этом же окне.
+  await page.evaluate(() => { const t = data.flatMap((p) => p.tasks).find((x) => x.title === 'Первая из встречи'); window.__linkTask = t.id; });
+  await page.evaluate((p) => { activeProject = p; switchView('tasks'); renderAll(); openTask(window.__linkTask); }, proj);
+  const lnk = page.locator('#dLinks a', { hasText: 'Встреча «Много задач»' });
+  await lnk.waitFor({ timeout: 3000 });
+  const pagesBefore = page.context().pages().length;
+  await lnk.click();
+  await view.locator('.mt-card.open[data-mt="mlocal2"]').waitFor({ timeout: 3000 });
+  if (page.context().pages().length !== pagesBefore) throw new Error('Meeting link must open in the same window');
   // Phone.
   await page.setViewportSize({ width: 390, height: 800 });
   const fits = await page.evaluate(() => document.getElementById('meetingsView').scrollWidth <= document.getElementById('meetingsView').clientWidth + 1);
