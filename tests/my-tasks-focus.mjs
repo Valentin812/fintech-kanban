@@ -134,14 +134,15 @@ try {
   await page.locator('.move-modal-search').fill('Проект из переноса');
   await page.locator('.move-new-project').click();
   await page.waitForFunction(() => data.some((p) => p.name === 'Проект из переноса' && p.tasks.some((t) => t.title === 'Создана из списка')) && !standaloneTasks.some((x) => x.title === 'Создана из списка'), null, { timeout: 3000 });
-  // Ширина списка «Мои задачи» не должна менять ширину быстрых заметок.
-  await page.evaluate(() => { window.myTasksFilter = 'noproject'; switchView('mytasks'); });
-  const widths = async () => page.evaluate(() => ({ list: document.querySelector('#myTasksView .mytask-list')?.getBoundingClientRect().width, notes: document.querySelector('#myTasksView .qn-panel')?.getBoundingClientRect().width }));
-  const w0 = await widths();
-  await page.evaluate(() => window.__listWidth.set(520));
-  const w1 = await widths();
-  console.log('widths', JSON.stringify(w0), JSON.stringify(w1));
-  assert(w0.notes && Math.abs(w1.notes - w0.notes) < 2, 'Quick notes width must not follow the list width: ' + JSON.stringify([w0, w1]));
+  // Быстрые заметки той же ширины, что и список задач — по умолчанию и после изменения ширины.
+  for (const f of ['focus', 'noproject']) {
+    await page.evaluate((f) => { window.myTasksFilter = f; switchView('mytasks'); }, f);
+    for (const w of [0, 600]) {
+      await page.evaluate((w) => window.__listWidth.set(w), w);
+      const g = await page.evaluate(() => ({ list: document.querySelector('#myTasksView .mytask-list').getBoundingClientRect().width, notes: document.querySelector('#myTasksView .qn-panel').getBoundingClientRect().width }));
+      assert(Math.abs(g.list - g.notes) < 2, `Notes width must match the list (${f}, ${w}): ${JSON.stringify(g)}`);
+    }
+  }
   await page.evaluate(() => window.__listWidth.set(0));
   assert(!errors.length, `Browser page errors: ${errors.join('; ')}`);
   console.log('My tasks focus OK: no-project first, pinned, hot/overdue, rest; pin + important saved; subtask form');
