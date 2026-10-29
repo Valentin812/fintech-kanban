@@ -116,6 +116,13 @@ try {
   await page.locator('[data-ai-skip]').waitFor();
   await page.locator('[data-ai-skip]').click();
   if ((await page.evaluate(() => standaloneTasks.filter((t) => t.title === 'Позвонить Азату').length)) !== 1) throw new Error('Skip must not create anything');
+  // Ассистент не создаёт дубль уже существующей задачи.
+  await page.locator('#aiInput').fill('ещё раз');
+  await page.locator('#aiInput').press('Enter');
+  await page.locator('.ai-actions').waitFor();
+  if (!(await page.locator('.ai-actions').textContent()).includes('Уже есть')) throw new Error('Duplicate must be flagged: ' + (await page.locator('.ai-actions').textContent()));
+  await page.locator('[data-ai-apply]').click();
+  if ((await page.evaluate(() => standaloneTasks.filter((t) => t.title === 'Позвонить Азату').length)) !== 1) throw new Error('Assistant must not duplicate an existing task');
   // Server error is shown politely.
   await page.locator('#aiInput').fill('вызови ошибка');
   await page.locator('#aiInput').press('Enter');
