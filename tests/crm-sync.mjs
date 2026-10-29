@@ -287,6 +287,16 @@ try {
   await wait(1500);
   if (await page.locator('.friendly-dialog', { hasText: 'Задача закрыта в CRM' }).count()) throw new Error('No prompt for a closure made in the kanban');
   if (!(await ST('240')).crm.asked) throw new Error('Own closure is marked as handled');
+  // Новая задача без проекта: календарь у срока и галочка «Передать во внешнюю CRM».
+  await page.evaluate(() => openStandaloneTaskCreate());
+  if (!(await page.locator('#standaloneTaskModal .date-btn').count())) throw new Error('Calendar button missing for due date');
+  await page.locator('#standaloneCrm').waitFor({ state: 'visible' });
+  await page.fill('#standaloneTitle', 'Из окна создания');
+  await page.locator('#standaloneCrm').check();
+  await page.click('#confirmStandaloneTask');
+  await until(() => page.locator('.friendly-dialog').count());
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => { document.querySelectorAll('.friendly-dialog').forEach((d) => d.closest('.modal,.friendly-back,body>div')?.remove()); });
   // Удаление карточки: задача в CRM отменяется, карточка не возвращается.
   crm.tasks.push(T({ id: '260', title: 'Удалить с CRM', status: 'active', version: 1 }));
   await page.evaluate(() => { standaloneTasks.push({ id: 9600, title: 'Удалить с CRM', status: 'В работе', start: '', end: '', crm: { id: '260', productId: 7, version: 1, st: 'active', sent: [], cids: [], cseen: 0, cl: { ids: [], tot: 0, done: 0 }, cancelled: false, snap: { title: 'Удалить с CRM', description: '', status: 'В работе', end: '', start: '' } } }); });
