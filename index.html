@@ -1292,7 +1292,7 @@ html.list-w-set[data-layout="rows"] .board .column{max-width:var(--list-w)}
 .crm-mark{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.02em;color:#fff;background:#e2453a;border-radius:6px;padding:1px 6px}
 .crm-badge.off{background:#7b8798;border-color:#7b8798}.crm-badge{display:inline-block;font-size:10.5px;font-weight:700;color:#fff;background:#e2453a;border:1px solid #e2453a;border-radius:6px;padding:0 5px;margin-right:2px;vertical-align:1px;white-space:nowrap}
 .crm-info{margin:6px 0 10px;padding:8px 10px;border-left:3px solid #e2453a;border-radius:6px;background:rgba(226,69,58,.07);font-size:13px;line-height:1.45}
-.crm-create-row{display:flex;align-items:center;gap:8px;margin:2px 0 10px;font-size:14px}.crm-create-row input{width:auto}.crm-info a{color:inherit}
+.crm-fresh{display:inline-block;width:9px;height:9px;border-radius:50%;background:#1f7aec;margin-right:6px;vertical-align:middle;flex:none}.crm-fresh.upd{background:#f08c00}.mytask-group-crmnew h4 .smallbtn{margin-left:8px;font-weight:400}.crm-create-row{display:flex;align-items:center;gap:8px;margin:2px 0 10px;font-size:14px}.crm-create-row input{width:auto}.crm-info a{color:inherit}
 .crm-info a{color:inherit}.crm-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 /* Телефон: кнопка «⋯» у вкладок проекта открывает список всех вкладок, «Встречи» — в панели «Ещё» */
 #meetingsTopButton,#tabsMore,#tabsMoreMenu{display:none}
@@ -1887,8 +1887,9 @@ function renderMyTasks(){
  const noProj=(standaloneTasks||[]).map(t=>({...t,project:''}));
  const pinned=allTasks().filter(t=>t.project&&isPinned(t.project,t.id));
  const focusSections=(()=>{const used=new Set();const take=list=>list.filter(t=>{const k=tkey(t);if(used.has(k))return false;used.add(k);return true});const byDate=(x,y)=>dateKey(x.end).localeCompare(dateKey(y.end))||String(x.title).localeCompare(String(y.title),'ru');
+  const fresh=take([...noProj,...assigned].filter(t=>t.crm&&(t.crm.seen===false||t.crm.upd)&&!isDone(t)).sort((x,y)=>(y.crm.at||0)-(x.crm.at||0)));
   const a=take(noProj.filter(t=>!isDone(t)).sort(byDate)),b=take(pinned.filter(t=>!isDone(t)).sort(byDate)),c=take(assigned.filter(isHot).sort(byDate)),d=take(assigned.filter(t=>!isDone(t)).sort(byDate));
-  return [['noproject','Без проекта',a],['pinned','Закреплённые',b],['hot','Горят и просрочены',c],['rest','Остальные активные',d]]})();
+  return [['crmnew','Новое из CRM',fresh],['noproject','Без проекта',a],['pinned','Закреплённые',b],['hot','Горят и просрочены',c],['rest','Остальные активные',d]]})();
  const counts={focus:focusSections.reduce((n,x)=>n+x[2].length,0),active:assigned.filter(t=>!isDone(t)).length,overdue:assigned.filter(isLate).length,done:assigned.filter(isDone).length,all:assigned.length,pinned:pinned.length,hot:assigned.filter(isHot).length};
  counts.noproject=noProj.filter(t=>!isDone(t)).length;const filter=['focus','noproject','pinned','hot','active','overdue','done','all'].includes(window.myTasksFilter)?window.myTasksFilter:'focus';
  const visible=filter==='focus'?[]:filter==='noproject'?noProj.filter(t=>!isDone(t)):filter==='pinned'?pinned.filter(t=>!isDone(t)):filter==='hot'?assigned.filter(isHot):assigned.filter(t=>filter==='all'||(filter==='active'&&!isDone(t))||(filter==='overdue'&&isLate(t))||(filter==='done'&&isDone(t)));
@@ -2035,6 +2036,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.10.29-15',date:'29.10.2026',title:'CRM: новое сверху и цветная точка',items:['В «Мои задачи» новые задачи из CRM собираются вверху в блоке «Новое из CRM» с синей точкой; оранжевая точка — задача или комментарии изменились в CRM. Точка пропадает, когда вы открыли карточку; есть кнопка «Отметить просмотренным», а на фильтре «CRM» — число новых.']},
  {v:'2026.10.29-14',date:'29.10.2026',title:'Сессия обновляется сама',items:['Если токен входа истёк («JWT expired»), приложение само обновляет сессию и повторяет запрос: встречи из Meeting Hub и другие облачные данные не пропадают, пока вы не перезайдёте.']},
  {v:'2026.10.29-13',date:'29.10.2026',title:'Быстрые заметки по ширине списка',items:['«Мои задачи»: быстрые заметки снова той же ширины, что и список задач (и по умолчанию, и после изменения ширины).']},
  {v:'2026.10.29-12',date:'29.10.2026',title:'Встречи: объединить с Meeting Hub',items:['В своей встрече есть кнопка «Объединить с Meeting Hub»: итог, решения, задачи и расшифровка из Meeting Hub добавляются к вашим заметкам, отдельная запись скрывается. Можно отменить сразу после.']},
@@ -3578,13 +3580,15 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
   // Отменённая в CRM задача уходит в «Готово», в архив не убирается: с ней можно продолжать работать в канбане.
   function merge(t,r,force){
     const s=force?null:t.crm?.snap,v=view(r),was=t.crm||{};
+    // «Изменена»: в CRM поменяли то, чего нет у нас (наши же правки, вернувшиеся из CRM, не считаются).
+    const upd=!!was.upd||!!(t.crm&&s&&((v.title!==s.title&&v.title!==t.title)||(v.description!==s.description&&v.description!==t.description)||(v.status&&v.status!==s.status&&v.status!==t.status)));
     for(const k of ['title','description','end'])if(!s||v[k]!==s[k])t[k]=v[k];
     if(v.start!==undefined&&(!s||v.start!==s.start))t.start=v.start;
     if(v.status&&(!s||v.status!==s.status))t.status=v.status;
     const off=r.status==='cancelled'||!!r.archived;
     if(r.status==='cancelled'&&!was.cancelled){t.status='Готово';if(!t.completedAt)t.completedAt=new Date().toISOString()}
     if(r.assignee)t.owner=(projectMeta.__crmNames__||{})[personKey(r.assignee)]||r.assignee;
-    t.crm={sent:was.sent||[],cids:was.cids||[],cseen:was.cseen||0,cl:was.cl,mine:!!was.mine,pn:was.pn||'',cancelled:off,why:r.status==='cancelled'?'cancelled':(r.archived?'archived':''),st:r.status||'',asked:was.asked||false,id:r.id,productId:r.productId,version:r.version,dueTime:r.dueTime||'',dueTz:r.dueTz||'',requester:r.requester||'',protocolId:r.protocolId||'',comments:r.comments||0,updatedAt:r.updatedAt||'',snap:{title:v.title,description:v.description,status:v.status||t.status,end:v.end,start:v.start!==undefined?v.start:(t.start||'')}}}
+    t.crm={seen:was.seen,at:was.at,upd:upd,sent:was.sent||[],cids:was.cids||[],cseen:was.cseen||0,cl:was.cl,mine:!!was.mine,pn:was.pn||'',cancelled:off,why:r.status==='cancelled'?'cancelled':(r.archived?'archived':''),st:r.status||'',asked:was.asked||false,id:r.id,productId:r.productId,version:r.version,dueTime:r.dueTime||'',dueTz:r.dueTz||'',requester:r.requester||'',protocolId:r.protocolId||'',comments:r.comments||0,updatedAt:r.updatedAt||'',snap:{title:v.title,description:v.description,status:v.status||t.status,end:v.end,start:v.start!==undefined?v.start:(t.start||'')}}}
   // Чек-лист: пункты CRM ↔ чек-лист карточки. Связь — cid и снимок csnap у пункта; c.cl.ids — какие пункты CRM мы уже знаем.
   function mergeCl(t,r){
     const c=t.crm;if(!Array.isArray(r.checklist))return false;
@@ -3601,7 +3605,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     for(const ri of r.checklist)if(!have.has(String(ri.id))&&!prev.has(String(ri.id)))list.push({text:ri.title,done:ri.completed,cid:ri.id,csnap:{text:ri.title,done:ri.completed}});
     t.checklist=list;c.cl={ids:r.checklist.map(i=>String(i.id)),tot:r.clTotal,done:r.clDone};
     return JSON.stringify(list)!==before}
-  function newTask(r){const t={id:freshTaskId(),title:'',start:ru(r.createdAt)||todayRu(),end:'',status:'Очередь',owner:'',description:'',comment:'',link:S.url,linkTitle:'Открыть CRM',mt:'',documents:[],extraLinks:[],source:'crm'};merge(t,r);return t}
+  function newTask(r){const t={id:freshTaskId(),title:'',start:ru(r.createdAt)||todayRu(),end:'',status:'Очередь',owner:'',description:'',comment:'',link:S.url,linkTitle:'Открыть CRM',mt:'',documents:[],extraLinks:[],source:'crm'};merge(t,r);if(Date.now()-(Date.parse(r.createdAt)||0)<7*864e5){t.crm.seen=false;t.crm.at=Date.now()}return t}
   function diff(t){
     const s=t.crm?.snap;if(!s||t.crm.gone||t.crm.cancelled)return null;const f={};
     if((t.title||'')!==(s.title||'')&&String(t.title||'').trim())f.title=t.title;
@@ -3631,7 +3635,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
       if(t.crm.cids.includes(c.id))continue;t.crm.cids.push(c.id);
       const e=`${new Date(c.createdAt).toLocaleString('ru-RU')} — ${c.author?c.author+': ':''}${c.body}`;
       t.crm.sent.push(hash(e));t.comment=(t.comment?t.comment+'\n\n':'')+e;n++}
-    t.crm.cseen=t.crm.comments||0;if(t.crm.cids.length>300)t.crm.cids=t.crm.cids.slice(-300);return n}
+    if(n&&t.crm.seen!==false)t.crm.upd=true;t.crm.cseen=t.crm.comments||0;if(t.crm.cids.length>300)t.crm.cids=t.crm.cids.slice(-300);return n}
   // Изменения чек-листа карточки → CRM: новые пункты, отметки «готово», удалённые пункты.
   async function pushCl(t){
     const c=t.crm;if(!c||c.gone||c.cancelled)return false;
@@ -3756,11 +3760,13 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
         const t=pr?(data.find(p=>p.name===pr)?.tasks||[]).find(x=>String(x.id)===id):(standaloneTasks||[]).find(x=>String(x.id)===id);
         const has=!!t?.crm;if(has)any=true;
         if(has&&!row.querySelector('.crm-badge'))row.querySelector('.mytask-title')?.insertAdjacentHTML('afterbegin',badge(t));
+        if(has&&!row.querySelector('.crm-fresh')&&(t.crm.seen===false||t.crm.upd))row.querySelector('.mytask-title')?.insertAdjacentHTML('afterbegin',`<span class="crm-fresh${t.crm.seen===false?'':' upd'}" title="${t.crm.seen===false?'Новая задача из CRM':'Изменена в CRM'}" role="img" aria-label="${t.crm.seen===false?'Новая':'Изменена'}"></span>`);
         row.style.display=(S.only&&!has)?'none':''});
       my.querySelectorAll('.mytask-group').forEach(g=>{g.style.display=[...g.querySelectorAll('.mytask-row')].every(r=>r.style.display==='none')?'none':''});
+      const gh=my.querySelector('.mytask-group-crmnew h4');if(gh&&!gh.querySelector('[data-crm-seen-all]'))gh.insertAdjacentHTML('beforeend',' <button type="button" class="smallbtn" data-crm-seen-all="1">Отметить просмотренным</button>');
       const fl=my.querySelector('.mytask-filters');
       if(fl&&!fl.querySelector('[data-crm-only]')&&(enabled()||any||S.only)){const b=document.createElement('button');b.type='button';b.className='btn quick-filter';b.dataset.crmOnly='1';fl.appendChild(b)}
-      const ob=fl?.querySelector('[data-crm-only]');if(ob){ob.textContent='🔗 CRM · '+crmTasks().length;ob.classList.toggle('active',S.only);ob.setAttribute('aria-pressed',String(S.only))}}}
+      const ob=fl?.querySelector('[data-crm-only]');if(ob){ob.textContent='🔗 CRM · '+crmTasks().length+(crmTasks().filter(x=>x.crm.seen===false||x.crm.upd).length?' · '+crmTasks().filter(x=>x.crm.seen===false||x.crm.upd).length+' новых':'');ob.classList.toggle('active',S.only);ob.setAttribute('aria-pressed',String(S.only))}}}
   function drawerInfo(t,shared){
     let box=$('crmInfo');const head=document.querySelector('#drawer .drawerhead');
     const canLink=!!t&&!t.crm&&enabled()&&signed()&&!shared&&!t.parent;
@@ -3771,7 +3777,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     box.innerHTML=`<button type="button" class="btn" data-crm-detach="1" aria-pressed="true" title="Снять метку">☑ CRM</button> Задача №${esc(c.id)}${c.pn?` · проект CRM: ${esc(c.pn)}`:''}${c.requester?` · от кого: ${esc(c.requester)}`:''}${c.protocolId?` · протокол №${esc(c.protocolId)}`:''}${SL[c.st]?` · статус в CRM: ${SL[c.st]}`:''}${c.dueTime?` · время срока ${esc(c.dueTime)}`:''}${c.comments?` · комментариев: ${c.comments}`:''}${offText(c)?` · <b>${offText(c)}</b>`:''}${S.url?` · <a href="${esc(S.url)}" target="_blank" rel="noopener">открыть CRM ↗</a>`:''}${open?`<div class="crm-actions"><button type="button" class="btn" data-crm-done="1">✓ Выполнено в CRM</button><button type="button" class="btn" data-crm-cancel="1">Отмена в CRM (в архив)</button></div>`:''}`}
   const showInfo=()=>{try{const t=currentDrawerTask();const sh=selectedStandaloneId===null&&!!active()?.shared;drawerInfo(t,sh)}catch(e){}};
   const ot=window.openTask;if(typeof ot==='function')window.openTask=function(){const r=ot.apply(this,arguments);showInfo();return r};
-  const os2=window.openStandaloneTask;if(typeof os2==='function')window.openStandaloneTask=function(){const r=os2.apply(this,arguments);showInfo();return r};
+  const os2=window.openStandaloneTask;if(typeof os2==='function')window.openStandaloneTask=function(){const r=os2.apply(this,arguments);try{const ct=currentDrawerTask();if(ct?.crm&&(ct.crm.seen===false||ct.crm.upd)){ct.crm.seen=true;ct.crm.upd=false;save();try{renderMyTasks()}catch(e){}}}catch(e){}showInfo();return r};
   const cd=window.closeDrawer;if(typeof cd==='function')window.closeDrawer=function(){const r=cd.apply(this,arguments);try{drawerInfo(null)}catch(e){}return r};
   const rb=window.renderBoard;if(typeof rb==='function')window.renderBoard=function(){const r=rb.apply(this,arguments);try{decorate()}catch(e){console.warn('CRM decorate failed',e)}return r};
   const rm=window.renderMyTasks;if(typeof rm==='function')window.renderMyTasks=function(){const r=rm.apply(this,arguments);try{decorate()}catch(e){console.warn('CRM decorate failed',e)}return r};
@@ -3876,6 +3882,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
         else toast('CRM не приняла: '+e.message)}
       finally{S.busy=false}}})}
   document.addEventListener('click',e=>{
+    if(e.target.closest('[data-crm-seen-all]')){e.preventDefault();e.stopPropagation();crmTasks().forEach(t=>{if(t.crm){t.crm.seen=true;t.crm.upd=false}});save();try{renderMyTasks()}catch(err){}return}
     if(e.target.closest('[data-crm-only]')){S.only=!S.only;decorate();return}
     if(e.target.closest('[data-crm-attach]')){attach();return}
     if(e.target.closest('[data-crm-done]')){closeCrm('done');return}
