@@ -115,6 +115,7 @@ try {
         if (f.status !== undefined) t.status = f.status;
         if (f.due !== undefined) t.due = f.due;
         if (f.start !== undefined) t.start = f.start;
+        if (f.additionalAssigneeIds !== undefined) { t.additional = f.additionalAssigneeIds; t.additionalNames = f.additionalAssigneeIds.map((i) => ({ '102': 'Лена', '103': 'Андрей' }[i])); }
         t.version++;
         await ok({ task: listView(t) });
         return;
@@ -144,7 +145,7 @@ try {
       if (b.action === 'operators') { await ok({ operators: [{ id: '102', name: 'Лена' }, { id: '103', name: 'Андрей' }] }); return; }
       if (b.action === 'create') {
         crm.created = b;
-        const t = T({ id: '300', productId: b.productId, title: b.title, description: b.description, status: b.status, version: 1 + b.checklist.length, due: b.due, start: b.start, assignee: b.assignedTo === '102' ? 'Лена' : 'Валентин', checklist: b.checklist.map((title, i) => ({ id: String(500 + i), title, completed: false })) });
+        const t = T({ id: '300', productId: b.productId, title: b.title, description: b.description, status: b.status, version: 1 + b.checklist.length, due: b.due, start: b.start, assignee: b.assignedTo === '102' ? 'Лена' : 'Валентин', assigneeId: b.assignedTo || '101', additional: b.additionalAssigneeIds || [], additionalNames: (b.additionalAssigneeIds || []).map((i) => ({ '102': 'Лена', '103': 'Андрей' }[i])), checklist: b.checklist.map((title, i) => ({ id: String(500 + i), title, completed: false })) });
         sync(t); crm.tasks.push(t);
         await ok({ task: t, duplicate: false, checklistFailed: false });
         return;
@@ -363,22 +364,31 @@ try {
   await dlg.locator('[name=f0]').selectOption('8');
   await dlg.locator('button[type=submit]').click();
   await dlg.locator('[name=f0]').selectOption('102');
+  if (!(await dlg.locator('input[name=f1][value="102"]').isDisabled())) throw new Error('The main assignee must not be selectable as additional');
+  await dlg.locator('input[name=f1][value="103"]').check();
   await page.locator('.friendly-dialog button[type=submit]').click();
   await until(() => !!crm.created);
   const cr = crm.created;
-  if (cr.title !== 'Сверить смету' || cr.productId !== 8 || cr.assignedTo !== '102' || cr.due !== '2026-11-10' || cr.start !== '2026-10-20' || cr.status !== 'active' || cr.description !== 'Материалы и работы' || cr.checklist.join('|') !== 'Материалы|Работы' || !/^[A-Za-z0-9_-]{12,128}$/.test(cr.requestKey)) throw new Error('Create: ' + JSON.stringify(cr));
+  if (cr.title !== 'Сверить смету' || cr.productId !== 8 || cr.assignedTo !== '102' || JSON.stringify(cr.additionalAssigneeIds) !== '["103"]' || cr.due !== '2026-11-10' || cr.start !== '2026-10-20' || cr.status !== 'active' || cr.description !== 'Материалы и работы' || cr.checklist.join('|') !== 'Материалы|Работы' || !/^[A-Za-z0-9_-]{12,128}$/.test(cr.requestKey)) throw new Error('Create: ' + JSON.stringify(cr));
   await until(async () => !!(await ST('300')));
   const n300 = await ST('300');
-  if (n300.crm.pn !== 'Продажи' || n300.owner !== 'Лена' || n300.checklist.map((i) => i.cid).join(',') !== '500,501' || n300.source !== 'crm') throw new Error('Linked after create: ' + JSON.stringify(n300));
+  if (n300.crm.pn !== 'Продажи' || n300.owner !== 'Лена, Андрей' || n300.checklist.map((i) => i.cid).join(',') !== '500,501' || n300.source !== 'crm') throw new Error('Linked after create: ' + JSON.stringify(n300));
   await until(async () => (await page.locator('#crmInfo').textContent()).includes('№300'));
+  if (!(await page.locator('#crmInfo').textContent()).includes('доп. ответственные: Андрей')) throw new Error('Additional assignees must be shown in the CRM block');
+  // Изменить состав доп. ответственных из карточки: снять Андрея.
+  await page.locator('[data-crm-add]').click();
+  await page.locator('.friendly-dialog input[name=f0][value="103"]').uncheck();
+  await page.locator('.friendly-dialog button[type=submit]').click();
+  await until(() => crm.calls.some((c) => c.action === 'update' && c.id === '300' && JSON.stringify(c.fields.additionalAssigneeIds) === '[]'));
+  await until(async () => (await ST('300')).owner === 'Лена');
   // Отметка, поставленная локально до отправки, уходит следующим шагом (в CRM пункты создаются невыполненными).
   await until(() => crm.calls.some((c) => c.action === 'checklist' && c.op === 'set' && c.itemId === '501' && c.completed === true), 12000);
   // Снять метку: выбор «Отмена», задача в CRM закрыта, карточка остаётся без связи.
   await page.locator('[data-crm-detach]').click();
   await page.locator('.friendly-dialog [name=f0]').selectOption('cancelled');
   await page.locator('.friendly-dialog button[type=submit]').click();
-  await until(() => crm.calls.some((c) => c.action === 'update' && c.id === '300'));
-  const un = crm.calls.find((c) => c.action === 'update' && c.id === '300');
+  await until(() => crm.calls.some((c) => c.action === 'update' && c.id === '300' && c.fields.status));
+  const un = crm.calls.find((c) => c.action === 'update' && c.id === '300' && c.fields.status);
   if (un.fields.status !== 'cancelled' || un.productId !== 8) throw new Error('Detach update: ' + JSON.stringify(un));
   await until(() => page.evaluate(() => { const t = standaloneTasks.find((x) => x.id === 9100); return !!t && !t.crm && !t.source; }));
   if (await page.evaluate(() => standaloneTasks.find((x) => x.id === 9100).checklist.some((i) => i.cid || i.csnap))) throw new Error('Checklist links must be removed');
