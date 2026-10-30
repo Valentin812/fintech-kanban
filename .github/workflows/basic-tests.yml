@@ -85,6 +85,9 @@ jobs:
       - name: Run My tasks focus browser test
         run: node tests/my-tasks-focus.mjs
 
+      - name: Run My tasks reorder browser test
+        run: node tests/my-tasks-reorder.mjs
+
       - name: Run Releases tab browser test
         run: node tests/releases-tab.mjs
 
