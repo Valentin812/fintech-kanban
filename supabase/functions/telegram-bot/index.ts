@@ -57,7 +57,10 @@ const HELP_TEXT =
   "• Срок: «до 25.10», «до 25.10.2026», «сегодня», «завтра» или «послезавтра».\n" +
   "• Проект: добавь #название, например #Автооплата.\n" +
   "• Быстрая заметка (дело на пару часов): /заметка текст или «заметка: текст».\n" +
-  "• Нумерованный список («1. … 2. … 3. …») — каждая строка станет отдельной задачей. С заголовком «Быстрые заметки» — отдельными заметками.\n" +
+  "• «1 задача: …» — всё сообщение станет одной задачей (первая строка — название, остальное — описание).\n" +
+  "• «Задачи: …», «3 задачи …», нумерация или список с «-» — каждая строка отдельной задачей. «Заметки: …» — отдельными заметками.\n" +
+  "• Несколько строк без этих слов — Джарвис спросит кнопками: одна задача, несколько или заметки.\n" +
+  "• После задачи кнопки «📝 В заметки» и «📁 В проект»; без выбора она остаётся в «Мои задачи». Напиши «в проект» — сразу покажу список проектов.\n" +
   "• Скриншот или фото: Джарвис распознает текст на картинке и сделает задачу (лучше отправлять как обычное фото, не файлом). Подпись к картинке — твой заголовок, #проект и срок тоже работают.\n" +
   "• Голосовое: Джарвис расшифрует его и сделает задачу, запись приложится к задаче.\n" +
   "• После картинки или голосового Джарвис спросит, в какой проект положить задачу.\n" +
@@ -565,6 +568,40 @@ export function parseListMessage(raw: string): { kind: "tasks" | "notes"; items:
   return { kind: notes ? "notes" : "tasks", items: items.slice(0, 20) };
 }
 
+// Явный режим в начале сообщения:
+// «1 задача: …» — всё сообщение одна задача; «задачи: …», «3 задачи …», «список: …» — по строкам;
+// «заметки: …» — каждая строка быстрая заметка.
+export function splitItems(body: string): string[] {
+  return String(body ?? "").replace(/\r\n?/g, "\n").split("\n")
+    .map((l) => l.replace(/^\s*(?:[-•*–—]|\d{1,2}[.)])\s+/, "").trim())
+    .filter(Boolean).slice(0, 20);
+}
+export type MessageKind =
+  | { kind: "plain" }
+  | { kind: "one"; body: string }
+  | { kind: "many"; items: string[] }
+  | { kind: "notes"; items: string[] }
+  | { kind: "ask"; lines: number };
+export function classifyMessage(raw: string): MessageKind {
+  const text = String(raw ?? "").replace(/\r\n?/g, "\n").trim();
+  const one = text.match(/^(?:(?:1|одна|одну)\s+задач[ауи]?\s*[:：—-]?|задача\s*[:：—])\s*(\S[\s\S]*)$/i);
+  if (one) return { kind: "one", body: one[1].trim() };
+  const notes = text.match(/^(?:быстрые\s+)?заметки\s*[:：—-]\s*(\S[\s\S]*)$/i);
+  if (notes) { const items = splitItems(notes[1]); return items.length ? { kind: "notes", items } : { kind: "plain" }; }
+  const many = text.match(/^(?:задачи\s*[:：—-]?|список(?:\s+задач)?\s*[:：—-]?|несколько\s+задач\s*[:：—-]?|(?:[2-9]|\d{2})\s+задач[иа]?\s*[:：—-]?)\s*(\S[\s\S]*)$/i);
+  if (many) { const items = splitItems(many[1]); return items.length > 1 ? { kind: "many", items } : { kind: "one", body: many[1].trim() }; }
+  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+  if (lines.length >= 2) {
+    if (lines.every((l) => /^(?:[-•*–—])\s+\S/.test(l))) return { kind: "many", items: splitItems(text) };
+    return { kind: "ask", lines: lines.length };
+  }
+  return { kind: "plain" };
+}
+// «в проект» без названия — человек хочет выбрать проект сразу.
+export function wantsProject(raw: string): boolean {
+  return /(?:^|\s)в\s+проект(?:$|[\s,.;!?])/iu.test(String(raw ?? ""));
+}
+
 // ---- Диалог с ИИ: разбор свободного текста в задачи/заметки с уточняющими вопросами ----
 export type DialogItem = { title: string; description: string; due: string; project: string };
 export type DialogReply = { kind: "task" | "note" | "ask" | "chat"; items: DialogItem[]; reply: string };
@@ -681,37 +718,37 @@ async function saveTask(
   const fileNote = attachment ? (attachment.kind === "voice" ? "\n🎙 Голосовое приложено к задаче." : "\n🖼 Картинка приложена к задаче.") : "";
   if (!task.projectHint && options.askProject) {
     const choices = [...new Set(await projectNamesFor(userId))].slice(0, MAX_PROJECT_BUTTONS);
-    if (choices.length) {
-      const { data: row, error } = await db.from("telegram_inbox").insert({
-        user_id: userId,
-        title: task.title,
-        description: task.description,
-        due: task.due,
-        project_hint: "",
-        attachment,
-        status: "pending",
-        choices,
-      }).select("id").single();
-      if (error || !row) {
-        console.error("Inbox insert failed:", error?.message);
-        await sendMessage(chatId, "Не удалось создать задачу. Попробуй ещё раз позже.");
-        return;
-      }
-      const buttons = choices.map((name, i) => ({ text: name.length > 40 ? name.slice(0, 39) + "…" : name, callback_data: `p:${row.id}:${i}` }));
-      const rows: { text: string; callback_data: string }[][] = [];
-      for (let i = 0; i < buttons.length; i += 2) rows.push(buttons.slice(i, i + 2));
-      rows.push([{ text: "📥 Оставить в «Мои задачи»", callback_data: `p:${row.id}:m` }]);
-      await sendMessage(
-        chatId,
-        `${heading}: ${task.title}` +
-          (task.due ? `\nСрок: ${task.due}` : "") +
-          (task.description ? `\nОписание: ${task.description.length > 300 ? task.description.slice(0, 299) + "…" : task.description}` : "") +
-          fileNote +
-          "\n\nВ какой проект добавить? Если не выбрать за 10 минут, задача попадёт в «Мои задачи».",
-        { reply_markup: { inline_keyboard: rows } },
-      );
+    const { data: row, error } = await db.from("telegram_inbox").insert({
+      user_id: userId,
+      title: task.title,
+      description: task.description,
+      due: task.due,
+      project_hint: "",
+      attachment,
+      status: "pending",
+      choices,
+    }).select("id").single();
+    if (error || !row) {
+      console.error("Inbox insert failed:", error?.message);
+      await sendMessage(chatId, "Не удалось создать задачу. Попробуй ещё раз позже.");
       return;
     }
+    // По умолчанию — «Мои задачи» или заметка; проекты показываем только по просьбе («в проект»).
+    const direct = choices.length && wantsProject(`${task.title} ${task.description}`);
+    const rows = direct
+      ? projectRows("p", row.id, choices)
+      : [[{ text: "📝 В заметки", callback_data: `p:${row.id}:n` }, ...(choices.length ? [{ text: "📁 В проект", callback_data: `p:${row.id}:v` }] : [])],
+         [{ text: "📥 Оставить в «Мои задачи»", callback_data: `p:${row.id}:m` }]];
+    await sendMessage(
+      chatId,
+      `${heading}: ${task.title}` +
+        (task.due ? `\nСрок: ${task.due}` : "") +
+        (task.description ? `\nОписание: ${task.description.length > 300 ? task.description.slice(0, 299) + "…" : task.description}` : "") +
+        fileNote +
+        (direct ? "\n\nВыбери проект. Если не выбрать за 10 минут, задача попадёт в «Мои задачи»." : "\n\nПо умолчанию — «Мои задачи». Можно переложить в заметки или проект."),
+      { reply_markup: { inline_keyboard: rows } },
+    );
+    return;
   }
   if (task.projectHint) {
     const match = matchProject(task.projectHint, await projectNamesFor(userId));
@@ -803,7 +840,7 @@ async function handleDialog(chatId: number, userId: string, text: string): Promi
   }
 }
 
-async function handleTaskMessage(chatId: number, providerUserId: string, text: string) {
+async function handleTaskMessage(chatId: number, providerUserId: string, text: string, messageId = 0) {
   if (/^\/help(?:@\w+)?$/i.test(text)) {
     await sendMessage(chatId, HELP_TEXT);
     return;
@@ -840,8 +877,27 @@ async function handleTaskMessage(chatId: number, providerUserId: string, text: s
     await handleListMessage(chatId, providerUserId, list);
     return;
   }
+  const cls = classifyMessage(text);
+  if (cls.kind === "many" || cls.kind === "notes") {
+    await handleListMessage(chatId, providerUserId, { kind: cls.kind === "many" ? "tasks" : "notes", items: cls.items });
+    return;
+  }
   const userId = await authorize(chatId, providerUserId);
   if (!userId) return;
+  if (cls.kind === "one") {
+    await saveTask(chatId, userId, parseTaskText(cls.body), "✅ Задача", { askProject: true });
+    return;
+  }
+  if (cls.kind === "ask") {
+    await sendMessage(chatId, "В сообщении несколько строк. Как сохранить?", {
+      ...(messageId ? { reply_parameters: { message_id: messageId, allow_sending_without_reply: true } } : {}),
+      reply_markup: { inline_keyboard: [
+        [{ text: "📌 Одна задача", callback_data: "m:one" }, { text: `📋 ${cls.lines} задач(и)`, callback_data: "m:many" }],
+        [{ text: "📝 Заметки", callback_data: "m:notes" }],
+      ] },
+    });
+    return;
+  }
   if (await handleDialog(chatId, userId, text)) return;
   await saveTask(chatId, userId, parseTaskText(text), "✅ Задача", { askProject: true });
 }
@@ -889,12 +945,12 @@ async function handleListMessage(chatId: number, providerUserId: string, list: {
   let text = `✅ Задач создано: ${tasks.length}\n` + lines.join("\n");
   const extra: Record<string, unknown> = {};
   if (firstId !== null) {
-    const buttons = choices.map((name, i) => ({ text: name.length > 40 ? name.slice(0, 39) + "…" : name, callback_data: `b:${firstId}:${i}` }));
-    const rows: { text: string; callback_data: string }[][] = [];
-    for (let i = 0; i < buttons.length; i += 2) rows.push(buttons.slice(i, i + 2));
-    rows.push([{ text: "📥 Оставить в «Мои задачи»", callback_data: `b:${firstId}:m` }]);
+    const direct = wantsProject(tasks.map((t) => t.title).join(" "));
+    const rows = direct
+      ? projectRows("b", firstId, choices)
+      : [[{ text: "📁 В проект", callback_data: `b:${firstId}:v` }], [{ text: "📥 Оставить в «Мои задачи»", callback_data: `b:${firstId}:m` }]];
     extra.reply_markup = { inline_keyboard: rows };
-    text += `\n\nВ какой проект добавить${decided.length ? " задачи без #проекта" : " их"}? Если не выбрать за 10 минут, они попадут в «Мои задачи».`;
+    text += `\n\n${direct ? "Выбери проект" : "По умолчанию — «Мои задачи». Можно выбрать проект"}${decided.length ? " для задач без #проекта" : ""}. Если не выбрать за 10 минут, они попадут в «Мои задачи».`;
   } else {
     text += "\n\nПоявятся в Kanban, как только приложение будет открыто.";
   }
@@ -988,10 +1044,19 @@ async function answerCallback(id: string, text: string) {
   }).catch(() => {});
 }
 
-export function parseProjectCallback(data: string): { inboxId: number; choice: number | "mine"; batch: boolean } | null {
-  const m = String(data ?? "").match(/^([pb]):(\d{1,18}):(m|\d{1,2})$/);
+export function parseProjectCallback(data: string): { inboxId: number; choice: number | "mine" | "note" | "view"; batch: boolean } | null {
+  const m = String(data ?? "").match(/^([pb]):(\d{1,18}):(m|n|v|\d{1,2})$/);
   if (!m) return null;
-  return { inboxId: Number(m[2]), choice: m[3] === "m" ? "mine" : Number(m[3]), batch: m[1] === "b" };
+  const c = m[3] === "m" ? "mine" : m[3] === "n" ? "note" : m[3] === "v" ? "view" : Number(m[3]);
+  return { inboxId: Number(m[2]), choice: c, batch: m[1] === "b" };
+}
+
+function projectRows(prefix: "p" | "b", id: number, choices: string[]) {
+  const buttons = choices.map((name, i) => ({ text: name.length > 40 ? name.slice(0, 39) + "…" : name, callback_data: `${prefix}:${id}:${i}` }));
+  const rows: { text: string; callback_data: string }[][] = [];
+  for (let i = 0; i < buttons.length; i += 2) rows.push(buttons.slice(i, i + 2));
+  rows.push([{ text: "📥 Оставить в «Мои задачи»", callback_data: `${prefix}:${id}:m` }]);
+  return rows;
 }
 
 async function handleProjectChoice(query: any) {
@@ -1003,10 +1068,40 @@ async function handleProjectChoice(query: any) {
   }
   const { data: account } = await db.from("messenger_accounts").select("user_id")
     .eq("provider", "telegram").eq("provider_user_id", String(query.from.id)).maybeSingle();
-  const { data: row } = await db.from("telegram_inbox").select("id,user_id,title,status,consumed_at,choices,created_at")
+  const { data: row } = await db.from("telegram_inbox").select("id,user_id,title,description,status,consumed_at,choices,created_at")
     .eq("id", parsed.inboxId).maybeSingle();
   if (!account || !row || row.user_id !== account.user_id) {
     await answerCallback(query.id, "Эта задача не найдена.");
+    return;
+  }
+  if (parsed.choice === "view") {
+    await answerCallback(query.id, "Выбери проект");
+    if (chatId && query?.message?.message_id) {
+      await fetch(telegramApi("editMessageReplyMarkup"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, message_id: query.message.message_id, reply_markup: { inline_keyboard: projectRows(parsed.batch ? "b" : "p", row.id, row.choices ?? []) } }),
+      }).catch(() => {});
+    }
+    return;
+  }
+  if (parsed.choice === "note") {
+    if (parsed.batch || row.consumed_at || row.status !== "pending") {
+      await answerCallback(query.id, "Уже в Kanban");
+      return;
+    }
+    const noteTitle = [row.title, row.description].filter(Boolean).join(" — ").replace(/\s+/g, " ").trim().slice(0, 300);
+    const { data: updated } = await db.from("telegram_inbox").update({ title: noteTitle, description: "", due: "", project_hint: "__note__", status: "ready" })
+      .eq("id", row.id).eq("status", "pending").is("consumed_at", null).select("id");
+    await answerCallback(query.id, updated?.length ? "→ Быстрые заметки" : "Уже в Kanban");
+    if (chatId && query?.message?.message_id) {
+      await fetch(telegramApi("editMessageReplyMarkup"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, message_id: query.message.message_id, reply_markup: { inline_keyboard: [] } }),
+      }).catch(() => {});
+      if (updated?.length) await sendMessage(chatId, `📝 Заметка: ${noteTitle}\n\nПоявится в «Быстрых заметках», как только приложение будет открыто.`);
+    }
     return;
   }
   const name = parsed.choice === "mine" ? "" : (row.choices ?? [])[parsed.choice] ?? null;
@@ -1042,6 +1137,32 @@ async function handleProjectChoice(query: any) {
   }
 }
 
+async function handleModeChoice(query: any) {
+  const chatId = query?.message?.chat?.id;
+  const original = String(query?.message?.reply_to_message?.text ?? "").trim();
+  const mode = String(query?.data ?? "").slice(2);
+  if (!chatId || !query?.from?.id || !original || !["one", "many", "notes"].includes(mode)) {
+    await answerCallback(query?.id, "Кнопка устарела. Отправь сообщение ещё раз.");
+    return;
+  }
+  await answerCallback(query.id, "Принято");
+  if (query?.message?.message_id) {
+    await fetch(telegramApi("editMessageReplyMarkup"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, message_id: query.message.message_id, reply_markup: { inline_keyboard: [] } }),
+    }).catch(() => {});
+  }
+  const providerUserId = String(query.from.id);
+  if (mode === "one") {
+    const userId = await authorize(chatId, providerUserId);
+    if (userId) await saveTask(chatId, userId, parseTaskText(original), "✅ Задача", { askProject: true });
+    return;
+  }
+  const items = splitItems(original);
+  await handleListMessage(chatId, providerUserId, { kind: mode === "many" ? "tasks" : "notes", items });
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
@@ -1060,6 +1181,15 @@ Deno.serve(async (req) => {
     });
 
     const result = await response.json();
+    // Меню команд бота (кнопка «Меню» в Telegram).
+    await fetch(telegramApi("setMyCommands"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ commands: [
+        { command: "note", description: "Быстрая заметка: /note текст" },
+        { command: "help", description: "Как создавать задачи и заметки" },
+      ] }),
+    }).catch(() => {});
     return Response.json(result, { status: response.ok ? 200 : 502 });
   }
 
@@ -1080,7 +1210,8 @@ Deno.serve(async (req) => {
   ensureCallbackUpdates();
 
   if (update?.callback_query) {
-    await handleProjectChoice(update.callback_query);
+    if (String(update.callback_query.data ?? "").startsWith("m:")) await handleModeChoice(update.callback_query);
+    else await handleProjectChoice(update.callback_query);
     return new Response("OK");
   }
 
@@ -1129,7 +1260,7 @@ Deno.serve(async (req) => {
   // Anything that is not a link code is a new task from a linked user.
   const isLinkCode = !!startMatch || LINK_CODE.test(text);
   if (!isLinkCode) {
-    await handleTaskMessage(chatId, String(telegramUser.id), text);
+    await handleTaskMessage(chatId, String(telegramUser.id), text, Number(message?.message_id ?? 0));
     return new Response("OK");
   }
 
