@@ -12,7 +12,7 @@ assert.ok(start > 0 && end > start, 'parseTaskText section not found in the bot 
 const dir = await mkdtemp(join(tmpdir(), 'bot-parse-'));
 const file = join(dir, 'parse.ts');
 await writeFile(file, source.slice(start, end));
-const { parseTaskText: p, parseImageReply: img, ocrTextToTask: ocr, parseNoteCommand: note, parseListMessage: listMsg, parseDialogReply: dlg, dialogSystemPrompt: dlgPrompt } = await import(pathToFileURL(file).href);
+const { parseTaskText: p, parseImageReply: img, ocrTextToTask: ocr, parseNoteCommand: note, parseListMessage: listMsg, parseDialogReply: dlg, dialogSystemPrompt: dlgPrompt, classifyMessage: cls, wantsProject, splitItems } = await import(pathToFileURL(file).href);
 const td = (s) => { const r = p(s); return [r.title, r.description, r.due]; };
 
 // The message that started it: dictated, no punctuation.
@@ -95,3 +95,18 @@ assert.equal(dlg('просто текст'), null);
 assert.equal(dlg('{"kind":"note","items":' + JSON.stringify(Array.from({ length: 30 }, () => ({ title: 'n' }))) + '}').items.length, 10);
 assert.match(dlgPrompt(['Альфа'], '2026-10-27'), /Альфа/);
 console.log('Telegram list message OK');
+
+// Hybrid modes: explicit words, bullets, or a question for ambiguous multi-line text.
+assert.deepEqual(cls('1 задача: позвонить в банк\nуточнить тарифы'), { kind: 'one', body: 'позвонить в банк\nуточнить тарифы' });
+assert.deepEqual(cls('Одна задача — подготовить отчёт\nсобрать данные'), { kind: 'one', body: 'подготовить отчёт\nсобрать данные' });
+assert.deepEqual(cls('задачи: позвонить в банк\nподготовить отчёт'), { kind: 'many', items: ['позвонить в банк', 'подготовить отчёт'] });
+assert.deepEqual(cls('3 задачи\n- а\n- б\n- в'), { kind: 'many', items: ['а', 'б', 'в'] });
+assert.deepEqual(cls('заметки: позвонить\nкупить воду'), { kind: 'notes', items: ['позвонить', 'купить воду'] });
+assert.deepEqual(cls('- а\n- б'), { kind: 'many', items: ['а', 'б'] });
+assert.deepEqual(cls('Позвонить в банк\nуточнить тарифы'), { kind: 'ask', lines: 2 });
+assert.deepEqual(cls('Позвонить в банк завтра'), { kind: 'plain' });
+assert.deepEqual(cls('задачи: одна'), { kind: 'one', body: 'одна' });
+assert.deepEqual(splitItems('1) а\n• б\n\nв'), ['а', 'б', 'в']);
+assert.equal(wantsProject('Позвонить в банк в проект'), true);
+assert.equal(wantsProject('Сдать отчёт в проектный офис'), false);
+console.log('telegram hybrid modes ok');
