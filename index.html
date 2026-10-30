@@ -1294,7 +1294,7 @@ html.list-w-set[data-layout="rows"] .board .column{max-width:var(--list-w)}
 .crm-mark{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.02em;color:#fff;background:#e2453a;border-radius:6px;padding:1px 6px}
 .crm-badge.off{background:#7b8798;border-color:#7b8798}.crm-badge{display:inline-block;font-size:10.5px;font-weight:700;color:#fff;background:#e2453a;border:1px solid #e2453a;border-radius:6px;padding:0 5px;margin-right:2px;vertical-align:1px;white-space:nowrap}
 .crm-info{margin:6px 0 10px;padding:8px 10px;border-left:3px solid #e2453a;border-radius:6px;background:rgba(226,69,58,.07);font-size:13px;line-height:1.45}
-.mytask-dot{display:none}.crm-fresh{display:inline-block;width:9px;height:9px;border-radius:50%;background:#1f7aec;margin-right:6px;vertical-align:middle;flex:none}.crm-fresh.upd{background:#f08c00}.mytask-group-crmnew h4 .smallbtn{margin-left:8px;font-weight:400}.crm-create-row{display:flex;align-items:center;gap:8px;margin:2px 0 10px;font-size:14px}.crm-create-row input{width:auto}.crm-info a{color:inherit}
+.crm-checks{display:grid;grid-template-columns:1fr 1fr;gap:4px 14px;max-height:220px;overflow:auto;padding:6px 8px;border:1px solid var(--line,#d7deea);border-radius:10px}.crm-check{display:flex;align-items:center;gap:6px;font-size:14px}.crm-check input{width:auto}.mytask-dot{display:none}.crm-fresh{display:inline-block;width:9px;height:9px;border-radius:50%;background:#1f7aec;margin-right:6px;vertical-align:middle;flex:none}.crm-fresh.upd{background:#f08c00}.mytask-group-crmnew h4 .smallbtn{margin-left:8px;font-weight:400}.crm-create-row{display:flex;align-items:center;gap:8px;margin:2px 0 10px;font-size:14px}.crm-create-row input{width:auto}.crm-info a{color:inherit}
 .crm-info a{color:inherit}.crm-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 /* Телефон: кнопка «⋯» у вкладок проекта открывает список всех вкладок, «Встречи» — в панели «Ещё» */
 #meetingsTopButton,#tabsMore,#tabsMoreMenu{display:none}
@@ -2090,6 +2090,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.10.30-03',date:'30.10.2026',title:'CRM: дополнительные ответственные',items:['При отправке задачи в CRM можно выбрать дополнительных ответственных (CRM их уведомит). В карточке связанной задачи — кнопка «👥 Доп. ответственные…», а имена видны в блоке CRM и в поле «Ответственный».']},
  {v:'2026.10.30-02',date:'30.10.2026',title:'Мои задачи: порядок перетаскиванием',items:['У каждой задачи слева значок ⠿: потяните его вверх или вниз, чтобы поставить задачу на своё место. Порядок запоминается для каждого списка.','С клавиатуры: поставьте фокус на ⠿ и нажмите стрелку вверх или вниз.','Новые задачи появляются в начале списка, пока вы их не переставите.']},
  {v:'2026.10.29-20',date:'29.10.2026',title:'Встречи: все задачи в один проект',items:['Ассистент больше не создаёт дубли: если задача с таким названием уже есть на доске (например, из этой встречи), он её пропускает, а в запрос «Разобрать с ИИ» добавляется список уже созданных задач.','У задачи из встречи ссылка называется «Встреча «название»» и открывается в этом же окне, а не в новой вкладке.','Над списком задач встречи (своей и из Meeting Hub) есть выбор «Все задачи в проект»: один выбор проставляет проект всем ещё не добавленным задачам, дальше «Добавить все». В Meeting Hub «Все задачи на доску» теперь учитывает выбранный у каждой задачи проект.']},
  {v:'2026.10.29-18',date:'29.10.2026',title:'Ассистент: понятный список действий',items:['В блоке «Предлагаю сделать» задачи встречи, подзадачи и изменения встречи теперь идут отдельными строками, а не одной длинной строкой через «;».']},
@@ -3664,8 +3665,8 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     if(v.status&&(!s||v.status!==s.status))t.status=v.status;
     const off=r.status==='cancelled'||!!r.archived;
     if(r.status==='cancelled'&&!was.cancelled){t.status='Готово';if(!t.completedAt)t.completedAt=new Date().toISOString()}
-    if(r.assignee)t.owner=(projectMeta.__crmNames__||{})[personKey(r.assignee)]||r.assignee;
-    t.crm={seen:was.seen,at:was.at,upd:upd,sent:was.sent||[],cids:was.cids||[],cseen:was.cseen||0,cl:was.cl,mine:!!was.mine,pn:was.pn||'',cancelled:off,why:r.status==='cancelled'?'cancelled':(r.archived?'archived':''),st:r.status||'',asked:was.asked||false,id:r.id,productId:r.productId,version:r.version,dueTime:r.dueTime||'',dueTz:r.dueTz||'',requester:r.requester||'',protocolId:r.protocolId||'',comments:r.comments||0,updatedAt:r.updatedAt||'',snap:{title:v.title,description:v.description,status:v.status||t.status,end:v.end,start:v.start!==undefined?v.start:(t.start||'')}}}
+    if(r.assignee){const al=n=>(projectMeta.__crmNames__||{})[personKey(n)]||n;const names=[];[r.assignee,...(r.additionalNames||[])].forEach(n=>{const v=al(n);if(v&&!names.some(x=>personKey(x)===personKey(v)))names.push(v)});t.owner=names.join(', ')}
+    t.crm={aid:r.assigneeId||'',add:Array.isArray(r.additional)?r.additional:[],addNames:Array.isArray(r.additionalNames)?r.additionalNames:[],seen:was.seen,at:was.at,upd:upd,sent:was.sent||[],cids:was.cids||[],cseen:was.cseen||0,cl:was.cl,mine:!!was.mine,pn:was.pn||'',cancelled:off,why:r.status==='cancelled'?'cancelled':(r.archived?'archived':''),st:r.status||'',asked:was.asked||false,id:r.id,productId:r.productId,version:r.version,dueTime:r.dueTime||'',dueTz:r.dueTz||'',requester:r.requester||'',protocolId:r.protocolId||'',comments:r.comments||0,updatedAt:r.updatedAt||'',snap:{title:v.title,description:v.description,status:v.status||t.status,end:v.end,start:v.start!==undefined?v.start:(t.start||'')}}}
   // Чек-лист: пункты CRM ↔ чек-лист карточки. Связь — cid и снимок csnap у пункта; c.cl.ids — какие пункты CRM мы уже знаем.
   function mergeCl(t,r){
     const c=t.crm;if(!Array.isArray(r.checklist))return false;
@@ -3851,7 +3852,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     if(!box){box=document.createElement('div');box.id='crmInfo';box.className='crm-info';head?.insertAdjacentElement('afterend',box)}
     if(!t.crm){box.innerHTML=`<button type="button" class="btn" data-crm-attach="1" aria-pressed="false">☐ CRM</button> <span class="mini">Отправить задачу в CRM и держать её в синхроне</span>`;return}
     const c=t.crm,open=!c.cancelled&&!c.gone&&c.st!=='done';
-    box.innerHTML=`<button type="button" class="btn" data-crm-detach="1" aria-pressed="true" title="Снять метку">☑ CRM</button> Задача №${esc(c.id)}${c.pn?` · проект CRM: ${esc(c.pn)}`:''}${c.requester?` · от кого: ${esc(c.requester)}`:''}${c.protocolId?` · протокол №${esc(c.protocolId)}`:''}${SL[c.st]?` · статус в CRM: ${SL[c.st]}`:''}${c.dueTime?` · время срока ${esc(c.dueTime)}`:''}${c.comments?` · комментариев: ${c.comments}`:''}${offText(c)?` · <b>${offText(c)}</b>`:''}${S.url?` · <a href="${esc(S.url)}" target="_blank" rel="noopener">открыть CRM ↗</a>`:''}${open?`<div class="crm-actions"><button type="button" class="btn" data-crm-done="1">✓ Выполнено в CRM</button><button type="button" class="btn" data-crm-cancel="1">Отмена в CRM (в архив)</button></div>`:''}`}
+    box.innerHTML=`<button type="button" class="btn" data-crm-detach="1" aria-pressed="true" title="Снять метку">☑ CRM</button> Задача №${esc(c.id)}${c.pn?` · проект CRM: ${esc(c.pn)}`:''}${c.requester?` · от кого: ${esc(c.requester)}`:''}${c.protocolId?` · протокол №${esc(c.protocolId)}`:''}${SL[c.st]?` · статус в CRM: ${SL[c.st]}`:''}${c.addNames?.length?` · доп. ответственные: ${esc(c.addNames.join(', '))}`:''}${c.dueTime?` · время срока ${esc(c.dueTime)}`:''}${c.comments?` · комментариев: ${c.comments}`:''}${offText(c)?` · <b>${offText(c)}</b>`:''}${S.url?` · <a href="${esc(S.url)}" target="_blank" rel="noopener">открыть CRM ↗</a>`:''}${open?`<div class="crm-actions"><button type="button" class="btn" data-crm-done="1">✓ Выполнено в CRM</button><button type="button" class="btn" data-crm-add="1" title="Кого CRM тоже уведомит по задаче">👥 Доп. ответственные…</button><button type="button" class="btn" data-crm-cancel="1">Отмена в CRM (в архив)</button></div>`:''}`}
   const showInfo=()=>{try{const t=currentDrawerTask();const sh=selectedStandaloneId===null&&!!active()?.shared;drawerInfo(t,sh)}catch(e){}};
   const ot=window.openTask;if(typeof ot==='function')window.openTask=function(){const r=ot.apply(this,arguments);showInfo();return r};
   const os2=window.openStandaloneTask;if(typeof os2==='function')window.openStandaloneTask=function(){const r=os2.apply(this,arguments);try{const ct=currentDrawerTask();if(ct?.crm&&(ct.crm.seen===false||ct.crm.upd)){ct.crm.seen=true;ct.crm.upd=false;save();try{renderMyTasks()}catch(e){}}}catch(e){}showInfo();return r};
@@ -3861,10 +3862,16 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
   // Свой диалог: закрытие по фону не отправляет форму (в общем диалоге оно сохраняет введённое).
   function dialog({title,description,fields,submitLabel,onSubmit,onClose}){
     const w=document.createElement('div');w.className='modal show friendly-dialog';
-    w.innerHTML=`<div class="modalcard" role="dialog" aria-modal="true"><h3>${esc(title)}</h3><p class="mini">${esc(description)}</p><form class="friendly-form">${fields.map((f,i)=>`<div class="field"><label>${esc(f.label)}</label><select name="f${i}">${f.options.map(o=>`<option value="${esc(o.value)}" ${String(o.value)===String(f.value)?'selected':''}>${esc(o.label)}</option>`).join('')}</select></div>`).join('')}<div class="friendly-actions"><button type="button" class="btn friendly-cancel">Отмена</button><button type="submit" class="btn primary">${esc(submitLabel)}</button></div></form></div>`;
+    const fieldHtml=(f,i)=>f.type==='checks'
+      ?`<div class="field"><label>${esc(f.label)}</label><div class="crm-checks">${f.options.map(o=>`<label class="crm-check"><input type="checkbox" name="f${i}" value="${esc(o.value)}"${(f.value||[]).map(String).includes(String(o.value))?' checked':''}${o.disabled?' disabled':''}> ${esc(o.label)}</label>`).join('')||'<span class="mini">Нет сотрудников</span>'}</div></div>`
+      :`<div class="field"><label>${esc(f.label)}</label><select name="f${i}">${f.options.map(o=>`<option value="${esc(o.value)}" ${String(o.value)===String(f.value)?'selected':''}>${esc(o.label)}</option>`).join('')}</select></div>`;
+    w.innerHTML=`<div class="modalcard" role="dialog" aria-modal="true"><h3>${esc(title)}</h3><p class="mini">${esc(description)}</p><form class="friendly-form">${fields.map(fieldHtml).join('')}<div class="friendly-actions"><button type="button" class="btn friendly-cancel">Отмена</button><button type="submit" class="btn primary">${esc(submitLabel)}</button></div></form></div>`;
     document.body.appendChild(w);const close=()=>{document.removeEventListener('keydown',key);w.remove();if(onClose)onClose()};const key=e=>{if(e.key==='Escape'){e.preventDefault();close()}};document.addEventListener('keydown',key);
     w.querySelector('.friendly-cancel').onclick=close;
-    w.querySelector('form').onsubmit=e=>{e.preventDefault();const vals=[...w.querySelectorAll('select')].map(x=>x.value);S.picked=true;close();onSubmit(vals)}}
+    // Основной исполнитель не может быть дополнительным: его галочка снимается и блокируется.
+    fields.forEach((f,i)=>{if(f.type!=='checks'||f.excludeBy===undefined)return;const sel=w.querySelector(`select[name="f${f.excludeBy}"]`);if(!sel)return;
+      const apply=()=>w.querySelectorAll(`input[name="f${i}"]`).forEach(x=>{const same=sel.value!==''&&x.value===sel.value;x.disabled=same;if(same)x.checked=false});sel.addEventListener('change',apply);apply()});
+    w.querySelector('form').onsubmit=e=>{e.preventDefault();const vals=fields.map((f,i)=>f.type==='checks'?[...w.querySelectorAll(`input[name="f${i}"]:checked`)].map(x=>x.value):w.querySelector(`select[name="f${i}"]`).value);S.picked=true;close();onSubmit(vals)}}
   async function operators(productId){
     if(!S.ops[productId]){S.ops[productId]=(await call({action:'operators',productId})).operators||[]}
     return S.ops[productId]}
@@ -3876,16 +3883,16 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     if(!prods.length){toast('В CRM нет доступных проектов');return}
     const who=async prod=>{
       let ops;try{ops=await operators(prod.id)}catch(e){toast('CRM: '+e.message);return}
-      dialog({title:'Кому поручить в CRM?',description:`Проект CRM: ${prod.name}. Уведомления отправит сама CRM.`,fields:[{label:'Исполнитель',value:'',options:[{value:'',label:'— я —'},...ops.map(o=>({value:o.id,label:o.name}))]}],submitLabel:'Отправить в CRM',onSubmit:v=>create(t,prod,v[0])})};
+      dialog({title:'Кому поручить в CRM?',description:`Проект CRM: ${prod.name}. Уведомления отправит сама CRM.`,fields:[{label:'Исполнитель',value:'',options:[{value:'',label:'— я —'},...ops.map(o=>({value:o.id,label:o.name}))]},{type:'checks',label:'Дополнительные ответственные (необязательно)',value:[],options:ops.map(o=>({value:o.id,label:o.name})),excludeBy:0}],submitLabel:'Отправить в CRM',onSubmit:v=>create(t,prod,v[0],v[1])})};
     if(prods.length===1){who(prods[0]);return}
     dialog({title:'В какой проект CRM отправить?',description:'Карточка останется в канбане, а в CRM появится задача.',fields:[{label:'Проект CRM',value:String(prods[0].id),options:prods.map(p=>({value:String(p.id),label:p.name}))}],submitLabel:'Дальше',onSubmit:v=>{const prod=prods.find(p=>String(p.id)===v[0]);if(prod)who(prod)}})}
-  async function create(t,prod,assignedTo){
+  async function create(t,prod,assignedTo,additional){
     if(t.crm||S.busy)return;S.busy=true;
     try{
       if(!t.crmReq||t.crmReq.productId!==prod.id)t.crmReq={productId:prod.id,key:'kanban-'+uid()};
       const items=(t.checklist||[]).filter(i=>String(i.text||'').trim());
       const due=t.end?iso(t.end):'';
-      const r=await call({action:'create',productId:prod.id,requestKey:t.crmReq.key,title:t.title,description:t.description||'',assignedTo,due,start:t.start?iso(t.start):'',status:L2C[t.status]||'new',checklist:items.map(i=>i.text)});
+      const r=await call({action:'create',productId:prod.id,requestKey:t.crmReq.key,title:t.title,description:t.description||'',assignedTo,additionalAssigneeIds:additional||[],due,start:t.start?iso(t.start):'',status:L2C[t.status]||'new',checklist:items.map(i=>i.text)});
       const rt=r.task;if(!rt)throw new Error('CRM не вернула задачу');
       merge(t,rt,true);t.source='crm';t.crm.pn=prod.name;delete t.crmReq;
       if(Array.isArray(rt.checklist)){items.forEach((it,i)=>{const n=rt.checklist[i];if(n){it.cid=n.id;it.csnap={text:n.title,done:n.completed}}});t.crm.cl={ids:rt.checklist.map(i=>String(i.id)),tot:rt.clTotal,done:rt.clDone}}
@@ -3925,6 +3932,21 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
         toast('Карточка удалена, задача в CRM отменена')
       }finally{S.busy=false}},'Удалить и отменить');
   },true);
+  // Дополнительные ответственные: выбрать из сотрудников проекта CRM, сохранить в CRM (менять может основной ответственный, заказчик или администратор).
+  async function editAdditional(){
+    const t=currentDrawerTask();if(!t?.crm||t.crm.cancelled||t.crm.gone||S.busy)return;
+    let ops;try{ops=await operators(t.crm.productId)}catch(e){toast('CRM: '+e.message);return}
+    dialog({title:'Дополнительные ответственные',description:'CRM уведомит выбранных людей по этой задаче. Менять состав может основной ответственный, заказчик задачи или администратор.',fields:[{type:'checks',label:'Дополнительные ответственные',value:t.crm.add||[],options:ops.map(o=>({value:o.id,label:o.name,disabled:o.id===t.crm.aid}))}],submitLabel:'Сохранить в CRM',onSubmit:async v=>{
+      if(S.busy)return;S.busy=true;
+      try{
+        const c=t.crm;await pushCl(t).catch(()=>{});
+        const r=await call({action:'update',productId:c.productId,id:c.id,base:{version:c.version,dueTime:c.dueTime,dueTz:c.dueTz},fields:{...(diff(t)||{}),additionalAssigneeIds:v[0]}});
+        if(r.task)merge(t,r.task);toast('Дополнительные ответственные сохранены в CRM')
+      }catch(e){
+        if(e.status===409){if(e.body?.task)merge(t,e.body.task);toast('Задачу изменили в CRM — проверьте и повторите')}
+        else toast('CRM не приняла: '+e.message)}
+      finally{S.busy=false}
+      save();refreshAfterTaskChange();showInfo()}})}
   // Закрыть задачу в CRM кнопкой: «Выполнено» или «Отмена» (в архив). Карточка остаётся в канбане со статусом «Готово».
   async function closeCrm(status){
     const t=currentDrawerTask();if(!t?.crm||t.crm.cancelled||t.crm.gone||S.busy)return;
@@ -3962,6 +3984,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     if(e.target.closest('[data-crm-seen-all]')){e.preventDefault();e.stopPropagation();crmTasks().forEach(t=>{if(t.crm){t.crm.seen=true;t.crm.upd=false}});save();try{renderMyTasks()}catch(err){}return}
     if(e.target.closest('[data-crm-only]')){S.only=!S.only;decorate();return}
     if(e.target.closest('[data-crm-attach]')){attach();return}
+    if(e.target.closest('[data-crm-add]')){editAdditional();return}
     if(e.target.closest('[data-crm-done]')){closeCrm('done');return}
     if(e.target.closest('[data-crm-cancel]')){friendlyConfirm('Отменить задачу в CRM?','Задача получит статус «Отменена» и уйдёт в архив CRM. Карточка останется в канбане со статусом «Готово».',()=>closeCrm('cancelled'),'Отменить в CRM');return}
     if(e.target.closest('[data-crm-detach]'))detach()});

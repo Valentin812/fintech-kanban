@@ -1,6 +1,6 @@
 // node --experimental-strip-types tests/crm-logic.mjs
 import assert from 'node:assert/strict';
-const { normalizeComment, buildComment, normalizeTask, buildPatch, buildCreate, buildChecklist, dateOnly, offsetOf, ymdInZone, hmInZone } = await import('../supabase/functions/crm-sync/logic.ts');
+const { cleanAdditional, normalizeComment, buildComment, normalizeTask, buildPatch, buildCreate, buildChecklist, dateOnly, offsetOf, ymdInZone, hmInZone } = await import('../supabase/functions/crm-sync/logic.ts');
 
 // Даты: SQL DATE как полночь сервера в любом поясе, due_at в поясе задачи.
 assert.equal(dateOnly('2026-11-10T00:00:00.000Z'), '2026-11-10');
@@ -64,4 +64,23 @@ assert.ok('error' in buildChecklist({ op: 'set', version: 0, itemId: '602' }));
 assert.ok('error' in buildChecklist({ op: 'set', version: 4, itemId: '6/../' }));
 assert.ok('error' in buildChecklist({ op: 'add', version: 4, requestKey: 'short', title: 'x' }));
 assert.ok('error' in buildChecklist({ op: 'nope', version: 4 }));
+// Дополнительные ответственные.
+const ta = normalizeTask({ id: '9', assigned_to: '102', additional_assignee_ids: ['103', 104, 'x', '103'], additional_assignees: [{ id: 103, name: 'Иванов' }, { id: 104, name: 'Петров' }] });
+assert.equal(ta.assigneeId, '102');
+assert.deepEqual(ta.additional, ['103', '104']);
+assert.deepEqual(ta.additionalNames, ['Иванов', 'Петров']);
+assert.deepEqual(normalizeTask({ id: 1 }).additional, []);
+assert.deepEqual(cleanAdditional(['103', 103, '104'], '104'), ['103']);
+assert.ok(cleanAdditional('103').error);
+assert.ok(cleanAdditional(['a']).error);
+assert.ok(cleanAdditional(Array.from({ length: 21 }, (_, i) => String(100 + i))).error);
+const pa = buildPatch({ version: 7 }, { additionalAssigneeIds: ['103', '104'] });
+assert.deepEqual(pa.body, { version: 7, additionalAssigneeIds: ['103', '104'] });
+assert.deepEqual(buildPatch({ version: 7 }, { additionalAssigneeIds: [] }).body, { version: 7, additionalAssigneeIds: [] });
+assert.ok(buildPatch({ version: 7 }, { additionalAssigneeIds: 'x' }).error);
+const ca = buildCreate({ requestKey: 'kanban-abcdefgh1234', title: 'Смета', assignedTo: '102', additionalAssigneeIds: ['102', '103', '104'] });
+assert.deepEqual(ca.body.additionalAssigneeIds, ['103', '104']);
+assert.equal(buildCreate({ requestKey: 'kanban-abcdefgh1234', title: 'Смета', additionalAssigneeIds: [] }).body.additionalAssigneeIds, undefined);
+assert.ok(buildCreate({ requestKey: 'kanban-abcdefgh1234', title: 'Смета', additionalAssigneeIds: ['q'] }).error);
+
 console.log('CRM logic OK');

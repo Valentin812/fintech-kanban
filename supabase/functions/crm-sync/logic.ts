@@ -45,6 +45,7 @@ export type CrmTask = {
   due: string; dueTime: string; dueTz: string; assignee: string; requester: string; protocolId: string;
   version: number; createdAt: string; updatedAt: string; archived: boolean; comments: number;
   start: string; clTotal: number; clDone: number; checklist: CrmItem[] | null;
+  assigneeId: string; additional: string[]; additionalNames: string[];
 };
 export type CrmItem = { id: string; title: string; completed: boolean };
 
@@ -80,8 +81,30 @@ export function normalizeTask(t: any): CrmTask | null {
     archived: !!t.archived_at,
     comments: Number(t.comment_count) || 0,
     start: dateOnly(t.start_date ?? t.startDate),
+    assigneeId: t.assigned_to === undefined || t.assigned_to === null ? "" : str(t.assigned_to, 40),
+    ...additionalOf(t),
     ...checklistOf(t),
   };
+}
+// Дополнительные ответственные: additional_assignee_ids (строки) и additional_assignees (объекты с именами).
+function additionalOf(t: any): { additional: string[]; additionalNames: string[] } {
+  const ids = Array.isArray(t.additional_assignee_ids) ? t.additional_assignee_ids : [];
+  const objs = Array.isArray(t.additional_assignees) ? t.additional_assignees : [];
+  const additional = [...new Set(ids.map((x: unknown) => String(x ?? "").trim()).filter((x: string) => /^\d{1,20}$/.test(x)))].slice(0, 20) as string[];
+  const additionalNames = objs.map((o: any) => str(o?.name, 100)).filter(Boolean).slice(0, 20);
+  return { additional, additionalNames };
+}
+// Список id дополнительных ответственных из запроса клиента: не больше 20, без повторов и без основного.
+export function cleanAdditional(v: unknown, main = ""): string[] | { error: string } {
+  if (!Array.isArray(v)) return { error: "Неверный список дополнительных ответственных." };
+  const out: string[] = [];
+  for (const x of v) {
+    const id = String(x ?? "").trim();
+    if (!/^\d{1,20}$/.test(id)) return { error: "Неверный дополнительный ответственный." };
+    if (id !== main && !out.includes(id)) out.push(id);
+  }
+  if (out.length > 20) return { error: "Не больше 20 дополнительных ответственных." };
+  return out;
 }
 function checklistOf(t: any): { clTotal: number; clDone: number; checklist: CrmItem[] | null } {
   if (Array.isArray(t.checklist)) {
@@ -91,7 +114,7 @@ function checklistOf(t: any): { clTotal: number; clDone: number; checklist: CrmI
   return { checklist: null, clTotal: Number(t.checklist_total) || 0, clDone: Number(t.checklist_done) || 0 };
 }
 
-export type UpdateFields = { title?: string; description?: string; status?: string; due?: string; start?: string };
+export type UpdateFields = { title?: string; description?: string; status?: string; due?: string; start?: string; additionalAssigneeIds?: string[] };
 export type Base = { version: number; dueTime?: string; dueTz?: string };
 
 // Проверка запроса клиента на изменение и сборка тела PATCH для CRM.
@@ -123,11 +146,16 @@ export function buildPatch(base: Base, fields: UpdateFields): { body: Record<str
     else if (!/^\d{4}-\d{2}-\d{2}$/.test(st) || isNaN(new Date(st + "T00:00:00Z").getTime())) return { error: "Неверная дата начала." };
     else body.startDate = st;
   }
+  if (f.additionalAssigneeIds !== undefined) {
+    const a = cleanAdditional(f.additionalAssigneeIds);
+    if (!Array.isArray(a)) return a;
+    body.additionalAssigneeIds = a;
+  }
   if (Object.keys(body).length < 2) return { error: "Нечего менять." };
   return { body };
 }
 
-export type CreateInput = { requestKey?: string; title?: string; description?: string; assignedTo?: string; due?: string; start?: string; status?: string; checklist?: unknown };
+export type CreateInput = { requestKey?: string; title?: string; description?: string; assignedTo?: string; additionalAssigneeIds?: unknown; due?: string; start?: string; status?: string; checklist?: unknown };
 export function buildCreate(input: CreateInput): { body: Record<string, unknown>; items: string[] } | { error: string } {
   const key = String(input?.requestKey ?? "");
   if (!/^[A-Za-z0-9_-]{12,128}$/.test(key)) return { error: "Нет ключа операции." };
@@ -139,6 +167,11 @@ export function buildCreate(input: CreateInput): { body: Record<string, unknown>
   if (desc.trim()) body.description = desc;
   const who = String(input?.assignedTo ?? "").trim();
   if (who) { if (!/^\d{1,20}$/.test(who)) return { error: "Неверный ответственный." }; body.assignedTo = who; }
+  if (input?.additionalAssigneeIds !== undefined && !(Array.isArray(input.additionalAssigneeIds) && input.additionalAssigneeIds.length === 0)) {
+    const a = cleanAdditional(input.additionalAssigneeIds, who);
+    if (!Array.isArray(a)) return a;
+    if (a.length) body.additionalAssigneeIds = a;
+  }
   const due = String(input?.due ?? "").trim();
   if (due) { if (!/^\d{4}-\d{2}-\d{2}$/.test(due)) return { error: "Неверная дата." }; body.dueDate = due; }
   // Дата начала в CRM требует срока и не может быть позже него.
