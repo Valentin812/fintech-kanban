@@ -1606,13 +1606,13 @@ function matchProjectName(hint,names){const h=normProjectName(hint);if(!h)return
 function todayRu(){const d=new Date();return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear()}
 function freshTaskId(){const used=new Set([...data.flatMap(p=>(p.tasks||[]).map(t=>Number(t.id))),...(standaloneTasks||[]).map(t=>Number(t.id))]);let id=Date.now();while(used.has(id))id++;return id}
 async function importTelegramInbox(){if(telegramImporting||!cloudSession?.access_token||!cloudStateReady)return;telegramImporting=true;try{
- const holdUntil=new Date(Date.now()-10*60000).toISOString();const rows=await cloudRequest(`/rest/v1/telegram_inbox?select=id,title,description,due,project_hint,created_at,attachment,status&consumed_at=is.null&or=(status.eq.ready,created_at.lt.${encodeURIComponent(holdUntil)})&order=created_at.asc&limit=50`,{method:'GET'});if(!Array.isArray(rows)||!rows.length)return;
+ const holdUntil=new Date(Date.now()-12*3600000).toISOString();const rows=await cloudRequest(`/rest/v1/telegram_inbox?select=id,title,description,due,project_hint,created_at,attachment,status&consumed_at=is.null&or=(status.eq.ready,created_at.lt.${encodeURIComponent(holdUntil)})&order=created_at.asc&limit=50`,{method:'GET'});if(!Array.isArray(rows)||!rows.length)return;
  const owner=myDisplayName();const added=[];
  for(const row of rows){let claimed;try{claimed=await cloudRequest(`/rest/v1/telegram_inbox?id=eq.${encodeURIComponent(row.id)}&consumed_at=is.null`,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({consumed_at:new Date().toISOString()})})}catch(err){console.warn('Telegram inbox claim failed',err);continue}if(!Array.isArray(claimed)||!claimed.length)continue;
-  if(row.project_hint==='__note__'){const text=String(row.title||'').replace(/\s+/g,' ').trim().slice(0,300);if(text){quickNotes.unshift({id:'n'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),text,created:new Date(row.created_at||Date.now()).getTime()||Date.now(),done:false});added.push({title:text,where:'Быстрые заметки',note:true})}continue}
-  const when=new Date(row.created_at||Date.now()).toLocaleString('ru-RU');const task={id:freshTaskId(),title:String(row.title||'Задача из Telegram'),start:todayRu(),end:row.due?normalizeDateText(row.due):'',status:'Очередь',owner,description:String(row.description||''),comment:`${when} — Создано из Telegram`,link:'',mt:'',documents:[],extraLinks:[],source:'telegram'};if(row.attachment&&typeof row.attachment==='object'&&row.attachment.path)task.attachments=[{path:String(row.attachment.path),name:String(row.attachment.name||''),type:String(row.attachment.type||''),size:Number(row.attachment.size)||0,kind:row.attachment.kind==='voice'?'voice':'image'}];
+  if(row.project_hint==='__note__'){const text=String(row.title||'')+String(row.description||'');const noteText=text.replace(/\r\n?/g,'\n').replace(/[ \t]+/g,' ').replace(/ ?\n ?/g,'\n').trim().slice(0,2000);if(noteText){quickNotes.unshift({id:'n'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),text:noteText,created:new Date(row.created_at||Date.now()).getTime()||Date.now(),done:false});added.push({title:noteText.slice(0,120),where:'Быстрые заметки',note:true})}continue}
+  const when=new Date(row.created_at||Date.now()).toLocaleString('ru-RU');const rawDesc=String(row.description||'').split('\n');const tgItems=rawDesc.filter(l=>/^☐ \S/.test(l)).map(l=>l.slice(2).trim());const task={id:freshTaskId(),title:String(row.title||'Задача из Telegram'),start:todayRu(),end:row.due?normalizeDateText(row.due):'',status:'Очередь',owner,description:(tgItems.length?rawDesc.filter(l=>!/^☐ \S/.test(l)):rawDesc).join('\n').trim(),comment:`${when} — Создано из Telegram`,link:'',mt:'',documents:[],extraLinks:[],source:'telegram'};if(row.attachment&&typeof row.attachment==='object'&&row.attachment.path)task.attachments=[{path:String(row.attachment.path),name:String(row.attachment.name||''),type:String(row.attachment.type||''),size:Number(row.attachment.size)||0,kind:row.attachment.kind==='voice'?'voice':'image'}];
   const projectName=row.project_hint?matchProjectName(row.project_hint,data.map(p=>p.name)):null;const project=projectName?data.find(p=>p.name===projectName):null;
-  if(project){const meta=projectMeta[project.name]||{};const all=[...defaultStatuses(),...(meta.extraStatuses||[])];const order=Array.isArray(meta.statusOrder)?meta.statusOrder.filter(x=>all.includes(x)):[];task.status=[...order,...all.filter(x=>!order.includes(x))][0]||'Очередь';project.tasks.push(task)}else standaloneTasks.push(task);
+  if(project){const meta=projectMeta[project.name]||{};const all=[...defaultStatuses(),...(meta.extraStatuses||[])];const order=Array.isArray(meta.statusOrder)?meta.statusOrder.filter(x=>all.includes(x)):[];task.status=[...order,...all.filter(x=>!order.includes(x))][0]||'Очередь';project.tasks.push(task);for(const title of tgItems)project.tasks.push({id:freshTaskId(),title,start:todayRu(),end:'',status:task.status,owner:'',description:'',comment:'',link:'',mt:'',documents:[],extraLinks:[],parent:String(task.id)})}else{if(tgItems.length)task.checklist=tgItems.map(text=>({text,done:false}));standaloneTasks.push(task)}
   added.push({title:task.title,where:project?project.name:'Мои задачи'})}
  if(!added.length)return;save();try{await cloudWriteNow()}catch(e){}renderAll();try{window.renderQuickNotes&&window.renderQuickNotes()}catch(e){}if(activeView==='mytasks'&&typeof renderMyTasks==='function')renderMyTasks();if(activeView==='inbox'&&typeof renderInbox==='function')renderInbox();
  toast(added.length===1?(added[0].note?`📝 Заметка из Telegram: «${added[0].title}»`:`📥 Из Telegram: «${added[0].title}» → ${added[0].where}`):`📥 Из Telegram добавлено задач: ${added.length}`)
@@ -2170,7 +2170,9 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
- {v:'2026.11.02-03',date:'02.11.2026',title:'Уведомления о сроках подробнее',items:['В колокольчике у просроченной задачи видно, на сколько дней просрочка, проект, статус, ответственного и начало описания.']},
+ {v:'2026.11.02-05',date:'02.11.2026',title:'Уведомления о сроках подробнее',items:['В колокольчике у просроченной задачи видно, на сколько дней просрочка, проект, статус, ответственного и начало описания.']},
+ {v:'2026.11.02-04',date:'02.11.2026',title:'CRM: удалённые задачи',items:['Задачи, удалённые в CRM (или больше не ваши), не вызывают окно «Задача закрыта в CRM». У карточки появляется метка «нет в CRM», а в «Мои задачи» — фильтр «🚫 Нет в CRM».']},
+ {v:'2026.11.02-03',date:'02.11.2026',title:'Джарвис: подтверждение и заметки целиком',items:['Сообщение вида «Уточнить у Андрея:» и пункты списком (1. 2. или «-») бот делает одной задачей: в «Мои задачи» пункты становятся чекбоксами, в проекте — подзадачами.','Поле «Описание» в задаче запоминает высоту, которую вы задали вручную (потянув за уголок), и открывается такого же размера. Сбросить: двойной щелчок по уголку.','Бот перед отправкой в Kanban показывает, что получилось, и спрашивает: «Отправить», «Изменить» (ответом с исправленным текстом) или «Отменить». Неподтверждённое уходит в Kanban само только через 12 часов.','У задачи в боте срок обязателен: без него «Отправить» не сработает — выберите «Сегодня / Завтра / Послезавтра / Через неделю» или впишите в «Изменить».','Заметки больше не урезаются: сохраняется весь текст вместе с переносами строк (до 2000 символов).']},
  {v:'2026.11.02-02',date:'02.11.2026',title:'Встречи: красивые выпадающие списки',items:['Выбор проекта и другие списки во встречах теперь в стиле темы: закруглённое окно, подсветка, галочка у выбранного, поиск, если вариантов больше восьми, выбор стрелками и Enter.']},
  {v:'2026.11.02-01',date:'02.11.2026',title:'Переименование проекта',items:['Меню проекта → «Переименовать проект…»: новое название сразу обновляется в закреплённых задачах, порядке проектов, встречах (в том числе из Meeting Hub) и релизах.','Общий проект переименовать нельзя; название не должно совпадать с другим проектом или архивом.']},
  {v:'2026.10.30-03',date:'30.10.2026',title:'CRM: дополнительные ответственные',items:['При отправке задачи в CRM можно выбрать дополнительных ответственных (CRM их уведомит). В карточке связанной задачи — кнопка «👥 Доп. ответственные…», а имена видны в блоке CRM и в поле «Ответственный».']},
@@ -3256,8 +3258,19 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
 /* ===== Поля описания и комментария растут вместе с текстом ===== */
 (function autoGrowTextareas(){
   const fields=['dDescription','newComment'];
-  const fit=el=>{if(!el||!el.offsetParent)return;el.style.height='auto';const max=Math.round(innerHeight*.6);el.style.height=Math.min(Math.max(el.scrollHeight+2,el.offsetHeight>0?95:0),max)+'px';el.style.overflowY=el.scrollHeight+2>max?'auto':'hidden'};
+  // Высота описания, выбранная вручную (перетаскиванием уголка), запоминается и применяется при следующем открытии.
+  const HK='fintech-kanban-desc-height';
+  const savedH=()=>{try{const v=Number(localStorage.getItem(HK));return v>=60&&v<=4000?v:0}catch(e){return 0}};
+  let lastSet=0;
+  const fit=el=>{if(!el||!el.offsetParent)return;const h=el.id==='dDescription'?savedH():0;if(h){el.style.height=Math.min(h,Math.round(innerHeight*.9))+'px';el.style.overflowY='auto';lastSet=el.offsetHeight;return}el.style.height='auto';const max=Math.round(innerHeight*.6);el.style.height=Math.min(Math.max(el.scrollHeight+2,el.offsetHeight>0?95:0),max)+'px';el.style.overflowY=el.scrollHeight+2>max?'auto':'hidden'};
   const fitAll=()=>fields.forEach(id=>fit($(id)));
+  const desc=$('dDescription');
+  if(desc){
+    const remember=()=>{if(!desc.offsetParent)return;const h=desc.offsetHeight;if(Math.abs(h-lastSet)>3){try{localStorage.setItem(HK,String(h))}catch(e){}lastSet=h}};
+    let down=0;desc.addEventListener('pointerdown',()=>{down=desc.offsetHeight});
+    window.addEventListener('pointerup',()=>{if(down&&desc.offsetHeight!==down)remember();down=0});
+    desc.addEventListener('dblclick',e=>{const r=desc.getBoundingClientRect();if(e.clientX>r.right-22&&e.clientY>r.bottom-22){try{localStorage.removeItem(HK)}catch(x){}fit(desc)}});
+  }
   fields.forEach(id=>{const el=$(id);if(el)el.addEventListener('input',()=>fit(el))});
   const drawer=$('drawer');
   if(drawer)new MutationObserver(()=>{if(drawer.classList.contains('open'))setTimeout(fitAll,30)}).observe(drawer,{attributes:true,attributeFilter:['class']});
@@ -3890,10 +3903,12 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     if(!data.some(p=>p.name===activeProject))activeProject=data[0]?.name||activeProject;
     save();renderAll();toast(`Перенесено в «Мои задачи»: ${n}`);S.last=0;sync(false)}
   // Задача закрыта, отменена или снята с вас в CRM: спрашиваем, что делать с карточкой.
+  // Удалена/пропала в CRM: не спрашиваем, только метка на карточке и фильтр «Нет в CRM».
+  const isGone=t=>!!(t&&t.crm&&t.crm.gone&&!t.crm.cancelled&&t.crm.why!=='cancelled'&&t.crm.why!=='archived');
   function askOff(){
     if(S.dlg||document.querySelector('.friendly-dialog'))return;
-    for(const x of crmTasks())if(x.crm.mine&&(x.crm.cancelled||x.crm.gone)&&!x.crm.asked){x.crm.asked=true;save()}
-    const t=crmTasks().find(x=>(x.crm.cancelled||x.crm.gone)&&!x.crm.asked&&!S.later.has(x.crm.id));if(!t)return;
+    for(const x of crmTasks())if(x.crm.mine&&(x.crm.cancelled||x.crm.gone)&&!isGone(x)&&!x.crm.asked){x.crm.asked=true;save()}
+    const t=crmTasks().find(x=>(x.crm.cancelled||x.crm.gone)&&!isGone(x)&&!x.crm.asked&&!S.later.has(x.crm.id));if(!t)return;
     S.dlg=true;S.picked=false;
     dialog({title:'Задача закрыта в CRM',description:`«${t.title}» (№${t.crm.id}): ${offText(t.crm)}. Что сделать с карточкой?`,fields:[{label:'Карточка',value:'keep',options:[{value:'keep',label:'Продолжить работать (снять связь с CRM)'},{value:'archive',label:'Завершить и убрать в архив'},{value:'later',label:'Решить позже'}]}],submitLabel:'Применить',
       onClose:()=>{S.dlg=false;if(!S.picked)S.later.add(t.crm.id)},
@@ -3906,7 +3921,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
   if(typeof os==='function')window.save=function(){const r=os.apply(this,arguments);if(enabled()&&cloudStateReady&&signed()){clearTimeout(S.pt);S.pt=setTimeout(()=>{if(S.busy)return;S.busy=true;pushAll().catch(e=>toast('CRM: '+e.message)).finally(()=>{S.busy=false})},4000)}return r};
   // Пометки: значок «внешняя CRM» на карточке и в «Мои задачи», сведения и кнопка метки в карточке.
   const SL={new:'новая',active:'в работе',waiting:'на анализе',done:'исполнена',cancelled:'отменена'};
-  const offText=c=>c.why==='cancelled'?'отменена в CRM':c.why==='archived'?'в архиве CRM':c.gone?'не у вас в CRM':'';
+  const offText=c=>c.why==='cancelled'?'отменена в CRM':c.why==='archived'?'в архиве CRM':c.gone?'нет в CRM':'';
   const badge=t=>{const off=offText(t.crm);return `<span class="crm-badge${off?' off':''}" title="${esc('Внешняя CRM'+(t.crm.pn?' · проект '+t.crm.pn:'')+(SL[t.crm.st]?' · статус в CRM: '+SL[t.crm.st]:'')+(off?' · '+off:''))}">CRM №${esc(t.crm.id)}${off?' · '+esc(off):''}</span> `};
   function decorate(){
     label();
@@ -3922,11 +3937,14 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
         const has=!!t?.crm;if(has)any=true;
         if(has&&!row.querySelector('.crm-badge'))row.querySelector('.mytask-title')?.insertAdjacentHTML('afterbegin',badge(t));
         if(has&&!row.querySelector('.crm-fresh')&&(t.crm.seen===false||t.crm.upd))row.querySelector('.mytask-title')?.insertAdjacentHTML('afterbegin',`<span class="crm-fresh${t.crm.seen===false?'':' upd'}" title="${t.crm.seen===false?'Новая задача из CRM':'Изменена в CRM'}" role="img" aria-label="${t.crm.seen===false?'Новая':'Изменена'}"></span>`);
-        row.style.display=(S.only&&!has)?'none':''});
+        row.style.display=((S.only&&!has)||(S.gone&&!isGone(t)))?'none':''});
       my.querySelectorAll('.mytask-group').forEach(g=>{g.style.display=[...g.querySelectorAll('.mytask-row')].every(r=>r.style.display==='none')?'none':''});
       const gh=my.querySelector('.mytask-group-crmnew h4');if(gh&&!gh.querySelector('[data-crm-seen-all]'))gh.insertAdjacentHTML('beforeend',' <button type="button" class="smallbtn" data-crm-seen-all="1">Отметить просмотренным</button>');
       const fl=my.querySelector('.mytask-filters');
       if(fl&&!fl.querySelector('[data-crm-only]')&&(enabled()||any||S.only)){const b=document.createElement('button');b.type='button';b.className='btn quick-filter';b.dataset.crmOnly='1';fl.appendChild(b)}
+      const goneN=crmTasks().filter(isGone).length;let gb=fl?.querySelector('[data-crm-gone]');
+      if(fl&&!gb&&(goneN||S.gone)){gb=document.createElement('button');gb.type='button';gb.className='btn quick-filter';gb.dataset.crmGone='1';fl.appendChild(gb)}
+      if(gb){if(!goneN&&!S.gone)gb.remove();else{gb.textContent='🚫 Нет в CRM · '+goneN;gb.title='Задачи, которые удалены в CRM или больше не у вас';gb.classList.toggle('active',!!S.gone);gb.setAttribute('aria-pressed',String(!!S.gone))}}
       const ob=fl?.querySelector('[data-crm-only]');if(ob){ob.textContent='🔗 CRM · '+crmTasks().length+(crmTasks().filter(x=>x.crm.seen===false||x.crm.upd).length?' · '+crmTasks().filter(x=>x.crm.seen===false||x.crm.upd).length+' новых':'');ob.classList.toggle('active',S.only);ob.setAttribute('aria-pressed',String(S.only))}}}
   function drawerInfo(t,shared){
     let box=$('crmInfo');const head=document.querySelector('#drawer .drawerhead');
@@ -4066,6 +4084,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
   document.addEventListener('click',e=>{
     if(e.target.closest('[data-crm-seen-all]')){e.preventDefault();e.stopPropagation();crmTasks().forEach(t=>{if(t.crm){t.crm.seen=true;t.crm.upd=false}});save();try{renderMyTasks()}catch(err){}return}
     if(e.target.closest('[data-crm-only]')){S.only=!S.only;decorate();return}
+    if(e.target.closest('[data-crm-gone]')){S.gone=!S.gone;decorate();return}
     if(e.target.closest('[data-crm-attach]')){attach();return}
     if(e.target.closest('[data-crm-add]')){editAdditional();return}
     if(e.target.closest('[data-crm-done]')){closeCrm('done');return}
