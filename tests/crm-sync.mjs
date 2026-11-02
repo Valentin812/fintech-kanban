@@ -264,18 +264,27 @@ try {
   // Приложение спрашивает, что делать с закрытой в CRM карточкой.
   const ask = page.locator('.friendly-dialog', { hasText: 'Задача закрыта в CRM' });
   await ask.waitFor();
+  // Окно только про отменённую (221); удалённая в CRM (220) не вызывает вопроса.
   const first = (await ask.locator('.mini').textContent());
-  const which = first.includes('№221') ? '221' : '220';
-  await ask.locator('[name=f0]').selectOption(which === '221' ? 'archive' : 'keep');
+  if (!first.includes('№221')) throw new Error('Only the cancelled task asks: ' + first);
+  await ask.locator('[name=f0]').selectOption('archive');
   await ask.locator('button[type=submit]').click();
-  const ask2 = page.locator('.friendly-dialog', { hasText: 'Задача закрыта в CRM' });
-  await ask2.waitFor();
-  await ask2.locator('[name=f0]').selectOption(which === '221' ? 'keep' : 'archive');
-  await ask2.locator('button[type=submit]').click();
-  await until(async () => { const a = await ST('221'), b = await ST('220'); return (which === '221' ? a?.archived && !b : !a && b?.archived) || (which === '221' ? (a?.archived && !b) : false); }, 5000).catch(() => {});
+  await wait(1200);
+  if (await page.locator('.friendly-dialog', { hasText: 'Задача закрыта в CRM' }).count()) throw new Error('Deleted-in-CRM task must not trigger a prompt');
   const arch = await page.evaluate(() => standaloneTasks.filter((t) => t.archived).map((t) => ({ id: t.crm?.id, status: t.status, completed: !!t.completedAt })));
-  if (arch.length !== 1 || arch[0].status !== 'Готово' || !arch[0].completed) throw new Error('Exactly one card archived: ' + JSON.stringify(arch));
-  if (await page.evaluate(() => standaloneTasks.filter((t) => t.crm && (t.crm.id === '221' || t.crm.id === '220')).length) !== 1) throw new Error('The other card must be unlinked');
+  if (arch.length !== 1 || arch[0].id !== '221' || arch[0].status !== 'Готово' || !arch[0].completed) throw new Error('Exactly the cancelled card archived: ' + JSON.stringify(arch));
+  const g220 = await ST('220');
+  if (!g220?.crm?.gone || g220.archived) throw new Error('Deleted task stays linked and marked: ' + JSON.stringify(g220));
+  // Метка и фильтр «Нет в CRM» в «Мои задачи».
+  await page.evaluate(() => switchView('mytasks'));
+  await page.locator('[data-crm-gone]').waitFor({ timeout: 5000 });
+  if (!(await page.locator('[data-crm-gone]').textContent()).includes('Нет в CRM · 1')) throw new Error('Filter must count deleted tasks');
+  await page.locator('[data-crm-gone]').click();
+  const shown = await page.evaluate(() => [...document.querySelectorAll('#myTasksView .mytask-row')].filter((r) => r.style.display !== 'none').length);
+  if (shown !== 1) throw new Error('Filter must leave only the deleted task, got ' + shown);
+  if (!(await page.locator('#myTasksView .crm-badge.off', { hasText: 'нет в CRM' }).count())) throw new Error('Badge must say «нет в CRM»');
+  await page.locator('[data-crm-gone]').click();
+  await page.evaluate(() => switchView('inbox'));
   if (await page.evaluate(() => !standaloneTasks.some((t) => t.title === 'Организовать встречу' || t.title === 'Изменено в CRM') && !standaloneTasks.some((t) => t.title === 'Провести встречу'))) throw new Error('Cards must not be deleted');
   // Завершили сами в канбане, CRM заархивировала — окно вопроса не появляется.
   await page.evaluate(() => { standaloneTasks.push({ id: 9400, title: 'Закрою сам', status: 'В работе', start: '', end: '', crm: { id: '240', productId: 7, version: 1, sent: [], cids: [], cseen: 0, cl: { ids: [], tot: 0, done: 0 }, cancelled: false, snap: { title: 'Закрою сам', description: '', status: 'В работе', end: '', start: '' } } }); });
