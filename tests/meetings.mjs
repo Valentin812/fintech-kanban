@@ -106,7 +106,14 @@ try {
   await view.locator('[data-mt-new]').click();
   await view.locator('[data-mt-f="title"]').fill('Планёрка по автооплате');
   const projectName = await page.evaluate(() => data[0].name);
-  await view.locator('select[data-mt-padd]').selectOption(projectName);
+  // The project list is a themed popup, not the system list.
+  await view.locator('select[data-mt-padd]').click();
+  await page.locator('.sel-pop').waitFor({ state: 'visible' });
+  if (await page.locator('.sel-pop-item').count() < 1) throw new Error('Popup has no items');
+  await page.keyboard.press('Escape');
+  await page.locator('.sel-pop').waitFor({ state: 'detached' });
+  await view.locator('select[data-mt-padd]').click();
+  await page.locator('.sel-pop-item', { hasText: projectName }).first().click();
   await view.locator(`[data-mt-premove="${projectName}"]`).waitFor();
   await view.locator('[data-mt-f="prep"]').fill('Обсудить сроки\nПодготовить цифры');
   await view.locator('[data-mt-f="summary"]').fill('Договорились о запуске в декабре');

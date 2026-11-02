@@ -1267,7 +1267,20 @@ html.list-w-set[data-layout="rows"] .board .column{max-width:var(--list-w)}
 .mt-grid input,.mt-grid select,.mt-field textarea,.mt-addrow input,.mt-tasks select{border:1px solid var(--line,#d7deea);border-radius:8px;padding:7px 9px;font:inherit;font-size:14px;color:inherit;background:transparent;box-sizing:border-box;width:100%}
 .mt-field textarea{resize:vertical;line-height:1.4}
 .mt-projs{display:flex;flex-wrap:wrap;gap:6px}
-.mt-pchip-x{border:0;background:transparent;cursor:pointer;font-size:15px;line-height:1;padding:0 2px;color:inherit;opacity:.6}.mt-pchip-x:hover{opacity:1}.mt-padd{max-width:230px}
+.mt-pchip-x{border:0;background:transparent;cursor:pointer;font-size:15px;line-height:1;padding:0 2px;color:inherit;opacity:.6}.mt-pchip-x:hover{opacity:1}.sel-pop{position:fixed;z-index:80;background:#fff;border:1px solid #cfd7e2;border-radius:12px;box-shadow:0 14px 34px rgba(16,24,40,.18);padding:6px;display:flex;flex-direction:column;gap:2px;overflow:hidden}
+.sel-pop input{width:100%;box-sizing:border-box;border:1px solid #d6dde8;border-radius:8px;padding:7px 10px;font:inherit;font-size:13px;margin:0 0 4px;background:#f7f9fc;color:#1f2a3c}
+.sel-pop-list{overflow:auto;display:flex;flex-direction:column;gap:1px;scrollbar-width:thin}
+.sel-pop-item{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:0;background:transparent;padding:8px 10px;border-radius:8px;font:inherit;font-size:13px;color:#1f2a3c;cursor:pointer;min-width:0}
+.sel-pop-item span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.sel-pop-item:hover,.sel-pop-item.act{background:#eef3fb}
+.sel-pop-item.cur{font-weight:600;color:#1f4fa3}.sel-pop-item.cur::after{content:"✓";margin-left:auto;font-size:12px}
+.sel-pop-item.ph{color:#6b7587}
+.sel-pop-empty{padding:10px;font-size:13px;color:#6b7587}
+body.dark-theme .sel-pop{background:#182233;border-color:#334158}body.dark-theme .sel-pop input{background:#0f1826;border-color:#334158;color:#dbe4f0}body.dark-theme .sel-pop-item{color:#dbe4f0}body.dark-theme .sel-pop-item:hover,body.dark-theme .sel-pop-item.act{background:#223049}body.dark-theme .sel-pop-item.cur{color:#8fb3ef}body.dark-theme .sel-pop-item.ph,body.dark-theme .sel-pop-empty{color:#9aa8bc}
+body[data-theme="latte"] .sel-pop{background:#fffaf3;border-color:#d8c6ac}body[data-theme="latte"] .sel-pop input{background:#f6ecdc;border-color:#d8c6ac;color:#3b2d24}body[data-theme="latte"] .sel-pop-item{color:#3b2d24}body[data-theme="latte"] .sel-pop-item:hover,body[data-theme="latte"] .sel-pop-item.act{background:#e9dac4}body[data-theme="latte"] .sel-pop-item.cur{color:#8a4b22}body[data-theme="latte"] .sel-pop-item.ph,body[data-theme="latte"] .sel-pop-empty{color:#6f5b4c}
+body[data-theme="cappuccino"] .sel-pop{background:#54352b;border-color:#8a6250}body[data-theme="cappuccino"] .sel-pop input{background:#4a2d24;border-color:#8a6250;color:#fff5ea}body[data-theme="cappuccino"] .sel-pop-item{color:#fff5ea}body[data-theme="cappuccino"] .sel-pop-item:hover,body[data-theme="cappuccino"] .sel-pop-item.act{background:#8a6250}body[data-theme="cappuccino"] .sel-pop-item.cur{color:#ffd9a8}body[data-theme="cappuccino"] .sel-pop-item.ph,body[data-theme="cappuccino"] .sel-pop-empty{color:#f0e3d3}
+body[data-theme="pixel"] .sel-pop{background:#413a5e;border:2px solid #7466c0;border-radius:0}body[data-theme="pixel"] .sel-pop input{background:#2d2840;border:2px solid #7466c0;border-radius:0;color:#f3efd9}body[data-theme="pixel"] .sel-pop-item{color:#f3efd9;border-radius:0}body[data-theme="pixel"] .sel-pop-item:hover,body[data-theme="pixel"] .sel-pop-item.act{background:#51487a}body[data-theme="pixel"] .sel-pop-item.cur{color:#ffd85e}body[data-theme="pixel"] .sel-pop-item.ph,body[data-theme="pixel"] .sel-pop-empty{color:#b9b2d4}
+.mt-padd{max-width:230px}
 .mt-pchip{display:inline-flex;flex-direction:row!important;align-items:center;gap:4px!important;border:1px solid var(--line,#d7deea);border-radius:999px;padding:2px 9px;font-size:12px;cursor:pointer}
 .mt-tasks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 .mt-tasks li{display:flex;gap:6px;align-items:center;flex-wrap:wrap;border:1px solid var(--line,#e3e8f1);border-radius:8px;padding:5px 8px}
@@ -1924,6 +1937,44 @@ function openMoveTaskModal(taskId){
  input.addEventListener('keydown',e=>{if(e.key==='Enter'&&creating){e.preventDefault();const n=input.value.trim();if(n)createAndMove(n)}});
  input.addEventListener('input',render);backdrop.querySelector('.move-modal-cancel').onclick=close;backdrop.addEventListener('click',e=>{if(e.target===backdrop)close()});render();input.focus();
 }
+function openSelectPopup(sel){
+ document.querySelectorAll('.sel-pop').forEach(x=>x._close?.());
+ const opts=[...sel.options].filter(o=>!o.disabled);if(!opts.length)return;
+ const pop=document.createElement('div');pop.className='sel-pop';pop.setAttribute('role','listbox');
+ const search=opts.length>8;let q='',act=-1;
+ pop.innerHTML=(search?'<input type="search" placeholder="Найти…" aria-label="Поиск" autocomplete="off">':'')+'<div class="sel-pop-list"></div>';
+ const list=pop.querySelector('.sel-pop-list');
+ const draw=()=>{const items=opts.filter(o=>!q||o.text.toLocaleLowerCase('ru').includes(q));list.innerHTML=items.length?items.map((o,i)=>`<button type="button" role="option" class="sel-pop-item${o.value===sel.value?' cur':''}${!o.value?' ph':''}${i===act?' act':''}" data-i="${opts.indexOf(o)}"><span>${esc(o.text)}</span></button>`).join(''):'<div class="sel-pop-empty">Ничего не найдено</div>'};
+ draw();document.body.appendChild(pop);
+ const r=sel.getBoundingClientRect();const w=Math.max(r.width,240);pop.style.width=Math.min(w,window.innerWidth-16)+'px';
+ pop.style.left=Math.max(8,Math.min(r.left,window.innerWidth-w-8))+'px';
+ const below=window.innerHeight-r.bottom-12,above=r.top-12;const up=below<200&&above>below;const max=Math.max(160,Math.min(340,up?above:below));
+ pop.style.maxHeight=max+'px';list.style.maxHeight=(max-(search?52:12))+'px';
+ if(up)pop.style.bottom=(window.innerHeight-r.top+4)+'px';else pop.style.top=(r.bottom+4)+'px';
+ const cur=list.querySelector('.cur');cur?.scrollIntoView({block:'nearest'});
+ const close=()=>{pop.remove();document.removeEventListener('mousedown',away,true);document.removeEventListener('keydown',key,true);window.removeEventListener('resize',close);window.removeEventListener('scroll',scr,true);sel.focus?.({preventScroll:true})};
+ pop._close=close;
+ const pick=i=>{const o=sel.options[i];if(!o)return;close();if(sel.value!==o.value){sel.value=o.value;sel.dispatchEvent(new Event('change',{bubbles:true}))}};
+ const away=e=>{if(!pop.contains(e.target))close()};
+ const scr=e=>{if(!pop.contains(e.target))close()};
+ const vis=()=>[...list.querySelectorAll('.sel-pop-item')];
+ const key=e=>{
+  if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close();return}
+  const items=vis();
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();if(!items.length)return;act=(act+(e.key==='ArrowDown'?1:-1)+items.length)%items.length;items.forEach((b,i)=>b.classList.toggle('act',i===act));items[act].scrollIntoView({block:'nearest'});return}
+  if(e.key==='Enter'){e.preventDefault();const b=items[act>=0?act:0];if(b)pick(Number(b.dataset.i))}
+ };
+ list.addEventListener('click',e=>{const b=e.target.closest('.sel-pop-item');if(b)pick(Number(b.dataset.i))});
+ pop.querySelector('input')?.addEventListener('input',e=>{q=e.target.value.trim().toLocaleLowerCase('ru');act=q?0:-1;draw()});
+ document.addEventListener('mousedown',away,true);document.addEventListener('keydown',key,true);window.addEventListener('resize',close);window.addEventListener('scroll',scr,true);
+ (pop.querySelector('input')||null)?.focus();
+}
+function wireStyledSelects(view){
+ if(!view||view._styledSel)return;view._styledSel=true;
+ const fine=()=>window.matchMedia&&matchMedia('(hover:hover) and (pointer:fine)').matches;
+ view.addEventListener('mousedown',e=>{const s=e.target.closest?.('select');if(!s||s.multiple||s.disabled||!fine())return;e.preventDefault();openSelectPopup(s)});
+ view.addEventListener('keydown',e=>{const s=e.target.closest?.('select');if(!s||s.multiple||s.disabled||!fine())return;if(e.key==='Enter'||e.key===' '||e.key==='ArrowDown'&&e.altKey){e.preventDefault();openSelectPopup(s)}});
+}
 function renderMyTasks(){
  const el=$('myTasksView');if(!el)return;
  const email=String(cloudSession?.user?.email||'').trim().toLocaleLowerCase();const meta=cloudSession?.user?.user_metadata||{};const names=myOwnerNames();const splitOwners=v=>String(v||'').split(/[;,\n]+/).map(x=>x.trim().toLocaleLowerCase()).filter(Boolean);const assigned=[...allTasks(),...(standaloneTasks||[]).map(t=>({...t,project:''}))].filter(t=>{const owners=splitOwners(t.owner);return owners.some(owner=>names.includes(owner)||email&&owner===email)||!!(t.assigneeId&&t.assigneeId===cloudSession?.user?.id)||!!(Array.isArray(t.assignees)&&t.assignees.some(a=>String(typeof a==='object'?(a.id||a.email||a.name):a).trim().toLocaleLowerCase()===email||names.includes(String(typeof a==='object'?(a.name||a.email):a).trim().toLocaleLowerCase())));});
@@ -2118,6 +2169,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.11.02-02',date:'02.11.2026',title:'Встречи: красивые выпадающие списки',items:['Выбор проекта и другие списки во встречах теперь в стиле темы: закруглённое окно, подсветка, галочка у выбранного, поиск, если вариантов больше восьми, выбор стрелками и Enter.']},
  {v:'2026.11.02-01',date:'02.11.2026',title:'Переименование проекта',items:['Меню проекта → «Переименовать проект…»: новое название сразу обновляется в закреплённых задачах, порядке проектов, встречах (в том числе из Meeting Hub) и релизах.','Общий проект переименовать нельзя; название не должно совпадать с другим проектом или архивом.']},
  {v:'2026.10.30-03',date:'30.10.2026',title:'CRM: дополнительные ответственные',items:['При отправке задачи в CRM можно выбрать дополнительных ответственных (CRM их уведомит). В карточке связанной задачи — кнопка «👥 Доп. ответственные…», а имена видны в блоке CRM и в поле «Ответственный».']},
  {v:'2026.10.30-02',date:'30.10.2026',title:'Мои задачи: порядок перетаскиванием',items:['У каждой задачи слева значок ⠿: потяните его вверх или вниз, чтобы поставить задачу на своё место. Порядок запоминается для каждого списка.','С клавиатуры: поставьте фокус на ⠿ и нажмите стрелку вверх или вниз.','Новые задачи появляются в начале списка, пока вы их не переставите.']},
@@ -3395,7 +3447,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
 (function meetingsModule(){
   const KEY='__meetings__';
   const view=document.createElement('section');view.className='viewpanel extra-view meetings-view';view.id='meetingsView';view.hidden=true;
-  const board=$('board');if(!board)return;board.parentNode.insertBefore(view,board.nextSibling);
+  const board=$('board');if(!board)return;board.parentNode.insertBefore(view,board.nextSibling);wireStyledSelects(view);
   const nav=document.createElement('button');nav.className='sidebar-inbox';nav.id='meetingsNav';nav.type='button';nav.textContent='Встречи';
   const rn=$('releasesNav')||$('myTasksNav');rn.insertAdjacentElement('afterend',nav);
   // На телефоне боковой панели нет: «Встречи» открываются из панели «Ещё».
