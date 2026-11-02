@@ -20,7 +20,7 @@ const dueEnd = source.indexOf('async function handleProjectChoice');
 assert.ok(cbStart > 0 && cbEnd > cbStart && dueStart > 0 && dueEnd > dueStart, 'callback section not found');
 await writeFile(cbFile, source.slice(cbStart, cbEnd) + source.slice(dueStart, dueEnd));
 const { parseProjectCallback: cb, dueChoice } = await import(pathToFileURL(cbFile).href);
-const { parseTaskText: p, parseImageReply: img, ocrTextToTask: ocr, parseNoteCommand: note, parseListMessage: listMsg, parseDialogReply: dlg, dialogSystemPrompt: dlgPrompt, classifyMessage: cls, wantsProject, splitItems, cleanNoteText, noteRow } = await import(pathToFileURL(file).href);
+const { parseTaskText: p, parseImageReply: img, ocrTextToTask: ocr, parseNoteCommand: note, parseListMessage: listMsg, parseDialogReply: dlg, dialogSystemPrompt: dlgPrompt, classifyMessage: cls, wantsProject, splitItems, cleanNoteText, noteRow, parseChecklistTask: chk, taskFromText } = await import(pathToFileURL(file).href);
 const td = (s) => { const r = p(s); return [r.title, r.description, r.due]; };
 
 // The message that started it: dictated, no punctuation.
@@ -141,3 +141,18 @@ assert.equal(dueChoice('t0', fixed), 'сегодня');
 assert.equal(dueChoice('t2', fixed), 'послезавтра');
 assert.equal(dueChoice('t3', fixed), '09.11.2026');
 console.log('draft/notes tests passed');
+
+// ---- Заголовок + пункты = одна задача с чек-листом ----
+const msg = 'Уточнить у Андрея:\n1. что с вопросом по банку\n2. что с обедом\n- как быть с задатком';
+const c1 = chk(msg);
+assert.equal(c1.heading, 'Уточнить у Андрея:');
+assert.deepEqual(c1.items, ['что с вопросом по банку', 'что с обедом', 'как быть с задатком']);
+assert.equal(chk('1. a\n2. b'), null, 'pure list stays a list of tasks');
+assert.equal(chk('Задачи:\n1. a\n2. b'), null, 'explicit "задачи" keeps list mode');
+assert.equal(chk('Заметки:\n- a\n- b'), null);
+assert.equal(chk('Купить:\n- хлеб'), null, 'one item is not a checklist');
+const tt = taskFromText(msg);
+assert.equal(tt.title, 'Уточнить у Андрея');
+assert.equal(tt.description, '☐ что с вопросом по банку\n☐ что с обедом\n☐ как быть с задатком');
+assert.equal(taskFromText('позвонить в банк завтра').due, 'завтра');
+console.log('checklist task tests passed');

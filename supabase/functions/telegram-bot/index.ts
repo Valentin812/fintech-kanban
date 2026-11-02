@@ -551,6 +551,32 @@ async function describeImage(image: { data: string; mime: string }, caption: str
 
 // A numbered list in one message ("1. … 2. … 3. …") is several items, not one task.
 // A heading «Быстрые заметки» / «Заметки» before the list makes them quick notes.
+// «Уточнить у Андрея:» + пункты (1. 2. - …) = ОДНА задача, пункты уходят в чек-лист (в проект — подзадачи).
+// В описании пункты хранятся строками «☐ текст»; приложение превращает их в чек-лист или подзадачи.
+const CHECK_ITEM = /^(?:\d{1,2}[.)]|[-•*–—])\s+(\S.*)$/;
+const LIST_HEADING = /^(?:задачи|список(?:\s+задач)?|несколько\s+задач|\d{1,2}\s+задач[иа]?|(?:быстрые?\s+)?заметк[аи])\s*[:：—-]?$/i;
+export function parseChecklistTask(raw: string): { heading: string; items: string[] } | null {
+  const lines = String(raw ?? "").replace(/\r\n?/g, "\n").split("\n").map((l) => l.trim()).filter(Boolean);
+  const first = lines.findIndex((l) => CHECK_ITEM.test(l));
+  if (first < 1) return null;
+  const heading = lines.slice(0, first).join(" ").replace(/\s+/g, " ").trim();
+  if (!heading || LIST_HEADING.test(heading)) return null;
+  const items: string[] = [];
+  for (const line of lines.slice(first)) {
+    const m = line.match(CHECK_ITEM);
+    if (m) items.push(m[1].trim());
+    else items[items.length - 1] += " " + line;
+  }
+  return items.length >= 2 ? { heading, items: items.slice(0, 30) } : null;
+}
+export function taskFromText(raw: string): ParsedTask {
+  const cl = parseChecklistTask(raw);
+  if (!cl) return parseTaskText(raw);
+  const t = parseTaskText(cl.heading);
+  const list = cl.items.map((i) => "☐ " + i).join("\n");
+  return { ...t, description: [t.description, list].filter(Boolean).join("\n").slice(0, 4000) };
+}
+
 export function parseListMessage(raw: string): { kind: "tasks" | "notes"; items: string[] } | null {
   const lines = String(raw ?? "").replace(/\r\n?/g, "\n").split("\n");
   const ITEM = /^\s*\d{1,2}[.)]\s+(\S.*)$/;
@@ -743,7 +769,7 @@ function draftText(rows: DraftRow[], names: string[], ask = true): string {
     const r = rows[0];
     const att = r.attachment ? (r.attachment.kind === "voice" ? "\n🎙 Голосовое приложено к задаче." : "\n🖼 Картинка приложена к задаче.") : "";
     return `📌 Задача: ${r.title}` + (r.due ? `\nСрок: ${r.due}` : (ask ? "\nСрок: ⚠️ не указан — выбери кнопкой ниже" : "")) +
-      (r.description ? `\nОписание: ${clip(r.description, 300)}` : "") + att + `\nКуда: ${where(r)}` + q("в Kanban");
+      (r.description ? `\n${r.description.includes("☐ ") ? "Пункты" : "Описание"}: ${clip(r.description, r.description.includes("☐ ") ? 900 : 300)}` : "") + att + `\nКуда: ${where(r)}` + q("в Kanban");
   }
   return `📋 Задач: ${rows.length}\n` + rows.map((r, i) =>
     `${i + 1}. ${r.title}` + (r.due ? ` · срок ${r.due}` : (ask ? " · ⚠️ без срока" : "")) + (r.project_hint ? ` → ${where(r).replace(/^проект /, "")}` : "")).join("\n") + q("в Kanban");
@@ -902,6 +928,11 @@ async function handleTaskMessage(chatId: number, providerUserId: string, text: s
       : "Сначала подключи аккаунт: в Kanban открой меню аккаунта → «Подключить Telegram» и отправь сюда код.");
     return;
   }
+  if (parseChecklistTask(text)) {
+    const clUser = await authorize(chatId, providerUserId);
+    if (clUser) await createDrafts(chatId, clUser, "tasks", [taskFromText(text)]);
+    return;
+  }
   const list = parseListMessage(text);
   if (list) {
     await handleListMessage(chatId, providerUserId, list);
@@ -915,7 +946,7 @@ async function handleTaskMessage(chatId: number, providerUserId: string, text: s
   const userId = await authorize(chatId, providerUserId);
   if (!userId) return;
   if (cls.kind === "one") {
-    await saveTask(chatId, userId, parseTaskText(cls.body), "✅ Задача", { askProject: true });
+    await saveTask(chatId, userId, taskFromText(cls.body), "✅ Задача", { askProject: true });
     return;
   }
   if (cls.kind === "ask") {
@@ -929,7 +960,7 @@ async function handleTaskMessage(chatId: number, providerUserId: string, text: s
     return;
   }
   if (await handleDialog(chatId, userId, text)) return;
-  await saveTask(chatId, userId, parseTaskText(text), "✅ Задача", { askProject: true });
+  await saveTask(chatId, userId, taskFromText(text), "✅ Задача", { askProject: true });
 }
 
 async function handleListMessage(chatId: number, providerUserId: string, list: { kind: "tasks" | "notes"; items: string[] }) {
@@ -1142,7 +1173,7 @@ async function handleProjectChoice(query: any) {
     await rerender();
     return;
   }
-  const name = parsed.choice === "mine" ? "" : (rows[0].choices ?? [])[parsed.choice] ?? null;
+  const name = parsed.choice === "mine" ? "" : typeof parsed.choice === "number" ? (rows[0].choices ?? [])[parsed.choice] ?? null : null;
   if (name === null) {
     await answerCallback(query.id, "Проект не найден.");
     return;
@@ -1184,7 +1215,7 @@ async function handleModeChoice(query: any) {
     const userId = await authorize(chatId, providerUserId);
     if (!userId) return;
     if (mode === "note") await createDrafts(chatId, userId, "notes", [original]);
-    else await createDrafts(chatId, userId, "tasks", [parseTaskText(original)]);
+    else await createDrafts(chatId, userId, "tasks", [taskFromText(original)]);
     return;
   }
   await handleListMessage(chatId, providerUserId, { kind: mode === "many" ? "tasks" : "notes", items: splitItems(original) });
