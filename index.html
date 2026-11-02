@@ -2170,6 +2170,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.11.02-06',date:'02.11.2026',title:'CRM: архивные задачи без окна',items:['Задачи, которые в CRM ушли в архив, тоже больше не вызывают окно «Задача закрыта в CRM»: только метка «нет в CRM» и фильтр.']},
  {v:'2026.11.02-05',date:'02.11.2026',title:'Уведомления о сроках подробнее',items:['В колокольчике у просроченной задачи видно, на сколько дней просрочка, проект, статус, ответственного и начало описания.']},
  {v:'2026.11.02-04',date:'02.11.2026',title:'CRM: удалённые задачи',items:['Задачи, удалённые в CRM (или больше не ваши), не вызывают окно «Задача закрыта в CRM». У карточки появляется метка «нет в CRM», а в «Мои задачи» — фильтр «🚫 Нет в CRM».']},
  {v:'2026.11.02-03',date:'02.11.2026',title:'Джарвис: подтверждение и заметки целиком',items:['Сообщение вида «Уточнить у Андрея:» и пункты списком (1. 2. или «-») бот делает одной задачей: в «Мои задачи» пункты становятся чекбоксами, в проекте — подзадачами.','Поле «Описание» в задаче запоминает высоту, которую вы задали вручную (потянув за уголок), и открывается такого же размера. Сбросить: двойной щелчок по уголку.','Бот перед отправкой в Kanban показывает, что получилось, и спрашивает: «Отправить», «Изменить» (ответом с исправленным текстом) или «Отменить». Неподтверждённое уходит в Kanban само только через 12 часов.','У задачи в боте срок обязателен: без него «Отправить» не сработает — выберите «Сегодня / Завтра / Послезавтра / Через неделю» или впишите в «Изменить».','Заметки больше не урезаются: сохраняется весь текст вместе с переносами строк (до 2000 символов).']},
@@ -3903,11 +3904,11 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     if(!data.some(p=>p.name===activeProject))activeProject=data[0]?.name||activeProject;
     save();renderAll();toast(`Перенесено в «Мои задачи»: ${n}`);S.last=0;sync(false)}
   // Задача закрыта, отменена или снята с вас в CRM: спрашиваем, что делать с карточкой.
-  // Удалена/пропала в CRM: не спрашиваем, только метка на карточке и фильтр «Нет в CRM».
-  const isGone=t=>!!(t&&t.crm&&t.crm.gone&&!t.crm.cancelled&&t.crm.why!=='cancelled'&&t.crm.why!=='archived');
+  // Удалена, в архиве или пропала в CRM: не спрашиваем, только метка на карточке и фильтр «Нет в CRM».
+  const isGone=t=>!!(t&&t.crm&&t.crm.why!=='cancelled'&&(t.crm.gone||t.crm.why==='archived'));
   function askOff(){
     if(S.dlg||document.querySelector('.friendly-dialog'))return;
-    for(const x of crmTasks())if(x.crm.mine&&(x.crm.cancelled||x.crm.gone)&&!isGone(x)&&!x.crm.asked){x.crm.asked=true;save()}
+    for(const x of crmTasks())if(x.crm.mine&&(x.crm.cancelled||x.crm.gone)&&!x.crm.asked){x.crm.asked=true;save()}
     const t=crmTasks().find(x=>(x.crm.cancelled||x.crm.gone)&&!isGone(x)&&!x.crm.asked&&!S.later.has(x.crm.id));if(!t)return;
     S.dlg=true;S.picked=false;
     dialog({title:'Задача закрыта в CRM',description:`«${t.title}» (№${t.crm.id}): ${offText(t.crm)}. Что сделать с карточкой?`,fields:[{label:'Карточка',value:'keep',options:[{value:'keep',label:'Продолжить работать (снять связь с CRM)'},{value:'archive',label:'Завершить и убрать в архив'},{value:'later',label:'Решить позже'}]}],submitLabel:'Применить',
