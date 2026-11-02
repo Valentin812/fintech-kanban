@@ -115,6 +115,8 @@ jobs:
         run: node tests/releases-multi.mjs
       - name: Run project order browser test
         run: node tests/project-order.mjs
+      - name: Project groups and checklist keys
+        run: node tests/project-groups.mjs
       - name: Quick task and note-to-project tests
         run: node tests/quick-task.mjs
       - name: Undo stack tests
