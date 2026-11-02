@@ -88,6 +88,9 @@ jobs:
       - name: Run My tasks reorder browser test
         run: node tests/my-tasks-reorder.mjs
 
+      - name: Run Project rename browser test
+        run: node tests/project-rename.mjs
+
       - name: Run Releases tab browser test
         run: node tests/releases-tab.mjs
 

@@ -1458,10 +1458,10 @@ function undoToast(message,onUndo){document.getElementById('undoToast')?.remove(
 (function projectMenu(){const actions=document.querySelector('.side-actions');if(!actions||$('projectMenuButton'))return;
  const btn=document.createElement('button');btn.id='projectMenuButton';btn.type='button';btn.title='Действия с проектом';btn.setAttribute('aria-label','Действия с проектом');btn.setAttribute('aria-haspopup','menu');btn.setAttribute('aria-expanded','false');btn.textContent='⋯';actions.appendChild(btn);
  const menu=document.createElement('div');menu.id='projectMenu';menu.className='project-menu';menu.setAttribute('role','menu');menu.hidden=true;document.body.appendChild(menu);
- const itemsFor=p=>{const shared=p?.shared;const list=[];if(shared){list.push(['__members','Участники проекта…'],['exportBtn','Экспорт данных (JSON)']);list.push(shared.role==='owner'?['deleteProject','Удалить общий проект','danger']:['__leave','Выйти из проекта','danger'])}else{list.push(['__share','Сделать проект общим…'],['exportBtn','Экспорт данных (JSON)'],['importBtn','Импорт задач из JSON'],['projectToTask','Превратить проект в задачу'],['__archive','В архив'],['deleteProject','Удалить проект','danger'])}if((archivedProjects||[]).length)list.push(['__archived','Архив проектов · '+archivedProjects.length]);if((projectBackups||[]).length)list.push(['__backups','Резервные копии…']);return list.filter(([id])=>id.startsWith('__')||$(id))};
+ const itemsFor=p=>{const shared=p?.shared;const list=[];if(shared){list.push(['__members','Участники проекта…'],['exportBtn','Экспорт данных (JSON)']);list.push(shared.role==='owner'?['deleteProject','Удалить общий проект','danger']:['__leave','Выйти из проекта','danger'])}else{list.push(['__share','Сделать проект общим…'],['exportBtn','Экспорт данных (JSON)'],['importBtn','Импорт задач из JSON'],['__rename','Переименовать проект…'],['projectToTask','Превратить проект в задачу'],['__archive','В архив'],['deleteProject','Удалить проект','danger'])}if((archivedProjects||[]).length)list.push(['__archived','Архив проектов · '+archivedProjects.length]);if((projectBackups||[]).length)list.push(['__backups','Резервные копии…']);return list.filter(([id])=>id.startsWith('__')||$(id))};
  const close=()=>{menu.hidden=true;btn.setAttribute('aria-expanded','false')};
  btn.addEventListener('click',e=>{e.stopPropagation();if(!menu.hidden){close();return}menu.innerHTML=itemsFor(active()).map(([id,label,cls])=>`<button type="button" role="menuitem" data-project-action="${id}"${cls?` class="${cls}"`:''}>${label}</button>`).join('');const r=btn.getBoundingClientRect();menu.hidden=false;menu.style.top=(r.bottom+4)+'px';menu.style.left=Math.max(8,Math.min(r.left,window.innerWidth-menu.offsetWidth-8))+'px';btn.setAttribute('aria-expanded','true');menu.querySelector('button')?.focus()});
- menu.addEventListener('click',e=>{const b=e.target.closest('[data-project-action]');if(!b)return;close();const id=b.dataset.projectAction;if(id==='__share')shareActiveProject();else if(id==='__members')openSharedMembers(active());else if(id==='__leave')deleteOrLeaveSharedProject(active());else if(id==='__backups')openBackups();else if(id==='__archive')archiveActiveProject();else if(id==='__archived')openArchive();else $(id)?.click()});
+ menu.addEventListener('click',e=>{const b=e.target.closest('[data-project-action]');if(!b)return;close();const id=b.dataset.projectAction;if(id==='__share')shareActiveProject();else if(id==='__members')openSharedMembers(active());else if(id==='__leave')deleteOrLeaveSharedProject(active());else if(id==='__backups')openBackups();else if(id==='__rename')renameActiveProject();else if(id==='__archive')archiveActiveProject();else if(id==='__archived')openArchive();else $(id)?.click()});
  document.addEventListener('click',e=>{if(!menu.hidden&&!e.target.closest('#projectMenu'))close()});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!menu.hidden){close();btn.focus()}})})();
 
 (function themeIntoAccountMenu(){const select=$('themeToggle'),security=$('cloudSecurityGroup');if(!select||!security||$('cloudThemeGroup'))return;const group=document.createElement('section');group.className='cloud-action-group';group.id='cloudThemeGroup';group.innerHTML='<label class="cloud-group-title" for="themeToggle">Оформление</label>';security.parentNode.insertBefore(group,security);group.appendChild(select);select.classList.add('cloud-theme-select')})();
@@ -1540,6 +1540,34 @@ function openBackups(){const list=projectBackups||[];if(!list.length){toast('Р�
  $('sharedBody').innerHTML=`<p class="mini">Последние ${list.length} копий. Восстановленная копия появится как отдельный личный проект — текущие проекты не изменятся.</p><div class="shared-members">${list.map((b,i)=>`<div class="admin-user"><div class="admin-user-main"><div class="admin-user-name">${esc(b.name)}</div><div class="admin-user-meta">${esc(new Date(b.at).toLocaleString('ru-RU'))} · ${esc(why[b.reason]||'копия')} · задач: ${b.tasks?.length||0}</div></div><button class="btn" type="button" data-restore-backup="${i}">Восстановить</button></div>`).reverse().join('')}</div>`;
  el.classList.add('show');document.querySelectorAll('[data-restore-backup]').forEach(b=>b.onclick=()=>{const bk=list[Number(b.dataset.restoreBackup)];if(!bk)return;const stamp=new Date(bk.at).toLocaleDateString('ru-RU');let name=`${bk.name} (копия от ${stamp})`,n=2;while(data.some(p=>p.name===name))name=`${bk.name} (копия от ${stamp}, ${n++})`;data.push({name,tasks:cloneJson(bk.tasks)});projectMeta[name]=cloneJson(bk.meta||defaultMeta());activeProject=name;save();renderAll();switchView('tasks');el.classList.remove('show');toast(`Восстановлено: «${name}»`)})}
 /* Архив проектов: проект уходит из списка вместе с задачами (в «Мои задачи» и поиске их нет); можно вернуть или удалить навсегда. */
+function renameActiveProject(){
+ const p=active();if(!p)return;if(p.shared){toast('Общий проект переименовать нельзя');return}
+ friendlyFormDialog({title:'Переименовать проект',description:'Название обновится в задачах, закреплениях, порядке проектов, встречах и релизах.',fields:[{label:'Новое название',value:p.name,required:true}],submitLabel:'Переименовать',onSubmit:([raw],wrap)=>{
+  const name=String(raw||'').trim().replace(/\s+/g,' ');const old=p.name;
+  if(!name||name===old)return true;
+  if(name.length>120){wrap.querySelector('.friendly-error').textContent='Название слишком длинное.';return false}
+  if(name.startsWith('__')||data.some(x=>x!==p&&x.name.toLowerCase()===name.toLowerCase())||(archivedProjects||[]).some(x=>String(x.name).toLowerCase()===name.toLowerCase())){wrap.querySelector('.friendly-error').textContent='Проект с таким названием уже есть (или лежит в архиве).';return false}
+  applyProjectRename(p,old,name);return true}})}
+function applyProjectRename(p,old,name){
+ p.name=name;
+ if(projectMeta[old]!==undefined){projectMeta[name]=projectMeta[old];delete projectMeta[old]}
+ const pre=old+'\u0001',npre=name+'\u0001';const fix=k=>typeof k==='string'&&k.startsWith(pre)?npre+k.slice(pre.length):k;
+ pinnedTasks=pinnedTasks.map(fix);
+ const mo=projectMeta.__myorder__;if(mo&&Array.isArray(mo.list))mo.list=mo.list.map(fix);
+ projectOrder=(projectOrder||[]).map(n=>n===old?name:n);
+ const ml=projectMeta.__meetings__?.list;if(Array.isArray(ml))ml.forEach(m=>{if(m.project===old)m.project=name;if(Array.isArray(m.projects))m.projects=m.projects.map(n=>n===old?name:n)});
+ if(activeProject===old)activeProject=name;
+ save();renderProjects();renderAll();toast(`Проект переименован: «${name}»`);
+ renameProjectInCloud(old,name);
+}
+async function renameProjectInCloud(old,name){
+ if(!cloudSession?.access_token)return;const uid=cloudSession.user?.id;if(!uid)return;let failed=false;
+ const q=encodeURIComponent;const patch=(path,body)=>cloudRequest(path,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(body)});
+ try{await patch(`/rest/v1/project_releases?shared_project_id=is.null&owner_id=eq.${q(uid)}&project_name=eq.${q(old)}`,{project_name:name})}catch(e){failed=true}
+ try{const rows=await cloudRequest(`/rest/v1/project_releases?select=id,tags&owner_id=eq.${q(uid)}&tags=cs.${q(JSON.stringify(['prj:'+old]))}&limit=200`,{method:'GET'});for(const r of (Array.isArray(rows)?rows:[])){await patch(`/rest/v1/project_releases?id=eq.${q(r.id)}`,{tags:(r.tags||[]).map(t=>t==='prj:'+old?'prj:'+name:t)})}}catch(e){failed=true}
+ try{await patch(`/rest/v1/meetings?project_name=eq.${q(old)}`,{project_name:name})}catch(e){failed=true}
+ if(failed)toast('Название сохранено, но часть встреч или релизов в облаке обновить не удалось');
+}
 function archiveActiveProject(){
  const p=active();if(!p||p.shared)return;
  if(data.length<2){toast('Нельзя архивировать единственный проект');return}
@@ -2090,6 +2118,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.11.02-01',date:'02.11.2026',title:'Переименование проекта',items:['Меню проекта → «Переименовать проект…»: новое название сразу обновляется в закреплённых задачах, порядке проектов, встречах (в том числе из Meeting Hub) и релизах.','Общий проект переименовать нельзя; название не должно совпадать с другим проектом или архивом.']},
  {v:'2026.10.30-03',date:'30.10.2026',title:'CRM: дополнительные ответственные',items:['При отправке задачи в CRM можно выбрать дополнительных ответственных (CRM их уведомит). В карточке связанной задачи — кнопка «👥 Доп. ответственные…», а имена видны в блоке CRM и в поле «Ответственный».']},
  {v:'2026.10.30-02',date:'30.10.2026',title:'Мои задачи: порядок перетаскиванием',items:['У каждой задачи слева значок ⠿: потяните его вверх или вниз, чтобы поставить задачу на своё место. Порядок запоминается для каждого списка.','С клавиатуры: поставьте фокус на ⠿ и нажмите стрелку вверх или вниз.','Новые задачи появляются в начале списка, пока вы их не переставите.']},
  {v:'2026.10.29-20',date:'29.10.2026',title:'Встречи: все задачи в один проект',items:['Ассистент больше не создаёт дубли: если задача с таким названием уже есть на доске (например, из этой встречи), он её пропускает, а в запрос «Разобрать с ИИ» добавляется список уже созданных задач.','У задачи из встречи ссылка называется «Встреча «название»» и открывается в этом же окне, а не в новой вкладке.','Над списком задач встречи (своей и из Meeting Hub) есть выбор «Все задачи в проект»: один выбор проставляет проект всем ещё не добавленным задачам, дальше «Добавить все». В Meeting Hub «Все задачи на доску» теперь учитывает выбранный у каждой задачи проект.']},
