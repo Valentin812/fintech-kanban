@@ -12,7 +12,15 @@ assert.ok(start > 0 && end > start, 'parseTaskText section not found in the bot 
 const dir = await mkdtemp(join(tmpdir(), 'bot-parse-'));
 const file = join(dir, 'parse.ts');
 await writeFile(file, source.slice(start, end));
-const { parseTaskText: p, parseImageReply: img, ocrTextToTask: ocr, parseNoteCommand: note, parseListMessage: listMsg, parseDialogReply: dlg, dialogSystemPrompt: dlgPrompt, classifyMessage: cls, wantsProject, splitItems } = await import(pathToFileURL(file).href);
+const cbFile = join(dir, 'callback.ts');
+const cbStart = source.indexOf('export function parseProjectCallback');
+const cbEnd = source.indexOf('async function editDraftMessage');
+const dueStart = source.indexOf('export function dueChoice');
+const dueEnd = source.indexOf('async function handleProjectChoice');
+assert.ok(cbStart > 0 && cbEnd > cbStart && dueStart > 0 && dueEnd > dueStart, 'callback section not found');
+await writeFile(cbFile, source.slice(cbStart, cbEnd) + source.slice(dueStart, dueEnd));
+const { parseProjectCallback: cb, dueChoice } = await import(pathToFileURL(cbFile).href);
+const { parseTaskText: p, parseImageReply: img, ocrTextToTask: ocr, parseNoteCommand: note, parseListMessage: listMsg, parseDialogReply: dlg, dialogSystemPrompt: dlgPrompt, classifyMessage: cls, wantsProject, splitItems, cleanNoteText, noteRow } = await import(pathToFileURL(file).href);
 const td = (s) => { const r = p(s); return [r.title, r.description, r.due]; };
 
 // The message that started it: dictated, no punctuation.
@@ -110,3 +118,26 @@ assert.deepEqual(splitItems('1) а\n• б\n\nв'), ['а', 'б', 'в']);
 assert.equal(wantsProject('Позвонить в банк в проект'), true);
 assert.equal(wantsProject('Сдать отчёт в проектный офис'), false);
 console.log('telegram hybrid modes ok');
+
+// ---- Заметки без потери смысла ----
+const longNote = 'А'.repeat(450) + ' конец';
+assert.equal(noteRow(longNote).title.length, 200);
+assert.equal(noteRow(longNote).title + noteRow(longNote).description, longNote, 'note must survive split into title+description');
+assert.equal(cleanNoteText('Первая  строка \r\n\n\n\n  вторая   '), 'Первая строка\n\nвторая', 'line breaks stay, spaces collapse');
+assert.equal(cleanNoteText('x'.repeat(3000)).length, 2000);
+assert.equal(note('/заметка идея 1\nидея 2'), 'идея 1\nидея 2', 'multi-line note is not flattened');
+assert.equal(note('/заметка ' + 'я'.repeat(500)).length, 500, 'note is not cut at 300');
+
+// ---- Кнопки подтверждения ----
+assert.deepEqual(cb('p:12:s'), { inboxId: 12, choice: 'send', batch: false });
+assert.deepEqual(cb('b:12:x'), { inboxId: 12, choice: 'cancel', batch: true });
+assert.deepEqual(cb('p:12:e'), { inboxId: 12, choice: 'edit', batch: false });
+assert.deepEqual(cb('p:5:t2'), { inboxId: 5, choice: 't2', batch: false });
+assert.deepEqual(cb('p:5:3'), { inboxId: 5, choice: 3, batch: false });
+assert.equal(cb('p:5:t9'), null);
+assert.equal(cb('q:5:s'), null);
+const fixed = new Date('2026-11-02T10:00:00Z');
+assert.equal(dueChoice('t0', fixed), 'сегодня');
+assert.equal(dueChoice('t2', fixed), 'послезавтра');
+assert.equal(dueChoice('t3', fixed), '09.11.2026');
+console.log('draft/notes tests passed');

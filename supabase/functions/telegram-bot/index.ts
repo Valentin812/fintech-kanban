@@ -60,7 +60,7 @@ const HELP_TEXT =
   "• «1 задача: …» — всё сообщение станет одной задачей (первая строка — название, остальное — описание).\n" +
   "• «Задачи: …», «3 задачи …», нумерация или список с «-» — каждая строка отдельной задачей. «Заметки: …» — отдельными заметками.\n" +
   "• Несколько строк без этих слов — Джарвис спросит кнопками: одна задача, несколько или заметки.\n" +
-  "• После задачи кнопки «📝 В заметки» и «📁 В проект»; без выбора она остаётся в «Мои задачи». Напиши «в проект» — сразу покажу список проектов.\n" +
+  "• Перед отправкой в Kanban показываю, что получилось, и спрашиваю: «✅ Отправить», «✏️ Изменить» (ответь исправленным текстом) или «❌ Отменить». Там же «📝 В заметки» и «📁 Проект»; без проекта задача уйдёт в «Мои задачи». Напиши «в проект» — сразу покажу список проектов.\n" +
   "• Скриншот или фото: Джарвис распознает текст на картинке и сделает задачу (лучше отправлять как обычное фото, не файлом). Подпись к картинке — твой заголовок, #проект и срок тоже работают.\n" +
   "• Голосовое: Джарвис расшифрует его и сделает задачу, запись приложится к задаче.\n" +
   "• После картинки или голосового Джарвис спросит, в какой проект положить задачу.\n" +
@@ -154,9 +154,9 @@ export function splitOneLine(line: string): { title: string; description: string
 export function parseNoteCommand(raw: string): string | null {
   const text = String(raw ?? "").trim();
   const cmd = text.match(/^\/(?:заметка|заметки|note|n)(?:@\w+)?(?:\s+([\s\S]*))?$/i);
-  if (cmd) return (cmd[1] ?? "").replace(/\s+/g, " ").trim().slice(0, 300);
+  if (cmd) return cleanNoteText(cmd[1] ?? "");
   const word = text.match(/^(?:быстрая\s+заметка|заметка|note)\s*[:：—-]\s*([\s\S]+)$/i);
-  if (word) return word[1].replace(/\s+/g, " ").trim().slice(0, 300);
+  if (word) return cleanNoteText(word[1]);
   return null;
 }
 
@@ -639,6 +639,17 @@ export function parseDialogReply(raw: string): DialogReply | null {
   return { kind, items, reply };
 }
 
+// ---- Заметки без потери смысла ----
+// Переносы строк сохраняем, лишние пробелы убираем. Колонка title ограничена 200 символами:
+// остаток уходит в description, а приложение склеивает title + description обратно.
+export function cleanNoteText(raw: string): string {
+  return String(raw ?? "").replace(/\r\n?/g, "\n").replace(/[ \t]+/g, " ").replace(/ ?\n ?/g, "\n").replace(/\n{3,}/g, "\n\n").trim().slice(0, 2000);
+}
+export function noteRow(text: string): { title: string; description: string } {
+  const t = cleanNoteText(text);
+  return { title: t.slice(0, 200), description: t.slice(200) };
+}
+
 function normName(v: string) {
   return String(v ?? "").toLocaleLowerCase("ru").replace(/ё/g, "е").replace(/[^\p{L}\p{N}]+/gu, "");
 }
@@ -705,81 +716,112 @@ async function authorize(chatId: number, providerUserId: string): Promise<string
 
 const MAX_PROJECT_BUTTONS = 8;
 
+// ---- Черновики: всё, что пришло в бота, сначала ждёт «Отправить / Изменить / Отменить» ----
+
+type DraftRow = {
+  id: number; user_id: string; title: string; description: string; due: string; project_hint: string;
+  choices: string[] | null; created_at: string; attachment: Attachment | null; status: string; consumed_at: string | null;
+};
+const DRAFT_COLS = "id,user_id,title,description,due,project_hint,choices,created_at,attachment,status,consumed_at";
+const isNoteRow = (r: { project_hint: string }) => r.project_hint === "__note__";
+const noteTextOf = (r: { title: string; description: string }) => `${r.title ?? ""}${r.description ?? ""}`;
+const clip = (v: string, n: number) => (v.length > n ? v.slice(0, n - 1) + "…" : v);
+type Btn = { text: string; callback_data: string };
+
+function draftText(rows: DraftRow[], names: string[], ask = true): string {
+  const q = (kind: string) => (ask ? `\n\nОтправить ${kind}?` : "");
+  if (rows.every(isNoteRow)) {
+    if (rows.length === 1) return `📝 Заметка:\n${noteTextOf(rows[0])}${q("в «Быстрые заметки»")}`;
+    return `📝 Заметок: ${rows.length}\n` + rows.map((r, i) => `${i + 1}. ${clip(noteTextOf(r), 300)}`).join("\n") + q("в «Быстрые заметки»");
+  }
+  const where = (r: DraftRow) => {
+    if (!r.project_hint) return "«Мои задачи»";
+    const m = matchProject(r.project_hint, names);
+    return m.name ? `проект «${m.name}»` : `⚠️ проект #${r.project_hint} не найден, уйдёт в «Мои задачи»`;
+  };
+  if (rows.length === 1) {
+    const r = rows[0];
+    const att = r.attachment ? (r.attachment.kind === "voice" ? "\n🎙 Голосовое приложено к задаче." : "\n🖼 Картинка приложена к задаче.") : "";
+    return `📌 Задача: ${r.title}` + (r.due ? `\nСрок: ${r.due}` : (ask ? "\nСрок: ⚠️ не указан — выбери кнопкой ниже" : "")) +
+      (r.description ? `\nОписание: ${clip(r.description, 300)}` : "") + att + `\nКуда: ${where(r)}` + q("в Kanban");
+  }
+  return `📋 Задач: ${rows.length}\n` + rows.map((r, i) =>
+    `${i + 1}. ${r.title}` + (r.due ? ` · срок ${r.due}` : (ask ? " · ⚠️ без срока" : "")) + (r.project_hint ? ` → ${where(r).replace(/^проект /, "")}` : "")).join("\n") + q("в Kanban");
+}
+
+function projectRows(prefix: "p" | "b", id: number, choices: string[]) {
+  const buttons = choices.map((name, i) => ({ text: name.length > 40 ? name.slice(0, 39) + "…" : name, callback_data: `${prefix}:${id}:${i}` }));
+  const rows: Btn[][] = [];
+  for (let i = 0; i < buttons.length; i += 2) rows.push(buttons.slice(i, i + 2));
+  rows.push([{ text: "📥 Оставить в «Мои задачи»", callback_data: `${prefix}:${id}:m` }]);
+  return rows;
+}
+
+function draftKeyboard(prefix: "p" | "b", id: number, rows: DraftRow[], mode: "main" | "projects"): Btn[][] {
+  const send = { text: "✅ Отправить", callback_data: `${prefix}:${id}:s` };
+  const edit = { text: "✏️ Изменить", callback_data: `${prefix}:${id}:e` };
+  const cancel = { text: "❌ Отменить", callback_data: `${prefix}:${id}:x` };
+  const choices = rows[0]?.choices ?? [];
+  if (mode === "projects") return [...projectRows(prefix, id, choices), [send, cancel]];
+  // (срок выбирается на основном экране)
+  const second: Btn[] = [];
+  const note = rows.every(isNoteRow);
+  const dueRow: Btn[][] = !note && rows.some((r) => !r.due)
+    ? [[{ text: "📅 Сегодня", callback_data: `${prefix}:${id}:t0` }, { text: "Завтра", callback_data: `${prefix}:${id}:t1` },
+        { text: "Послезавтра", callback_data: `${prefix}:${id}:t2` }, { text: "Через неделю", callback_data: `${prefix}:${id}:t3` }]]
+    : [];
+  if (!note && prefix === "p") second.push({ text: "📝 В заметки", callback_data: `p:${id}:n` });
+  if (!note && choices.length) second.push({ text: "📁 Проект", callback_data: `${prefix}:${id}:v` });
+  return [...dueRow, [send, edit, cancel], ...(second.length ? [second] : [])];
+}
+
+async function loadDraftRows(prefix: "p" | "b", id: number, userId: string): Promise<DraftRow[]> {
+  const { data: row } = await db.from("telegram_inbox").select(DRAFT_COLS).eq("id", id).maybeSingle();
+  if (!row || row.user_id !== userId) return [];
+  if (prefix === "p") return row.status === "pending" && !row.consumed_at ? [row as DraftRow] : [];
+  const { data } = await db.from("telegram_inbox").select(DRAFT_COLS).eq("user_id", userId).eq("created_at", row.created_at)
+    .eq("status", "pending").is("consumed_at", null).order("id", { ascending: true });
+  return (data ?? []) as DraftRow[];
+}
+
+type DraftTask = { title: string; description: string; due: string; projectHint: string };
+
+// Один insert = одна пачка: строки делят created_at, по нему кнопки находят всю пачку.
+async function createDrafts(
+  chatId: number,
+  userId: string,
+  kind: "tasks" | "notes",
+  items: DraftTask[] | string[],
+  options: { attachment?: Attachment | null } = {},
+) {
+  const names = [...new Set(await projectNamesFor(userId))];
+  const choices = names.slice(0, MAX_PROJECT_BUTTONS);
+  const attachment = options.attachment ?? null;
+  const rows = kind === "notes"
+    ? (items as string[]).map((t) => ({ user_id: userId, ...noteRow(t), due: "", project_hint: "__note__", attachment: null, status: "pending", choices }))
+    : (items as DraftTask[]).map((t) => ({ user_id: userId, title: t.title, description: t.description, due: t.due, project_hint: t.projectHint, attachment, status: "pending", choices }));
+  const { data, error } = await db.from("telegram_inbox").insert(rows).select(DRAFT_COLS).order("id", { ascending: true });
+  if (error || !data?.length) {
+    console.error("Draft insert failed:", error?.message);
+    await sendMessage(chatId, kind === "notes" ? "Не удалось сохранить заметку. Попробуй ещё раз позже." : "Не удалось создать задачу. Попробуй ещё раз позже.");
+    return;
+  }
+  const drafts = data as DraftRow[];
+  const prefix = drafts.length === 1 && kind === "tasks" ? "p" : "b";
+  const direct = kind === "tasks" && choices.length > 0 && drafts.some((r) => !r.project_hint) && wantsProject(drafts.map((r) => `${r.title} ${r.description}`).join(" "));
+  await sendMessage(chatId, draftText(drafts, names), {
+    reply_markup: { inline_keyboard: draftKeyboard(prefix, drafts[0].id, drafts, direct ? "projects" : "main") },
+  });
+}
+
 async function saveTask(
   chatId: number,
   userId: string,
-  task: { title: string; description: string; due: string; projectHint: string },
-  heading: string,
+  task: DraftTask,
+  _heading: string,
   options: { attachment?: Attachment | null; askProject?: boolean } = {},
 ) {
-  let where = "«Мои задачи»";
-  let note = "";
-  const attachment = options.attachment ?? null;
-  const fileNote = attachment ? (attachment.kind === "voice" ? "\n🎙 Голосовое приложено к задаче." : "\n🖼 Картинка приложена к задаче.") : "";
-  if (!task.projectHint && options.askProject) {
-    const choices = [...new Set(await projectNamesFor(userId))].slice(0, MAX_PROJECT_BUTTONS);
-    const { data: row, error } = await db.from("telegram_inbox").insert({
-      user_id: userId,
-      title: task.title,
-      description: task.description,
-      due: task.due,
-      project_hint: "",
-      attachment,
-      status: "pending",
-      choices,
-    }).select("id").single();
-    if (error || !row) {
-      console.error("Inbox insert failed:", error?.message);
-      await sendMessage(chatId, "Не удалось создать задачу. Попробуй ещё раз позже.");
-      return;
-    }
-    // По умолчанию — «Мои задачи» или заметка; проекты показываем только по просьбе («в проект»).
-    const direct = choices.length && wantsProject(`${task.title} ${task.description}`);
-    const rows = direct
-      ? projectRows("p", row.id, choices)
-      : [[{ text: "📝 В заметки", callback_data: `p:${row.id}:n` }, ...(choices.length ? [{ text: "📁 В проект", callback_data: `p:${row.id}:v` }] : [])],
-         [{ text: "📥 Оставить в «Мои задачи»", callback_data: `p:${row.id}:m` }]];
-    await sendMessage(
-      chatId,
-      `${heading}: ${task.title}` +
-        (task.due ? `\nСрок: ${task.due}` : "") +
-        (task.description ? `\nОписание: ${task.description.length > 300 ? task.description.slice(0, 299) + "…" : task.description}` : "") +
-        fileNote +
-        (direct ? "\n\nВыбери проект. Если не выбрать за 10 минут, задача попадёт в «Мои задачи»." : "\n\nПо умолчанию — «Мои задачи». Можно переложить в заметки или проект."),
-      { reply_markup: { inline_keyboard: rows } },
-    );
-    return;
-  }
-  if (task.projectHint) {
-    const match = matchProject(task.projectHint, await projectNamesFor(userId));
-    if (match.name) where = `проект «${match.name}»`;
-    else if (match.ambiguous) note = `\n⚠️ #${task.projectHint} подходит к нескольким проектам (${match.ambiguous.join(", ")}) — задача попадёт в «Мои задачи». Уточни название.`;
-    else note = `\n⚠️ Проект #${task.projectHint} не найден — задача попадёт в «Мои задачи».`;
-  }
-
-  const { error } = await db.from("telegram_inbox").insert({
-    user_id: userId,
-    title: task.title,
-    description: task.description,
-    due: task.due,
-    project_hint: task.projectHint,
-    attachment,
-  });
-  if (error) {
-    console.error("Inbox insert failed:", error.message);
-    await sendMessage(chatId, "Не удалось создать задачу. Попробуй ещё раз позже.");
-    return;
-  }
-
-  await sendMessage(
-    chatId,
-    `${heading}: ${task.title}\nКуда: ${where}` +
-      (task.due ? `\nСрок: ${task.due}` : "") +
-      (task.description ? `\nОписание: ${task.description.length > 300 ? task.description.slice(0, 299) + "…" : task.description}` : "") +
-      fileNote +
-      note +
-      "\n\nПоявится в Kanban, как только приложение будет открыто."
-  );
+  await createDrafts(chatId, userId, "tasks", [task], { attachment: options.attachment ?? null });
 }
 
 const DIALOG_TTL_MS = 15 * 60_000;
@@ -823,16 +865,12 @@ async function handleDialog(chatId: number, userId: string, text: string): Promi
     }
     await saveDialog(userId, []);
     if (parsed.kind === "note") {
-      const rows = parsed.items.map((i) => ({ user_id: userId, title: i.title.slice(0, 300), description: "", due: "", project_hint: "__note__", attachment: null, status: "ready" }));
-      const { error } = await db.from("telegram_inbox").insert(rows);
-      if (error) { console.error("Dialog note insert failed:", error.message); await sendMessage(chatId, "Не удалось сохранить заметку. Попробуй ещё раз позже."); return true; }
-      await sendMessage(chatId, `📝 Заметок: ${rows.length}\n${rows.map((r) => "• " + r.title).join("\n")}\n\nПоявятся в «Быстрых заметках», как только приложение будет открыто.`);
+      // Заметку не переписываем: одно сообщение — одна заметка с исходным текстом.
+      const texts = parsed.items.length === 1 ? [text] : parsed.items.map((i) => [i.title, i.description].filter(Boolean).join(" — "));
+      await createDrafts(chatId, userId, "notes", texts);
       return true;
     }
-    const many = parsed.items.length > 1;
-    for (const item of parsed.items) {
-      await saveTask(chatId, userId, { title: item.title, description: item.description, due: item.due, projectHint: item.project }, "✅ Задача", { askProject: !many });
-    }
+    await createDrafts(chatId, userId, "tasks", parsed.items.map((i) => ({ title: i.title, description: i.description, due: i.due, projectHint: i.project })));
     return true;
   } catch (e) {
     console.error("Dialog failed:", String((e as Error)?.message ?? e).slice(0, 200));
@@ -853,15 +891,7 @@ async function handleTaskMessage(chatId: number, providerUserId: string, text: s
       await sendMessage(chatId, "Напиши заметку после команды, например:\n/заметка перезвонить Азату после обеда");
       return;
     }
-    const { error: noteError } = await db.from("telegram_inbox").insert({
-      user_id: noteUser, title: noteText, description: "", due: "", project_hint: "__note__", attachment: null, status: "ready",
-    });
-    if (noteError) {
-      console.error("Note insert failed:", noteError.message);
-      await sendMessage(chatId, "Не удалось сохранить заметку. Попробуй ещё раз позже.");
-      return;
-    }
-    await sendMessage(chatId, `📝 Заметка: ${noteText}\n\nПоявится в «Быстрых заметках», как только приложение будет открыто.`);
+    await createDrafts(chatId, noteUser, "notes", [noteText]);
     return;
   }
   if (text.startsWith("/")) {
@@ -893,7 +923,7 @@ async function handleTaskMessage(chatId: number, providerUserId: string, text: s
       ...(messageId ? { reply_parameters: { message_id: messageId, allow_sending_without_reply: true } } : {}),
       reply_markup: { inline_keyboard: [
         [{ text: "📌 Одна задача", callback_data: "m:one" }, { text: `📋 ${cls.lines} задач(и)`, callback_data: "m:many" }],
-        [{ text: "📝 Заметки", callback_data: "m:notes" }],
+        [{ text: "📝 Одна заметка", callback_data: "m:note" }, { text: "📝 Заметки по строкам", callback_data: "m:notes" }],
       ] },
     });
     return;
@@ -906,55 +936,10 @@ async function handleListMessage(chatId: number, providerUserId: string, list: {
   const userId = await authorize(chatId, providerUserId);
   if (!userId) return;
   if (list.kind === "notes") {
-    const rows = list.items.map((item) => ({
-      user_id: userId, title: item.replace(/\s+/g, " ").trim().slice(0, 300), description: "", due: "", project_hint: "__note__", attachment: null, status: "ready",
-    }));
-    const { error } = await db.from("telegram_inbox").insert(rows);
-    if (error) {
-      console.error("Notes insert failed:", error.message);
-      await sendMessage(chatId, "Не удалось сохранить заметки. Попробуй ещё раз позже.");
-      return;
-    }
-    await sendMessage(chatId, `📝 Заметок добавлено: ${rows.length}\n` + rows.map((r, i) => `${i + 1}. ${r.title}`).join("\n") + "\n\nПоявятся в «Быстрых заметках», как только приложение будет открыто.");
+    await createDrafts(chatId, userId, "notes", list.items);
     return;
   }
-  const tasks = list.items.map((item) => parseTaskText(item));
-  const names = await projectNamesFor(userId);
-  const choices = [...new Set(names)].slice(0, MAX_PROJECT_BUTTONS);
-  const toRow = (t: typeof tasks[number], pending: boolean) => ({
-    user_id: userId, title: t.title, description: t.description, due: t.due, project_hint: t.projectHint, attachment: null,
-    ...(pending ? { status: "pending", choices, project_hint: "" } : {}),
-  });
-  const decided = tasks.filter((t) => t.projectHint || !choices.length);
-  const undecided = tasks.filter((t) => !t.projectHint && choices.length);
-  // Rows of one insert share created_at: that is how the button answer finds the whole list.
-  if (decided.length) {
-    const { error } = await db.from("telegram_inbox").insert(decided.map((t) => toRow(t, false)));
-    if (error) { console.error("List insert failed:", error.message); await sendMessage(chatId, "Не удалось создать задачи. Попробуй ещё раз позже."); return; }
-  }
-  let firstId: number | null = null;
-  if (undecided.length) {
-    const { data, error } = await db.from("telegram_inbox").insert(undecided.map((t) => toRow(t, true))).select("id").order("id", { ascending: true });
-    if (error || !data?.length) { console.error("List insert failed:", error?.message); await sendMessage(chatId, "Не удалось создать задачи. Попробуй ещё раз позже."); return; }
-    firstId = data[0].id;
-  }
-  const lines = tasks.map((t, i) => {
-    const hint = t.projectHint ? matchProject(t.projectHint, names).name : "";
-    return `${i + 1}. ${t.title}` + (t.due ? ` · срок ${t.due}` : "") + (hint ? ` → ${hint}` : "");
-  });
-  let text = `✅ Задач создано: ${tasks.length}\n` + lines.join("\n");
-  const extra: Record<string, unknown> = {};
-  if (firstId !== null) {
-    const direct = wantsProject(tasks.map((t) => t.title).join(" "));
-    const rows = direct
-      ? projectRows("b", firstId, choices)
-      : [[{ text: "📁 В проект", callback_data: `b:${firstId}:v` }], [{ text: "📥 Оставить в «Мои задачи»", callback_data: `b:${firstId}:m` }]];
-    extra.reply_markup = { inline_keyboard: rows };
-    text += `\n\n${direct ? "Выбери проект" : "По умолчанию — «Мои задачи». Можно выбрать проект"}${decided.length ? " для задач без #проекта" : ""}. Если не выбрать за 10 минут, они попадут в «Мои задачи».`;
-  } else {
-    text += "\n\nПоявятся в Kanban, как только приложение будет открыто.";
-  }
-  await sendMessage(chatId, text, extra);
+  await createDrafts(chatId, userId, "tasks", list.items.map((item) => parseTaskText(item)));
 }
 
 async function handleImageMessage(chatId: number, providerUserId: string, fileId: string, caption: string) {
@@ -1044,104 +1029,145 @@ async function answerCallback(id: string, text: string) {
   }).catch(() => {});
 }
 
-export function parseProjectCallback(data: string): { inboxId: number; choice: number | "mine" | "note" | "view"; batch: boolean } | null {
-  const m = String(data ?? "").match(/^([pb]):(\d{1,18}):(m|n|v|\d{1,2})$/);
+export function parseProjectCallback(data: string): { inboxId: number; choice: number | "mine" | "note" | "view" | "send" | "cancel" | "edit" | "t0" | "t1" | "t2" | "t3"; batch: boolean } | null {
+  const m = String(data ?? "").match(/^([pb]):(\d{1,18}):(m|n|v|s|x|e|t[0-3]|\d{1,2})$/);
   if (!m) return null;
-  const c = m[3] === "m" ? "mine" : m[3] === "n" ? "note" : m[3] === "v" ? "view" : Number(m[3]);
-  return { inboxId: Number(m[2]), choice: c, batch: m[1] === "b" };
+  if (/^t[0-3]$/.test(m[3])) return { inboxId: Number(m[2]), choice: m[3] as "t0" | "t1" | "t2" | "t3", batch: m[1] === "b" };
+  const map: Record<string, "mine" | "note" | "view" | "send" | "cancel" | "edit"> = { m: "mine", n: "note", v: "view", s: "send", x: "cancel", e: "edit" };
+  return { inboxId: Number(m[2]), choice: map[m[3]] ?? Number(m[3]), batch: m[1] === "b" };
 }
 
-function projectRows(prefix: "p" | "b", id: number, choices: string[]) {
-  const buttons = choices.map((name, i) => ({ text: name.length > 40 ? name.slice(0, 39) + "…" : name, callback_data: `${prefix}:${id}:${i}` }));
-  const rows: { text: string; callback_data: string }[][] = [];
-  for (let i = 0; i < buttons.length; i += 2) rows.push(buttons.slice(i, i + 2));
-  rows.push([{ text: "📥 Оставить в «Мои задачи»", callback_data: `${prefix}:${id}:m` }]);
-  return rows;
+async function editDraftMessage(chatId: number, messageId: number, text: string, keyboard?: Btn[][]) {
+  await fetch(telegramApi("editMessageText"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: chatId, message_id: messageId, text, ...(keyboard ? { reply_markup: { inline_keyboard: keyboard } } : { reply_markup: { inline_keyboard: [] } }) }),
+  }).catch(() => {});
+}
+
+// Отмена и замена не удаляют строки, а закрывают их: приложение такие не импортирует.
+const closeDrafts = (ids: number[]) =>
+  db.from("telegram_inbox").update({ consumed_at: new Date().toISOString() }).in("id", ids).eq("status", "pending").is("consumed_at", null);
+
+// Срок в формате, который понимает приложение: сегодня / завтра / послезавтра / ДД.ММ.ГГГГ.
+export function dueChoice(code: string, now = new Date()): string {
+  if (code === "t0") return "сегодня";
+  if (code === "t1") return "завтра";
+  if (code === "t2") return "послезавтра";
+  const d = new Date(now.getTime() + 5 * 3600_000 + 7 * 86400_000); // неделя вперёд по времени UTC+5
+  return `${String(d.getUTCDate()).padStart(2, "0")}.${String(d.getUTCMonth() + 1).padStart(2, "0")}.${d.getUTCFullYear()}`;
 }
 
 async function handleProjectChoice(query: any) {
   const parsed = parseProjectCallback(query?.data);
   const chatId = query?.message?.chat?.id;
-  if (!parsed || !query?.from?.id) {
+  const messageId = query?.message?.message_id;
+  if (!parsed || !query?.from?.id || !chatId) {
     await answerCallback(query?.id, "Кнопка устарела.");
     return;
   }
   const { data: account } = await db.from("messenger_accounts").select("user_id")
     .eq("provider", "telegram").eq("provider_user_id", String(query.from.id)).maybeSingle();
-  const { data: row } = await db.from("telegram_inbox").select("id,user_id,title,description,status,consumed_at,choices,created_at")
-    .eq("id", parsed.inboxId).maybeSingle();
-  if (!account || !row || row.user_id !== account.user_id) {
+  if (!account) {
     await answerCallback(query.id, "Эта задача не найдена.");
+    return;
+  }
+  const userId = account.user_id as string;
+  const prefix = parsed.batch ? "b" : "p";
+  const rows = await loadDraftRows(prefix, parsed.inboxId, userId);
+  if (!rows.length) {
+    await answerCallback(query.id, "Уже обработано");
+    if (messageId) await fetch(telegramApi("editMessageReplyMarkup"), {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, message_id: messageId, reply_markup: { inline_keyboard: [] } }),
+    }).catch(() => {});
+    return;
+  }
+  const ids = rows.map((r) => r.id);
+  const names = [...new Set(await projectNamesFor(userId))];
+  const isNote = rows.every(isNoteRow);
+  const rerender = async (mode: "main" | "projects" = "main") => {
+    const fresh = await loadDraftRows(prefix, parsed.inboxId, userId);
+    if (messageId && fresh.length) await editDraftMessage(chatId, messageId, draftText(fresh, names), draftKeyboard(prefix, parsed.inboxId, fresh, mode));
+  };
+
+  if (typeof parsed.choice === "string" && /^t[0-3]$/.test(parsed.choice)) {
+    const due = dueChoice(parsed.choice);
+    await db.from("telegram_inbox").update({ due }).in("id", ids).eq("status", "pending").is("consumed_at", null);
+    await answerCallback(query.id, `Срок: ${due}`);
+    await rerender();
+    return;
+  }
+  if (parsed.choice === "send") {
+    if (!isNote && rows.some((r) => !r.due)) {
+      await answerCallback(query.id, "Сначала выбери срок");
+      await rerender();
+      return;
+    }
+    const { data: sent } = await db.from("telegram_inbox").update({ status: "ready" })
+      .in("id", ids).eq("status", "pending").is("consumed_at", null).select("id");
+    await answerCallback(query.id, sent?.length ? "Отправлено" : "Уже в Kanban");
+    if (messageId) await editDraftMessage(chatId, messageId,
+      `✅ Отправлено${isNote ? " в «Быстрые заметки»" : " в Kanban"}. Появится, как только приложение будет открыто.\n\n` + draftText(rows, names, false));
+    return;
+  }
+  if (parsed.choice === "cancel") {
+    await closeDrafts(ids);
+    await answerCallback(query.id, "Отменено");
+    if (messageId) await editDraftMessage(chatId, messageId, "❌ Отменено, в Kanban ничего не уйдёт.\n\n" + clip(draftText(rows, names, false), 600));
+    return;
+  }
+  if (parsed.choice === "edit") {
+    await answerCallback(query.id, "Пришли исправленный текст");
+    const current = rows.map((r) => (isNoteRow(r) ? noteTextOf(r) : [r.title, r.description].filter(Boolean).join("\n"))).join("\n");
+    await sendMessage(chatId, `✏️ Ответь на это сообщение исправленным текстом — заменю черновик №${prefix}${parsed.inboxId}.\n\nСейчас:\n${clip(current, 1500)}`, {
+      reply_markup: { force_reply: true, input_field_placeholder: "Исправленный текст" },
+    });
     return;
   }
   if (parsed.choice === "view") {
     await answerCallback(query.id, "Выбери проект");
-    if (chatId && query?.message?.message_id) {
-      await fetch(telegramApi("editMessageReplyMarkup"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: chatId, message_id: query.message.message_id, reply_markup: { inline_keyboard: projectRows(parsed.batch ? "b" : "p", row.id, row.choices ?? []) } }),
-      }).catch(() => {});
-    }
+    if (messageId) await editDraftMessage(chatId, messageId, draftText(rows, names), draftKeyboard(prefix, parsed.inboxId, rows, "projects"));
     return;
   }
   if (parsed.choice === "note") {
-    if (parsed.batch || row.consumed_at || row.status !== "pending") {
-      await answerCallback(query.id, "Уже в Kanban");
+    if (parsed.batch || isNote) {
+      await answerCallback(query.id, "Уже заметка");
       return;
     }
-    const noteTitle = [row.title, row.description].filter(Boolean).join(" — ").replace(/\s+/g, " ").trim().slice(0, 300);
-    const { data: updated } = await db.from("telegram_inbox").update({ title: noteTitle, description: "", due: "", project_hint: "__note__", status: "ready" })
-      .eq("id", row.id).eq("status", "pending").is("consumed_at", null).select("id");
-    await answerCallback(query.id, updated?.length ? "→ Быстрые заметки" : "Уже в Kanban");
-    if (chatId && query?.message?.message_id) {
-      await fetch(telegramApi("editMessageReplyMarkup"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: chatId, message_id: query.message.message_id, reply_markup: { inline_keyboard: [] } }),
-      }).catch(() => {});
-      if (updated?.length) await sendMessage(chatId, `📝 Заметка: ${noteTitle}\n\nПоявится в «Быстрых заметках», как только приложение будет открыто.`);
-    }
+    const r = rows[0];
+    const asNote = noteRow([r.title, r.description].filter(Boolean).join("\n"));
+    await db.from("telegram_inbox").update({ ...asNote, due: "", project_hint: "__note__" }).eq("id", r.id).eq("status", "pending").is("consumed_at", null);
+    await answerCallback(query.id, "→ Быстрые заметки");
+    await rerender();
     return;
   }
-  const name = parsed.choice === "mine" ? "" : (row.choices ?? [])[parsed.choice] ?? null;
+  const name = parsed.choice === "mine" ? "" : (rows[0].choices ?? [])[parsed.choice] ?? null;
   if (name === null) {
     await answerCallback(query.id, "Проект не найден.");
     return;
   }
-  const where = name ? `проект «${name}»` : "«Мои задачи»";
-  let text: string;
-  if (parsed.batch) {
-    const { data: updated } = await db.from("telegram_inbox").update({ project_hint: name, status: "ready" })
-      .eq("user_id", row.user_id).eq("created_at", row.created_at).eq("status", "pending").is("consumed_at", null).select("id");
-    text = updated?.length
-      ? `Готово: задач ${updated.length} → ${where}.\n\nПоявятся в Kanban, как только приложение будет открыто.`
-      : "Эти задачи уже в Kanban (в «Мои задачи»). Перенеси их в нужный проект в приложении.";
-  } else if (row.consumed_at || row.status !== "pending") {
-    text = `Задача «${row.title}» уже в Kanban (в «Мои задачи»). Перенеси её в нужный проект в приложении.`;
-  } else {
-    const { data: updated } = await db.from("telegram_inbox").update({ project_hint: name, status: "ready" })
-      .eq("id", row.id).eq("status", "pending").is("consumed_at", null).select("id");
-    text = updated?.length
-      ? `Готово: «${row.title}» → ${where}.\n\nПоявится в Kanban, как только приложение будет открыто.`
-      : `Задача «${row.title}» уже в Kanban (в «Мои задачи»). Перенеси её в нужный проект в приложении.`;
-  }
+  await db.from("telegram_inbox").update({ project_hint: name }).in("id", ids).eq("status", "pending").is("consumed_at", null);
   await answerCallback(query.id, name ? `→ ${name}` : "→ Мои задачи");
-  if (chatId && query?.message?.message_id) {
-    await fetch(telegramApi("editMessageReplyMarkup"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, message_id: query.message.message_id, reply_markup: { inline_keyboard: [] } }),
-    }).catch(() => {});
-    await sendMessage(chatId, text);
+  await rerender();
+}
+
+// Ответ на «✏️ Изменить»: старый черновик закрываем, новый текст разбираем как обычное сообщение.
+async function handleDraftReplace(chatId: number, providerUserId: string, prefix: "p" | "b", id: number, text: string, messageId: number) {
+  const { data: account } = await db.from("messenger_accounts").select("user_id")
+    .eq("provider", "telegram").eq("provider_user_id", providerUserId).maybeSingle();
+  if (account) {
+    const rows = await loadDraftRows(prefix, id, account.user_id);
+    if (rows.length) await closeDrafts(rows.map((r) => r.id));
   }
+  await handleTaskMessage(chatId, providerUserId, text, messageId);
 }
 
 async function handleModeChoice(query: any) {
   const chatId = query?.message?.chat?.id;
   const original = String(query?.message?.reply_to_message?.text ?? "").trim();
   const mode = String(query?.data ?? "").slice(2);
-  if (!chatId || !query?.from?.id || !original || !["one", "many", "notes"].includes(mode)) {
+  if (!chatId || !query?.from?.id || !original || !["one", "many", "notes", "note"].includes(mode)) {
     await answerCallback(query?.id, "Кнопка устарела. Отправь сообщение ещё раз.");
     return;
   }
@@ -1154,13 +1180,14 @@ async function handleModeChoice(query: any) {
     }).catch(() => {});
   }
   const providerUserId = String(query.from.id);
-  if (mode === "one") {
+  if (mode === "one" || mode === "note") {
     const userId = await authorize(chatId, providerUserId);
-    if (userId) await saveTask(chatId, userId, parseTaskText(original), "✅ Задача", { askProject: true });
+    if (!userId) return;
+    if (mode === "note") await createDrafts(chatId, userId, "notes", [original]);
+    else await createDrafts(chatId, userId, "tasks", [parseTaskText(original)]);
     return;
   }
-  const items = splitItems(original);
-  await handleListMessage(chatId, providerUserId, { kind: mode === "many" ? "tasks" : "notes", items });
+  await handleListMessage(chatId, providerUserId, { kind: mode === "many" ? "tasks" : "notes", items: splitItems(original) });
 }
 
 Deno.serve(async (req) => {
@@ -1240,6 +1267,13 @@ Deno.serve(async (req) => {
   }
 
   if (!chatId || !telegramUser || !text) {
+    return new Response("OK");
+  }
+
+  const replyTo = message?.reply_to_message;
+  const editMark = replyTo?.from?.is_bot ? String(replyTo?.text ?? "").match(/^✏️[\s\S]*?№([pb])(\d{1,18})/u) : null;
+  if (editMark) {
+    await handleDraftReplace(chatId, String(telegramUser.id), editMark[1] as "p" | "b", Number(editMark[2]), text, Number(message?.message_id ?? 0));
     return new Response("OK");
   }
 

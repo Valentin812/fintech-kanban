@@ -48,7 +48,7 @@ let inbox = [
   { id: 3, title: 'Неоднозначный проект', description: '', due: '', project_hint: 'мобильн', created_at: new Date().toISOString(), consumed_at: null },
   { id: 4, title: 'Уже забрана другой вкладкой', description: '', due: '', project_hint: '', created_at: new Date().toISOString(), consumed_at: null, claimedElsewhere: true },
   { id: 5, title: 'Ждёт выбора проекта', description: '', due: '', project_hint: '', created_at: new Date().toISOString(), consumed_at: null, status: 'pending' },
-  { id: 6, title: 'Давно ждёт выбора', description: '', due: '', project_hint: '', created_at: new Date(Date.now() - 11 * 60000).toISOString(), consumed_at: null, status: 'pending' },
+  { id: 6, title: 'Давно ждёт выбора', description: '', due: '', project_hint: '', created_at: new Date(Date.now() - 13 * 3600000).toISOString(), consumed_at: null, status: 'pending' },
   { id: 7, title: 'Скриншот счёта', description: 'Текст', due: '', project_hint: '', created_at: new Date().toISOString(), consumed_at: null, status: 'ready', attachment: { path: '00000000-0000-4000-8000-000000000001/abc/screenshot-1.jpg', name: 'screenshot-1.jpg', type: 'image/jpeg', size: 1200, kind: 'image' } },
   { id: 8, title: 'Голосовое', description: 'Расшифровка', due: '', project_hint: '', created_at: new Date().toISOString(), consumed_at: null, status: 'ready', attachment: { path: '00000000-0000-4000-8000-000000000001/def/voice-1.oga', name: 'voice-1.oga', type: 'audio/ogg', size: 4000, kind: 'voice' } },
 ];
@@ -121,7 +121,7 @@ try {
   assert(!JSON.stringify(result).includes('Уже забрана другой вкладкой'), 'A row claimed by another tab must not be imported twice');
   assert(inbox.filter((r) => r.id !== 5).every((r) => r.consumed_at), 'All ready rows should be consumed: ' + JSON.stringify(inbox.filter((r) => r.id !== 5 && !r.consumed_at).map((r) => r.id)));
   assert(!inbox.find((r) => r.id === 5).consumed_at && !JSON.stringify(result).includes('Ждёт выбора проекта'), 'A fresh pending row waits for the project choice');
-  assert(result.standalone.some((t) => t.title === 'Давно ждёт выбора'), 'A pending row older than 10 minutes is imported anyway');
+  assert(result.standalone.some((t) => t.title === 'Давно ждёт выбора'), 'A pending row older than 12 hours is imported anyway');
   // Attachments come with the task and are shown in the drawer.
   const shot = await page.evaluate(() => standaloneTasks.find((t) => t.title === 'Скриншот счёта'));
   assert(shot.attachments?.[0]?.path?.endsWith('screenshot-1.jpg') && shot.attachments[0].kind === 'image', 'Image attachment is kept on the task: ' + JSON.stringify(shot.attachments));
