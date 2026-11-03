@@ -2184,7 +2184,8 @@ const CHANGELOG=[
  {v:'2026.11.02-04',date:'02.11.2026',title:'CRM: удалённые задачи',items:['Задачи, удалённые в CRM (или больше не ваши), не вызывают окно «Задача закрыта в CRM». У карточки появляется метка «нет в CRM», а в «Мои задачи» — фильтр «🚫 Нет в CRM».']},
  {v:'2026.11.02-03',date:'02.11.2026',title:'Джарвис: подтверждение и заметки целиком',items:['Сообщение вида «Уточнить у Андрея:» и пункты списком (1. 2. или «-») бот делает одной задачей: в «Мои задачи» пункты становятся чекбоксами, в проекте — подзадачами.','Поле «Описание» в задаче запоминает высоту, которую вы задали вручную (потянув за уголок), и открывается такого же размера. Сбросить: двойной щелчок по уголку.','Бот перед отправкой в Kanban показывает, что получилось, и спрашивает: «Отправить», «Изменить» (ответом с исправленным текстом) или «Отменить». Неподтверждённое уходит в Kanban само только через 12 часов.','У задачи в боте срок обязателен: без него «Отправить» не сработает — выберите «Сегодня / Завтра / Послезавтра / Через неделю» или впишите в «Изменить».','Заметки больше не урезаются: сохраняется весь текст вместе с переносами строк (до 2000 символов).']},
  {v:'2026.11.02-02',date:'02.11.2026',title:'Встречи: красивые выпадающие списки',items:['Выбор проекта и другие списки во встречах теперь в стиле темы: закруглённое окно, подсветка, галочка у выбранного, поиск, если вариантов больше восьми, выбор стрелками и Enter.']},
- {v:'2026.11.03-09',date:'03.11.2026',title:'Встречи: название из Meeting Hub',items:['При объединении встречи с Meeting Hub название берётся из Meeting Hub (отмена вернёт прежнее).','Блок «Подготовка к встрече» можно свернуть и развернуть.']},
+ {v:'2026.11.03-11',date:'03.11.2026',title:'Встречи: название из Meeting Hub',items:['При объединении встречи с Meeting Hub название берётся из Meeting Hub (отмена вернёт прежнее).','Блок «Подготовка к встрече» можно свернуть и развернуть.']},
+ {v:'2026.11.03-10',date:'03.11.2026',title:'Группы: пустая группа',items:['В «Группа проекта…» можно создать пустую группу — проект при этом никуда не переносится. Пустую группу можно удалить крестиком, а проекты перетащить в неё мышкой.']},
  {v:'2026.11.02-01',date:'02.11.2026',title:'Переименование проекта',items:['Меню проекта → «Переименовать проект…»: новое название сразу обновляется в закреплённых задачах, порядке проектов, встречах (в том числе из Meeting Hub) и релизах.','Общий проект переименовать нельзя; название не должно совпадать с другим проектом или архивом.']},
  {v:'2026.10.30-03',date:'30.10.2026',title:'CRM: дополнительные ответственные',items:['При отправке задачи в CRM можно выбрать дополнительных ответственных (CRM их уведомит). В карточке связанной задачи — кнопка «👥 Доп. ответственные…», а имена видны в блоке CRM и в поле «Ответственный».']},
  {v:'2026.10.30-02',date:'30.10.2026',title:'Мои задачи: порядок перетаскиванием',items:['У каждой задачи слева значок ⠿: потяните его вверх или вниз, чтобы поставить задачу на своё место. Порядок запоминается для каждого списка.','С клавиатуры: поставьте фокус на ⠿ и нажмите стрелку вверх или вниз.','Новые задачи появляются в начале списка, пока вы их не переставите.']},
@@ -3055,12 +3056,17 @@ function fmtDone(iso){const d=new Date(iso);return isNaN(d)?'':d.toLocaleDateStr
   const readSet=()=>{try{return new Set(JSON.parse(localStorage.getItem(CK)||'[]'))}catch(e){return new Set()}};
   const writeSet=v=>{try{localStorage.setItem(CK,JSON.stringify([...v]))}catch(e){}};
   const groupOf=name=>String((projectMeta&&projectMeta[name]&&projectMeta[name].group)||'').trim();
-  const allGroups=()=>[...new Set(data.map(p=>groupOf(p.name)).filter(Boolean))];
+  const emptyList=()=>{const l=projectMeta&&projectMeta.__groups__&&projectMeta.__groups__.list;return Array.isArray(l)?l.filter(x=>typeof x==='string'&&x):[]};
+  const setEmpty=l=>{if(!projectMeta.__groups__)projectMeta.__groups__={};projectMeta.__groups__.list=l};
+  const cleanName=v=>String(v||'').replace(/\s+/g,' ').trim().slice(0,40);
+  const allGroups=()=>[...new Set([...data.map(p=>groupOf(p.name)).filter(Boolean),...emptyList()])];
   function setGroup(name,group){
     const g=String(group||'').replace(/\s+/g,' ').trim().slice(0,40);
     if(!projectMeta[name])projectMeta[name]={};
-    if(g)projectMeta[name].group=g;else delete projectMeta[name].group;
+    if(g){projectMeta[name].group=g;if(emptyList().includes(g))setEmpty(emptyList().filter(x=>x!==g))}else delete projectMeta[name].group;
     save();renderProjects()}
+  function addEmptyGroup(group){const g=cleanName(group);if(!g)return false;if(!allGroups().includes(g))setEmpty([...emptyList(),g]);save();renderProjects();return true}
+  function removeEmptyGroup(g){setEmpty(emptyList().filter(x=>x!==g));save();renderProjects()}
   // Положение группы — место её проектов в общем порядке: группу можно поставить между любыми проектами.
   function placeGroup(g,target,isGroup,after){
     const members=data.filter(p=>groupOf(p.name)===g);if(!members.length)return;
@@ -3074,29 +3080,32 @@ function fmtDone(iso){const d=new Date(iso);return isNaN(d)?'':d.toLocaleDateStr
     const p=active();if(!p)return;
     const groups=allGroups(),cur=groupOf(p.name);
     friendlyFormDialog({title:'Группа проекта',description:'Группа — это подпись-разделитель в списке проектов. Проекты одной группы идут вместе.',
-      fields:[{label:'Группа',type:'select',value:cur||'',options:[{value:'',label:'Без группы'},...groups.map(g=>({value:g,label:g})),{value:'__new',label:'＋ Новая группа…'}]},{label:'Название новой группы',value:'',placeholder:'например, ЭР'}],
+      fields:[{label:'Группа',type:'select',value:cur||'',options:[{value:'',label:'Без группы'},...groups.map(g=>({value:g,label:g})),{value:'__new',label:'＋ Новая группа…'},{value:'__empty',label:'＋ Пустая группа (проект не переносить)…'}]},{label:'Название новой группы',value:'',placeholder:'например, ЭР'}],
       submitLabel:'Сохранить',
       onSubmit:([choice,fresh],wrap)=>{
         let g=choice==='__new'?String(fresh||'').trim():choice;
         if(choice==='__new'&&!g){wrap.querySelector('.friendly-error').textContent='Введите название новой группы.';return false}
+        if(choice==='__empty'){const n=String(fresh||'').trim();if(!n){wrap.querySelector('.friendly-error').textContent='Введите название новой группы.';return false}addEmptyGroup(n);return true}
         setGroup(p.name,g);return true}})};
   const css=document.createElement('style');
-  css.textContent='#projects .proj-group-head{display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;margin:10px 0 2px;padding:5px 9px;border:0;border-radius:7px;background:transparent;color:var(--muted,#6b7587);font:inherit;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;text-align:left}#projects .proj-group-head:hover,#projects .proj-group-head.drop{background:rgba(100,120,170,.14)}#projects .proj-group-head .count{font-weight:600}#projects .project.in-group{width:calc(100% - 14px);margin-left:14px!important;border-left:2px solid var(--line);border-radius:0 9px 9px 0}#projects .project.in-group-last{margin-bottom:10px!important}#projects .proj-group-head{margin-top:12px}@media(max-width:700px){#projects .project.in-group{width:auto;margin-left:0!important;border-left:0;border-radius:9px}#projects .project.in-group-last{margin-bottom:0!important}}#projects .proj-group-head.dragging{opacity:.4}#projects .proj-group-head.drop-before{box-shadow:0 -2px 0 var(--blue,#3b6fd6)}#projects .proj-group-head.drop-after{box-shadow:0 2px 0 var(--blue,#3b6fd6)}@media(max-width:700px){#projects .proj-group-head{flex:0 0 auto;width:auto;margin:0}}';
+  css.textContent='#projects .proj-group-head{display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;margin:10px 0 2px;padding:5px 9px;border:0;border-radius:7px;background:transparent;color:var(--muted,#6b7587);font:inherit;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;text-align:left}#projects .proj-group-head:hover,#projects .proj-group-head.drop{background:rgba(100,120,170,.14)}#projects .proj-group-head .count{font-weight:600}#projects .gh-del{margin-left:8px;padding:0 4px;cursor:pointer;font-size:14px;line-height:1}#projects .gh-del:hover{color:var(--danger,#d33)}#projects .project.in-group{width:calc(100% - 14px);margin-left:14px!important;border-left:2px solid var(--line);border-radius:0 9px 9px 0}#projects .project.in-group-last{margin-bottom:10px!important}#projects .proj-group-head{margin-top:12px}@media(max-width:700px){#projects .project.in-group{width:auto;margin-left:0!important;border-left:0;border-radius:9px}#projects .project.in-group-last{margin-bottom:0!important}}#projects .proj-group-head.dragging{opacity:.4}#projects .proj-group-head.drop-before{box-shadow:0 -2px 0 var(--blue,#3b6fd6)}#projects .proj-group-head.drop-after{box-shadow:0 2px 0 var(--blue,#3b6fd6)}@media(max-width:700px){#projects .proj-group-head{flex:0 0 auto;width:auto;margin:0}}';
   document.head.appendChild(css);
   function regroup(){
     const box=$('projects');if(!box)return;
     const btns=[...box.querySelectorAll(':scope>.project')];
-    if(!btns.some(b=>groupOf(b.dataset.project)))return;
+    if(!btns.some(b=>groupOf(b.dataset.project))&&!emptyList().length)return;
     const seq=[],seen=new Set();
     btns.forEach(b=>{const g=groupOf(b.dataset.project);if(!g){seq.push({b});return}if(seen.has(g))return;seen.add(g);seq.push({g})});
+    emptyList().forEach(g=>{if(!seen.has(g)){seen.add(g);seq.push({g,empty:true})}});
     const collapsed=readSet(),frag=document.createDocumentFragment();
     seq.forEach(item=>{
       if(item.b){frag.appendChild(item.b);return}
       const g=item.g,members=btns.filter(b=>groupOf(b.dataset.project)===g);
       const open=!collapsed.has(g)||members.some(b=>b.classList.contains('active'));
       const head=document.createElement('button');head.type='button';head.className='proj-group-head';head.dataset.group=g;head.setAttribute('aria-expanded',String(open));
-      head.innerHTML=`<span class="gh-name">${open?'▾':'▸'} ${esc(g)}</span><span class="count">${members.length}</span>`;
-      head.draggable=true;head.title='Потяните, чтобы переставить группу';
+      head.innerHTML=`<span class="gh-name">${open?'▾':'▸'} ${esc(g)}</span><span class="count">${item.empty?`пусто <span class="gh-del" role="button" tabindex="0" data-gdel="1" title="Удалить пустую группу" aria-label="Удалить пустую группу ${esc(g)}">×</span>`:members.length}</span>`;
+      head.draggable=!item.empty;head.title=item.empty?'Пустая группа: перетащите сюда проект':'Потяните, чтобы переставить группу';
+      if(item.empty)head.addEventListener('click',e=>{if(e.target.closest('[data-gdel]')){e.stopImmediatePropagation();removeEmptyGroup(g)}},true);
       head.addEventListener('dragstart',e=>{window.__dragGroup=g;head.classList.add('dragging');try{e.dataTransfer.setData('text/plain','group:'+g);e.dataTransfer.effectAllowed='move'}catch(_){}});
       head.addEventListener('dragend',()=>{window.__dragGroup=null;document.querySelectorAll('#projects .proj-group-head').forEach(x=>x.classList.remove('dragging','drop-before','drop-after'))});
       head.addEventListener('click',e=>{const c=readSet();if(c.has(g))c.delete(g);else c.add(g);writeSet(c);renderProjects()});
