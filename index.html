@@ -3029,8 +3029,15 @@ function fmtDone(iso){const d=new Date(iso);return isNaN(d)?'':d.toLocaleDateStr
       frag.appendChild(head);
       members.forEach(b=>{if(!open)b.style.display='none';frag.appendChild(b)})});
     box.appendChild(frag)}
+  // Проект, брошенный на проект другой группы (или без группы), переходит в эту группу.
+  let dragged='';
+  function wireProjectDrops(){
+    document.querySelectorAll('#projects .project').forEach(b=>{
+      b.addEventListener('dragstart',()=>{dragged=b.dataset.project});
+      b.addEventListener('dragend',()=>{setTimeout(()=>{dragged=''},0)});
+      b.addEventListener('drop',()=>{const name=dragged;dragged='';if(!name||name===b.dataset.project)return;const g=groupOf(b.dataset.project);if(groupOf(name)!==g)setTimeout(()=>setGroup(name,g),0)})})}
   const orig=window.renderProjects;if(typeof orig!=='function')return;
-  window.renderProjects=function(){const r=orig.apply(this,arguments);try{regroup()}catch(e){console.warn('Project groups',e)}return r};
+  window.renderProjects=function(){const r=orig.apply(this,arguments);try{regroup();wireProjectDrops()}catch(e){console.warn('Project groups',e)}return r};
 })();
 
 /* ===== Быстрая задача у названия проекта; заметка сразу в проект ===== */
