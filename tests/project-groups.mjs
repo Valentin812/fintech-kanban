@@ -58,6 +58,18 @@ try {
   assert((await vis()).join() === 'Альфа', 'Collapsed group hides its projects: ' + (await vis()));
   await page.locator('.proj-group-head').click();
   assert((await vis()).length === 3, 'Expanded again');
+  // Порядок групп: стрелки и Alt+стрелки.
+  await page.evaluate(() => { setProjectGroup('Альфа', 'НС'); });
+  assert((await heads()).join() === 'НС,ЭР', 'Groups follow first appearance: ' + (await heads()));
+  await page.locator('.proj-group-head[data-group="НС"] [data-gmv="1"]').click();
+  assert((await heads()).join() === 'ЭР,НС', 'Arrow moves the group down: ' + (await heads()));
+  await page.locator('.proj-group-head[data-group="НС"]').focus();
+  await page.keyboard.press('Alt+ArrowUp');
+  assert((await heads()).join() === 'НС,ЭР', 'Alt+Up moves the group up: ' + (await heads()));
+  await page.evaluate(() => { moveProjectGroup('НС', 1); });
+  assert((await heads()).join() === 'ЭР,НС' && await page.evaluate(() => projectMeta.__groups__.order.join()) === 'ЭР,НС', 'Group order is stored');
+  await page.evaluate(() => { setProjectGroup('Альфа', ''); });
+  assert((await heads()).join() === 'ЭР', 'Empty group disappears: ' + (await heads()));
   // Сохранение и перезагрузка.
   await page.evaluate(() => cloudWriteNow());
   await page.waitForTimeout(300);

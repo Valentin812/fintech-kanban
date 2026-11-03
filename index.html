@@ -2170,6 +2170,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.11.03-01',date:'03.11.2026',title:'Группы проектов: порядок',items:['Группы можно двигать вверх и вниз: стрелки ▲▼ на подписи группы или Alt+↑/↓ на подписи.']},
  {v:'2026.11.02-07',date:'02.11.2026',title:'Группы проектов, чек-лист по Enter, ширина «Мои задачи»',items:['Группы проектов: в меню проекта (⋯) пункт «Группа проекта…» — выберите существующую группу или создайте новую (ЭР, НС…). В списке появляется подпись-разделитель, её можно свернуть щелчком; проект можно перетащить на подпись группы.','Чек-лист в задаче: пункт добавляется по Enter, кнопка «Добавить» убрана, Esc очищает поле.','«Мои задачи»: при изменении ширины список задач и «Быстрые заметки» двигаются вместе в обе стороны.']},
  {v:'2026.11.02-06',date:'02.11.2026',title:'CRM: архивные задачи без окна',items:['Задачи, которые в CRM ушли в архив, тоже больше не вызывают окно «Задача закрыта в CRM»: только метка «нет в CRM» и фильтр.']},
  {v:'2026.11.02-05',date:'02.11.2026',title:'Уведомления о сроках подробнее',items:['В колокольчике у просроченной задачи видно, на сколько дней просрочка, проект, статус, ответственного и начало описания.']},
@@ -2985,6 +2986,14 @@ function fmtDone(iso){const d=new Date(iso);return isNaN(d)?'':d.toLocaleDateStr
     if(!projectMeta[name])projectMeta[name]={};
     if(g)projectMeta[name].group=g;else delete projectMeta[name].group;
     save();renderProjects()}
+  // Порядок самих групп: projectMeta.__groups__.order; новые группы встают в конец.
+  const orderedGroups=found=>{const saved=((projectMeta&&projectMeta.__groups__&&projectMeta.__groups__.order)||[]).filter(g=>found.includes(g));return [...saved,...found.filter(g=>!saved.includes(g))]};
+  function moveGroup(g,delta){
+    const list=orderedGroups(allGroups()),i=list.indexOf(g),j=i+delta;
+    if(i<0||j<0||j>=list.length)return;
+    list.splice(j,0,list.splice(i,1)[0]);
+    projectMeta.__groups__={order:list};save();renderProjects()}
+  window.moveProjectGroup=moveGroup;
   window.setProjectGroup=setGroup;
   window.editProjectGroup=function(){
     const p=active();if(!p)return;
@@ -2997,21 +3006,23 @@ function fmtDone(iso){const d=new Date(iso);return isNaN(d)?'':d.toLocaleDateStr
         if(choice==='__new'&&!g){wrap.querySelector('.friendly-error').textContent='Введите название новой группы.';return false}
         setGroup(p.name,g);return true}})};
   const css=document.createElement('style');
-  css.textContent='#projects .proj-group-head{display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;margin:10px 0 2px;padding:5px 9px;border:0;border-radius:7px;background:transparent;color:var(--muted,#6b7587);font:inherit;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;text-align:left}#projects .proj-group-head:hover,#projects .proj-group-head.drop{background:rgba(100,120,170,.14)}#projects .proj-group-head .count{font-weight:600}@media(max-width:700px){#projects .proj-group-head{flex:0 0 auto;width:auto;margin:0}}';
+  css.textContent='#projects .proj-group-head{display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;margin:10px 0 2px;padding:5px 9px;border:0;border-radius:7px;background:transparent;color:var(--muted,#6b7587);font:inherit;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;text-align:left}#projects .proj-group-head:hover,#projects .proj-group-head.drop{background:rgba(100,120,170,.14)}#projects .proj-group-head .count{font-weight:600}#projects .proj-group-head .gh-right{display:flex;align-items:center;gap:6px}#projects .proj-group-head .gh-mv{padding:0 3px;font-size:10px;opacity:.55;border-radius:4px}#projects .proj-group-head .gh-mv:hover{opacity:1;background:rgba(100,120,170,.25)}#projects .proj-group-head .gh-mv.off{visibility:hidden}@media(max-width:700px){#projects .proj-group-head{flex:0 0 auto;width:auto;margin:0}}';
   document.head.appendChild(css);
   function regroup(){
     const box=$('projects');if(!box)return;
     const btns=[...box.querySelectorAll(':scope>.project')];
-    const groups=[];btns.forEach(b=>{const g=groupOf(b.dataset.project);if(g&&!groups.includes(g))groups.push(g)});
-    if(!groups.length)return;
+    const found=[];btns.forEach(b=>{const g=groupOf(b.dataset.project);if(g&&!found.includes(g))found.push(g)});
+    if(!found.length)return;const groups=orderedGroups(found);
     const collapsed=readSet(),frag=document.createDocumentFragment();
     btns.filter(b=>!groupOf(b.dataset.project)).forEach(b=>frag.appendChild(b));
     groups.forEach(g=>{
       const members=btns.filter(b=>groupOf(b.dataset.project)===g);
       const open=!collapsed.has(g)||members.some(b=>b.classList.contains('active'));
       const head=document.createElement('button');head.type='button';head.className='proj-group-head';head.dataset.group=g;head.setAttribute('aria-expanded',String(open));
-      head.innerHTML=`<span>${open?'▾':'▸'} ${esc(g)}</span><span class="count">${members.length}</span>`;
-      head.addEventListener('click',()=>{const c=readSet();if(c.has(g))c.delete(g);else c.add(g);writeSet(c);renderProjects()});
+      const gi=groups.indexOf(g);
+      head.innerHTML=`<span class="gh-name">${open?'▾':'▸'} ${esc(g)}</span><span class="gh-right"><span class="gh-mv${gi===0?' off':''}" role="button" aria-label="Группа выше" title="Группа выше" data-gmv="-1">▲</span><span class="gh-mv${gi===groups.length-1?' off':''}" role="button" aria-label="Группа ниже" title="Группа ниже" data-gmv="1">▼</span><span class="count">${members.length}</span></span>`;
+      head.addEventListener('keydown',e=>{if(!e.altKey||(e.key!=='ArrowUp'&&e.key!=='ArrowDown'))return;e.preventDefault();moveGroup(g,e.key==='ArrowUp'?-1:1);setTimeout(()=>document.querySelector(`#projects .proj-group-head[data-group="${CSS.escape(g)}"]`)?.focus(),0)});
+      head.addEventListener('click',e=>{const mv=e.target.closest('[data-gmv]');if(mv){e.stopPropagation();if(!mv.classList.contains('off'))moveGroup(g,Number(mv.dataset.gmv));return}const c=readSet();if(c.has(g))c.delete(g);else c.add(g);writeSet(c);renderProjects()});
       head.addEventListener('dragover',e=>{if(!window.__dragProject)return;e.preventDefault();head.classList.add('drop')});
       head.addEventListener('dragleave',()=>head.classList.remove('drop'));
       head.addEventListener('drop',e=>{const name=window.__dragProject;if(!name)return;e.preventDefault();e.stopPropagation();window.__dragProject=null;setGroup(name,g)});
