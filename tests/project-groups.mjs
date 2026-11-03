@@ -74,6 +74,11 @@ try {
   assert(await page.locator('.gh-mv').count() === 0, 'No arrow buttons');
   await page.locator('.proj-group-head[data-group="НС"]').dragTo(page.locator('.proj-group-head[data-group="ЭР"]'), { targetPosition: { x: 20, y: 2 } });
   assert((await heads()).join() === 'НС,ЭР', 'Dragging a group header above another moves it up: ' + (await heads()));
+  // Группу можно бросить и на проект другой группы.
+  await page.locator('.proj-group-head[data-group="НС"]').dragTo(page.locator('#projects .project[data-project="Гамма"]'));
+  assert((await heads()).join() === 'ЭР,НС', 'Dropping a group on a project of a lower group puts it after: ' + (await heads()));
+  await page.locator('.proj-group-head[data-group="НС"]').dragTo(page.locator('#projects .project[data-project="Бета"]'));
+  assert((await heads()).join() === 'НС,ЭР', 'Dropping a group on a project of an upper group puts it before: ' + (await heads()));
   await page.evaluate(() => { moveProjectGroup('НС', 1); });
   assert((await heads()).join() === 'ЭР,НС' && await page.evaluate(() => projectMeta.__groups__.order.join()) === 'ЭР,НС', 'Group order is stored');
   await page.evaluate(() => { setProjectGroup('Альфа', ''); });

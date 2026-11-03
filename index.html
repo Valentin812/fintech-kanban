@@ -2171,7 +2171,8 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
- {v:'2026.11.03-03',date:'03.11.2026',title:'Вложения: свои файлы в задаче',items:['В карточке задачи можно прикрепить файл: перетащите его на карточку или нажмите «＋ Файл». Поддерживаются картинки, аудио, PDF, Word, Excel, PowerPoint, TXT и CSV до 20 МБ. Вложения из Telegram работают как раньше.']},
+ {v:'2026.11.03-04',date:'03.11.2026',title:'Вложения: свои файлы в задаче',items:['В карточке задачи можно прикрепить файл: перетащите его на карточку или нажмите «＋ Файл». Поддерживаются картинки, аудио, PDF, Word, Excel, PowerPoint, TXT и CSV до 20 МБ. Вложения из Telegram работают как раньше.']},
+ {v:'2026.11.03-02',date:'03.11.2026',title:'Группы: перетаскивание на проект',items:['Группу можно бросить не только на подпись другой группы, но и на любой её проект — раньше в таком случае группа возвращалась на место.']},
  {v:'2026.11.03-01',date:'03.11.2026',title:'Группы проектов: порядок',items:['Группы можно переставлять мышкой: потяните подпись группы и бросьте на другую подпись.']},
  {v:'2026.11.02-07',date:'02.11.2026',title:'Группы проектов, чек-лист по Enter, ширина «Мои задачи»',items:['Группы проектов: в меню проекта (⋯) пункт «Группа проекта…» — выберите существующую группу или создайте новую (ЭР, НС…). В списке появляется подпись-разделитель, её можно свернуть щелчком; проект можно перетащить на подпись группы.','Чек-лист в задаче: пункт добавляется по Enter, кнопка «Добавить» убрана, Esc очищает поле.','«Мои задачи»: при изменении ширины список задач и «Быстрые заметки» двигаются вместе в обе стороны.']},
  {v:'2026.11.02-06',date:'02.11.2026',title:'CRM: архивные задачи без окна',items:['Задачи, которые в CRM ушли в архив, тоже больше не вызывают окно «Задача закрыта в CRM»: только метка «нет в CRM» и фильтр.']},
@@ -3074,6 +3075,10 @@ function fmtDone(iso){const d=new Date(iso);return isNaN(d)?'':d.toLocaleDateStr
     document.querySelectorAll('#projects .project').forEach(b=>{
       b.addEventListener('dragstart',()=>{dragged=b.dataset.project});
       b.addEventListener('dragend',()=>{setTimeout(()=>{dragged=''},0)});
+      // Группу можно бросить и на проект другой группы: вниз — после неё, вверх — перед ней.
+      const side=()=>{const g=window.__dragGroup,tg=groupOf(b.dataset.project);if(!g||!tg||tg===g)return null;const list=orderedGroups(allGroups());return {g,tg,after:list.indexOf(g)<list.indexOf(tg)}};
+      b.addEventListener('dragover',e=>{const x=side();if(!x)return;e.preventDefault();document.querySelectorAll('#projects .proj-group-head').forEach(h=>h.classList.remove('drop-before','drop-after'));document.querySelector(`#projects .proj-group-head[data-group="${CSS.escape(x.tg)}"]`)?.classList.add(x.after?'drop-after':'drop-before')});
+      b.addEventListener('drop',e=>{const x=side();if(!x)return;e.preventDefault();e.stopPropagation();window.__dragGroup=null;placeGroup(x.g,x.tg,x.after)});
       b.addEventListener('drop',()=>{const name=dragged;dragged='';if(!name||name===b.dataset.project)return;const g=groupOf(b.dataset.project);if(groupOf(name)!==g)setTimeout(()=>setGroup(name,g),0)})})}
   const orig=window.renderProjects;if(typeof orig!=='function')return;
   window.renderProjects=function(){const r=orig.apply(this,arguments);try{regroup();wireProjectDrops()}catch(e){console.warn('Project groups',e)}return r};
