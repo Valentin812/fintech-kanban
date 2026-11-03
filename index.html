@@ -2170,6 +2170,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.11.03-01',date:'03.11.2026',title:'Группы проектов: порядок',items:['Группы можно переставлять мышкой: потяните подпись группы и бросьте на другую подпись.']},
  {v:'2026.11.02-07',date:'02.11.2026',title:'Группы проектов, чек-лист по Enter, ширина «Мои задачи»',items:['Группы проектов: в меню проекта (⋯) пункт «Группа проекта…» — выберите существующую группу или создайте новую (ЭР, НС…). В списке появляется подпись-разделитель, её можно свернуть щелчком; проект можно перетащить на подпись группы.','Чек-лист в задаче: пункт добавляется по Enter, кнопка «Добавить» убрана, Esc очищает поле.','«Мои задачи»: при изменении ширины список задач и «Быстрые заметки» двигаются вместе в обе стороны.']},
  {v:'2026.11.02-06',date:'02.11.2026',title:'CRM: архивные задачи без окна',items:['Задачи, которые в CRM ушли в архив, тоже больше не вызывают окно «Задача закрыта в CRM»: только метка «нет в CRM» и фильтр.']},
  {v:'2026.11.02-05',date:'02.11.2026',title:'Уведомления о сроках подробнее',items:['В колокольчике у просроченной задачи видно, на сколько дней просрочка, проект, статус, ответственного и начало описания.']},
@@ -2985,6 +2986,13 @@ function fmtDone(iso){const d=new Date(iso);return isNaN(d)?'':d.toLocaleDateStr
     if(!projectMeta[name])projectMeta[name]={};
     if(g)projectMeta[name].group=g;else delete projectMeta[name].group;
     save();renderProjects()}
+  // Порядок самих групп: projectMeta.__groups__.order; новые группы встают в конец.
+  const orderedGroups=found=>{const saved=((projectMeta&&projectMeta.__groups__&&projectMeta.__groups__.order)||[]).filter(g=>found.includes(g));return [...saved,...found.filter(g=>!saved.includes(g))]};
+  function placeGroup(g,target,after){
+    const list=orderedGroups(allGroups()),from=list.indexOf(g);if(from<0||list.indexOf(target)<0)return;
+    list.splice(from,1);let to=list.indexOf(target)+(after?1:0);list.splice(to,0,g);
+    projectMeta.__groups__={order:list};save();renderProjects()}
+  window.moveProjectGroup=(g,delta)=>{const list=orderedGroups(allGroups()),i=list.indexOf(g),j=i+delta;if(i<0||j<0||j>=list.length)return;placeGroup(g,list[j],delta>0)};
   window.setProjectGroup=setGroup;
   window.editProjectGroup=function(){
     const p=active();if(!p)return;
@@ -2997,29 +3005,39 @@ function fmtDone(iso){const d=new Date(iso);return isNaN(d)?'':d.toLocaleDateStr
         if(choice==='__new'&&!g){wrap.querySelector('.friendly-error').textContent='Введите название новой группы.';return false}
         setGroup(p.name,g);return true}})};
   const css=document.createElement('style');
-  css.textContent='#projects .proj-group-head{display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;margin:10px 0 2px;padding:5px 9px;border:0;border-radius:7px;background:transparent;color:var(--muted,#6b7587);font:inherit;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;text-align:left}#projects .proj-group-head:hover,#projects .proj-group-head.drop{background:rgba(100,120,170,.14)}#projects .proj-group-head .count{font-weight:600}@media(max-width:700px){#projects .proj-group-head{flex:0 0 auto;width:auto;margin:0}}';
+  css.textContent='#projects .proj-group-head{display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;margin:10px 0 2px;padding:5px 9px;border:0;border-radius:7px;background:transparent;color:var(--muted,#6b7587);font:inherit;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;text-align:left}#projects .proj-group-head:hover,#projects .proj-group-head.drop{background:rgba(100,120,170,.14)}#projects .proj-group-head .count{font-weight:600}#projects .proj-group-head.dragging{opacity:.4}#projects .proj-group-head.drop-before{box-shadow:0 -2px 0 var(--blue,#3b6fd6)}#projects .proj-group-head.drop-after{box-shadow:0 2px 0 var(--blue,#3b6fd6)}@media(max-width:700px){#projects .proj-group-head{flex:0 0 auto;width:auto;margin:0}}';
   document.head.appendChild(css);
   function regroup(){
     const box=$('projects');if(!box)return;
     const btns=[...box.querySelectorAll(':scope>.project')];
-    const groups=[];btns.forEach(b=>{const g=groupOf(b.dataset.project);if(g&&!groups.includes(g))groups.push(g)});
-    if(!groups.length)return;
+    const found=[];btns.forEach(b=>{const g=groupOf(b.dataset.project);if(g&&!found.includes(g))found.push(g)});
+    if(!found.length)return;const groups=orderedGroups(found);
     const collapsed=readSet(),frag=document.createDocumentFragment();
     btns.filter(b=>!groupOf(b.dataset.project)).forEach(b=>frag.appendChild(b));
     groups.forEach(g=>{
       const members=btns.filter(b=>groupOf(b.dataset.project)===g);
       const open=!collapsed.has(g)||members.some(b=>b.classList.contains('active'));
       const head=document.createElement('button');head.type='button';head.className='proj-group-head';head.dataset.group=g;head.setAttribute('aria-expanded',String(open));
-      head.innerHTML=`<span>${open?'▾':'▸'} ${esc(g)}</span><span class="count">${members.length}</span>`;
-      head.addEventListener('click',()=>{const c=readSet();if(c.has(g))c.delete(g);else c.add(g);writeSet(c);renderProjects()});
-      head.addEventListener('dragover',e=>{if(!window.__dragProject)return;e.preventDefault();head.classList.add('drop')});
-      head.addEventListener('dragleave',()=>head.classList.remove('drop'));
-      head.addEventListener('drop',e=>{const name=window.__dragProject;if(!name)return;e.preventDefault();e.stopPropagation();window.__dragProject=null;setGroup(name,g)});
+      head.innerHTML=`<span class="gh-name">${open?'▾':'▸'} ${esc(g)}</span><span class="count">${members.length}</span>`;
+      head.draggable=true;head.title='Потяните, чтобы переставить группу';
+      head.addEventListener('dragstart',e=>{window.__dragGroup=g;head.classList.add('dragging');try{e.dataTransfer.setData('text/plain','group:'+g);e.dataTransfer.effectAllowed='move'}catch(_){}});
+      head.addEventListener('dragend',()=>{window.__dragGroup=null;document.querySelectorAll('#projects .proj-group-head').forEach(x=>x.classList.remove('dragging','drop-before','drop-after'))});
+      head.addEventListener('click',e=>{const c=readSet();if(c.has(g))c.delete(g);else c.add(g);writeSet(c);renderProjects()});
+      head.addEventListener('dragover',e=>{if(window.__dragGroup){e.preventDefault();if(window.__dragGroup!==g){const r=head.getBoundingClientRect();document.querySelectorAll('#projects .proj-group-head').forEach(x=>x.classList.remove('drop-before','drop-after'));head.classList.add(e.clientY>r.top+r.height/2?'drop-after':'drop-before')}return}if(!window.__dragProject)return;e.preventDefault();head.classList.add('drop')});
+      head.addEventListener('dragleave',()=>head.classList.remove('drop','drop-before','drop-after'));
+      head.addEventListener('drop',e=>{const dg=window.__dragGroup;if(dg){e.preventDefault();e.stopPropagation();window.__dragGroup=null;if(dg!==g){const r=head.getBoundingClientRect();placeGroup(dg,g,e.clientY>r.top+r.height/2)}return}const name=window.__dragProject;if(!name)return;e.preventDefault();e.stopPropagation();window.__dragProject=null;setGroup(name,g)});
       frag.appendChild(head);
       members.forEach(b=>{if(!open)b.style.display='none';frag.appendChild(b)})});
     box.appendChild(frag)}
+  // Проект, брошенный на проект другой группы (или без группы), переходит в эту группу.
+  let dragged='';
+  function wireProjectDrops(){
+    document.querySelectorAll('#projects .project').forEach(b=>{
+      b.addEventListener('dragstart',()=>{dragged=b.dataset.project});
+      b.addEventListener('dragend',()=>{setTimeout(()=>{dragged=''},0)});
+      b.addEventListener('drop',()=>{const name=dragged;dragged='';if(!name||name===b.dataset.project)return;const g=groupOf(b.dataset.project);if(groupOf(name)!==g)setTimeout(()=>setGroup(name,g),0)})})}
   const orig=window.renderProjects;if(typeof orig!=='function')return;
-  window.renderProjects=function(){const r=orig.apply(this,arguments);try{regroup()}catch(e){console.warn('Project groups',e)}return r};
+  window.renderProjects=function(){const r=orig.apply(this,arguments);try{regroup();wireProjectDrops()}catch(e){console.warn('Project groups',e)}return r};
 })();
 
 /* ===== Быстрая задача у названия проекта; заметка сразу в проект ===== */

@@ -58,6 +58,26 @@ try {
   assert((await vis()).join() === 'Альфа', 'Collapsed group hides its projects: ' + (await vis()));
   await page.locator('.proj-group-head').click();
   assert((await vis()).length === 3, 'Expanded again');
+  // Перетаскивание проекта на подпись группы и на проект другой группы.
+  await page.locator('#projects .project[data-project="Альфа"]').dragTo(page.locator('.proj-group-head[data-group="ЭР"]'));
+  assert(await page.evaluate(() => projectMeta['Альфа']?.group) === 'ЭР', 'Drop on a group header assigns the group');
+  await page.locator('#projects .project[data-project="Гамма"]').dragTo(page.locator('#projects .project[data-project="Бета"]'), { targetPosition: { x: 20, y: 2 } });
+  await page.evaluate(() => { setProjectGroup('Альфа', ''); });
+  await page.locator('#projects .project[data-project="Альфа"]').dragTo(page.locator('#projects .project[data-project="Гамма"]'), { targetPosition: { x: 20, y: 2 } });
+  assert(await page.evaluate(() => projectMeta['Альфа']?.group) === 'ЭР', 'Drop on a project of a group joins that group: ' + await page.evaluate(() => JSON.stringify(projectMeta)));
+  await page.evaluate(() => { setProjectGroup('Альфа', ''); });
+  // Порядок групп: стрелки и Alt+стрелки.
+  await page.evaluate(() => { setProjectGroup('Альфа', 'НС'); });
+  assert((await heads()).join() === 'НС,ЭР', 'Groups follow first appearance: ' + (await heads()));
+  await page.locator('.proj-group-head[data-group="НС"]').dragTo(page.locator('.proj-group-head[data-group="ЭР"]'), { targetPosition: { x: 20, y: 25 } });
+  assert((await heads()).join() === 'ЭР,НС', 'Dragging a group header below another moves it: ' + (await heads()));
+  assert(await page.locator('.gh-mv').count() === 0, 'No arrow buttons');
+  await page.locator('.proj-group-head[data-group="НС"]').dragTo(page.locator('.proj-group-head[data-group="ЭР"]'), { targetPosition: { x: 20, y: 2 } });
+  assert((await heads()).join() === 'НС,ЭР', 'Dragging a group header above another moves it up: ' + (await heads()));
+  await page.evaluate(() => { moveProjectGroup('НС', 1); });
+  assert((await heads()).join() === 'ЭР,НС' && await page.evaluate(() => projectMeta.__groups__.order.join()) === 'ЭР,НС', 'Group order is stored');
+  await page.evaluate(() => { setProjectGroup('Альфа', ''); });
+  assert((await heads()).join() === 'ЭР', 'Empty group disappears: ' + (await heads()));
   // Сохранение и перезагрузка.
   await page.evaluate(() => cloudWriteNow());
   await page.waitForTimeout(300);
