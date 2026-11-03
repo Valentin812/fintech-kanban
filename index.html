@@ -644,6 +644,7 @@ body.dark-theme .project-menu{background:#182233;border-color:#334158}body.dark-
 .shared-invite-row{display:flex;gap:8px}.shared-invite-row input{flex:1;min-width:0;border:1px solid #c9d1dd;border-radius:8px;padding:9px 10px;font:inherit}
 body.dark-theme .shared-invite{border-top-color:#2a3547}body.dark-theme .shared-invite-row input{background:#111a28;color:#e5ebf3;border-color:#334158}
 
+.attach-drop{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:8px;padding:9px 11px;border:1px dashed var(--line);border-radius:9px}.attach-file{display:inline-block;padding:7px 2px;font-weight:600;word-break:break-all}#drawer.file-drop .attach-drop{border-color:var(--blue);background:rgba(59,111,214,.10)}#drawer.file-drop{outline:2px dashed var(--blue);outline-offset:-4px}
 .mytask-filters{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 18px}
 .mytask-group{max-width:960px;margin:0 0 18px}
 .mytask-group h4{margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#556173}
@@ -2170,6 +2171,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.11.03-03',date:'03.11.2026',title:'Вложения: свои файлы в задаче',items:['В карточке задачи можно прикрепить файл: перетащите его на карточку или нажмите «＋ Файл». Поддерживаются картинки, аудио, PDF, Word, Excel, PowerPoint, TXT и CSV до 20 МБ. Вложения из Telegram работают как раньше.']},
  {v:'2026.11.03-01',date:'03.11.2026',title:'Группы проектов: порядок',items:['Группы можно переставлять мышкой: потяните подпись группы и бросьте на другую подпись.']},
  {v:'2026.11.02-07',date:'02.11.2026',title:'Группы проектов, чек-лист по Enter, ширина «Мои задачи»',items:['Группы проектов: в меню проекта (⋯) пункт «Группа проекта…» — выберите существующую группу или создайте новую (ЭР, НС…). В списке появляется подпись-разделитель, её можно свернуть щелчком; проект можно перетащить на подпись группы.','Чек-лист в задаче: пункт добавляется по Enter, кнопка «Добавить» убрана, Esc очищает поле.','«Мои задачи»: при изменении ширины список задач и «Быстрые заметки» двигаются вместе в обе стороны.']},
  {v:'2026.11.02-06',date:'02.11.2026',title:'CRM: архивные задачи без окна',items:['Задачи, которые в CRM ушли в архив, тоже больше не вызывают окно «Задача закрыта в CRM»: только метка «нет в CRM» и фильтр.']},
@@ -2679,7 +2681,7 @@ document.addEventListener('click',e=>{
 },true);
 window.__releasesApi={buildCard,parseQuery,extractText,matchesDate,visibleItems};
 })();
-/* ===== Вложения задач (картинки и голосовые из Telegram) ===== */
+/* ===== Вложения задач: из Telegram и свои файлы (перетаскивание или «＋ Файл») ===== */
 (function(){
 const urlCache=new Map();
 const objPath=p=>String(p).split('/').map(encodeURIComponent).join('/');
@@ -2690,14 +2692,51 @@ async function signed(path){
   const url=CLOUD_URL+'/storage/v1'+(u.startsWith('/')?u:'/'+u);urlCache.set(path,{url,until:Date.now()+50*60000});return url;
 }
 const host=()=>{let el=$('dAttachments');if(!el){const desc=$('dDescription')?.closest('.field');if(!desc)return null;el=document.createElement('div');el.id='dAttachments';el.className='attach-box';desc.after(el)}return el};
+const MAX_FILE=20*1024*1024;
+const OK_TYPES=['image/jpeg','image/png','image/webp','image/gif','audio/ogg','audio/mpeg','audio/mp4','audio/x-m4a','audio/wav','application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.ms-powerpoint','application/vnd.openxmlformats-officedocument.presentationml.presentation','text/plain','text/csv'];
+const EXT_TYPE={pdf:'application/pdf',doc:'application/msword',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',xls:'application/vnd.ms-excel',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',ppt:'application/vnd.ms-powerpoint',pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',txt:'text/plain',csv:'text/csv',jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',gif:'image/gif',mp3:'audio/mpeg',wav:'audio/wav',ogg:'audio/ogg',oga:'audio/ogg',m4a:'audio/x-m4a'};
+const fileType=f=>{const ext=String(f.name||'').split('.').pop().toLowerCase();return OK_TYPES.includes(f.type)?f.type:(EXT_TYPE[ext]||'')};
+const sizeText=n=>n>=1048576?(n/1048576).toFixed(1).replace('.0','')+' МБ':Math.max(1,Math.round(n/1024))+' КБ';
+const isAudio=a=>a.kind==='voice'||String(a.type).startsWith('audio/');
+const isImage=a=>a.kind==='image'||String(a.type).startsWith('image/');
+const safeName=n=>{const m=String(n||'file').match(/^(.*?)(\.[A-Za-z0-9]{1,8})?$/);const base=(m[1]||'file').normalize('NFKD').replace(/[^A-Za-z0-9._-]+/g,'_').replace(/^[_.]+|[_.]+$/g,'').slice(0,60)||'file';return base+(m[2]||'')};
 function render(){
-  const el=host();if(!el)return;const t=currentDrawerTask();const list=(t&&Array.isArray(t.attachments))?t.attachments.filter(a=>a&&a.path):[];
-  if(!list.length){el.hidden=true;el.innerHTML='';return}
+  const el=host();if(!el)return;const t=currentDrawerTask();if(!t){el.hidden=true;el.innerHTML='';return}
+  const list=Array.isArray(t.attachments)?t.attachments.filter(a=>a&&a.path):[];
   el.hidden=false;
-  el.innerHTML=`<label>Вложения</label><div class="attach-list">${list.map((a,i)=>`<div class="attach-item" data-att="${i}">${a.kind==='voice'||String(a.type).startsWith('audio/')?`<div class="attach-audio"><span>🎙 ${esc(a.name||'Голосовое')}</span><audio controls preload="none" data-att-src="${i}"></audio></div>`:`<a class="attach-thumb" data-att-open="${i}" href="#" title="Открыть в полном размере"><img alt="${esc(a.name||'Картинка')}" data-att-src="${i}"></a>`}<div class="attach-meta"><span class="mini">${esc(a.name||'')}</span><button type="button" class="cm-btn" data-att-download="${i}">Скачать</button><button type="button" class="cm-btn" data-att-remove="${i}">Убрать из задачи</button></div></div>`).join('')}</div><div class="mini attach-note" hidden></div>`;
-  if(!cloudSession?.access_token){el.querySelector('.attach-note').hidden=false;el.querySelector('.attach-note').textContent='Войдите в аккаунт, чтобы увидеть вложения.';return}
-  list.forEach((a,i)=>{const node=el.querySelector(`[data-att-src="${i}"]`);signed(a.path).then(u=>{if(node.isConnected)node.src=u}).catch(err=>{const n=el.querySelector('.attach-note');if(n){n.hidden=false;n.textContent='Не удалось открыть вложение: '+err.message}})});
+  el.innerHTML=`<label>Вложения</label>${list.length?`<div class="attach-list">${list.map((a,i)=>`<div class="attach-item" data-att="${i}">${isAudio(a)?`<div class="attach-audio"><span>🎙 ${esc(a.name||'Голосовое')}</span><audio controls preload="none" data-att-src="${i}"></audio></div>`:isImage(a)?`<a class="attach-thumb" data-att-open="${i}" href="#" title="Открыть в полном размере"><img alt="${esc(a.name||'Картинка')}" data-att-src="${i}"></a>`:`<a class="attach-file" data-att-open="${i}" href="#" title="Открыть">📄 ${esc(a.name||'Файл')}${a.size?` <span class="mini">· ${sizeText(a.size)}</span>`:''}</a>`}<div class="attach-meta">${isImage(a)||isAudio(a)?`<span class="mini">${esc(a.name||'')}</span>`:''}<button type="button" class="cm-btn" data-att-download="${i}">Скачать</button><button type="button" class="cm-btn" data-att-remove="${i}">Убрать из задачи</button></div></div>`).join('')}</div>`:''}<div class="attach-drop" data-att-drop="1"><span class="mini">Перетащите файл сюда (до 20 МБ: картинки, аудио, PDF, Word, Excel, PowerPoint, TXT, CSV)</span> <button type="button" class="cm-btn" data-att-add="1">＋ Файл</button><input type="file" hidden multiple data-att-input="1"></div><div class="mini attach-note" hidden></div>`;
+  const note=el.querySelector('.attach-note');
+  if(!cloudSession?.access_token){note.hidden=false;note.textContent='Войдите в аккаунт, чтобы видеть и добавлять вложения.';return}
+  list.forEach((a,i)=>{const node=el.querySelector(`[data-att-src="${i}"]`);if(!node)return;signed(a.path).then(u=>{if(node.isConnected)node.src=u}).catch(err=>{const n=el.querySelector('.attach-note');if(n){n.hidden=false;n.textContent='Не удалось открыть вложение: '+err.message}})});
 }
+async function upload(files){
+  const t=currentDrawerTask();if(!t)return;
+  if(!cloudSession?.access_token||!cloudSession?.user?.id){toast('Войдите в аккаунт, чтобы добавлять файлы');return}
+  const note=()=>host()?.querySelector('.attach-note');
+  let added=0;
+  for(const f of [...files]){
+    const type=fileType(f);
+    if(!type){toast(`«${f.name}»: такой тип файла не поддерживается`);continue}
+    if(f.size>MAX_FILE){toast(`«${f.name}»: больше 20 МБ`);continue}
+    if(!f.size){toast(`«${f.name}»: пустой файл`);continue}
+    const n=note();if(n){n.hidden=false;n.textContent='Загружаю «'+f.name+'»…'}
+    const path=`${cloudSession.user.id}/${crypto.randomUUID()}/${safeName(f.name)}`;
+    try{
+      await cloudRequest(`/storage/v1/object/task-files/${objPath(path)}`,{method:'POST',headers:{'Content-Type':type,'x-upsert':'false'},body:f});
+      if(!Array.isArray(t.attachments))t.attachments=[];
+      t.attachments.push({path,name:String(f.name).slice(0,120),type,size:f.size,kind:type.startsWith('image/')?'image':type.startsWith('audio/')?'voice':'file'});
+      added++;
+    }catch(err){toast(`Не удалось загрузить «${f.name}»: ${err.message}`)}
+  }
+  if(added){save();refreshAfterTaskChange();toast(added===1?'Файл добавлен к задаче':`Файлов добавлено: ${added}`)}
+  render()}
+window.__uploadTaskFiles=upload;
+const hasFiles=e=>[...(e.dataTransfer?.types||[])].includes('Files');
+document.addEventListener('dragover',e=>{const d=e.target.closest?.('#drawer');if(!d||!hasFiles(e))return;e.preventDefault();d.classList.add('file-drop')});
+document.addEventListener('dragleave',e=>{const d=$('drawer');if(d&&!d.contains(e.relatedTarget))d.classList.remove('file-drop')});
+document.addEventListener('drop',e=>{const d=e.target.closest?.('#drawer');if(!d||!hasFiles(e))return;e.preventDefault();d.classList.remove('file-drop');upload(e.dataTransfer.files)});
+document.addEventListener('click',e=>{const add=e.target.closest?.('[data-att-add]');if(add){e.preventDefault();add.closest('#dAttachments')?.querySelector('[data-att-input]')?.click()}});
+document.addEventListener('change',e=>{const inp=e.target.closest?.('[data-att-input]');if(!inp)return;const files=[...inp.files];inp.value='';if(files.length)upload(files)});
 window.renderTaskAttachments=render;
 ['openTask','openStandaloneTask'].forEach(name=>{const o=window[name];if(typeof o!=='function')return;window[name]=function(){const r=o.apply(this,arguments);try{render()}catch(e){console.warn('Attachments render failed',e)}return r}});
 document.addEventListener('click',async e=>{

@@ -136,7 +136,7 @@ try {
   await page.locator('#undoToast button').click();
   assert((await page.evaluate((id) => standaloneTasks.find((t) => t.id === id).attachments?.length, voice.id)) === 1, 'Undo brings the attachment back');
   await page.evaluate(() => openStandaloneTask(standaloneTasks.find((t) => t.title === 'Позвонить в банк').id));
-  assert(await page.locator('#dAttachments').isHidden(), 'Tasks without files show no attachments block');
+  assert(await page.locator('#dAttachments .attach-item').count() === 0 && await page.locator('#dAttachments [data-att-add]').isVisible(), 'Tasks without files show only the add-file control');
   await page.evaluate(() => closeDrawer());
 
   await page.waitForTimeout(1200);
