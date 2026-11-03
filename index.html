@@ -2172,6 +2172,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.11.03-12',date:'03.11.2026',title:'Группы: без лишнего пункта',items:['В «Группа проекта…» у проекта без группы больше нет пункта «Без группы». У проекта в группе есть «Убрать из группы».']},
  {v:'2026.11.03-11',date:'03.11.2026',title:'Встречи: название из Meeting Hub',items:['При объединении встречи с Meeting Hub название берётся из Meeting Hub (отмена вернёт прежнее).','Блок «Подготовка к встрече» можно свернуть и развернуть.']},
  {v:'2026.11.03-10',date:'03.11.2026',title:'Группы: пустая группа',items:['В «Группа проекта…» можно создать пустую группу — проект при этом никуда не переносится. Пустую группу можно удалить крестиком, а проекты перетащить в неё мышкой.']},
  {v:'2026.11.03-08',date:'03.11.2026',title:'Группы: проекты с отступом',items:['Проекты внутри группы сдвинуты вправо и отмечены линией слева, после группы небольшой отступ — сразу видно, какие проекты в группе.']},
@@ -3080,7 +3081,7 @@ function fmtDone(iso){const d=new Date(iso);return isNaN(d)?'':d.toLocaleDateStr
     const p=active();if(!p)return;
     const groups=allGroups(),cur=groupOf(p.name);
     friendlyFormDialog({title:'Группа проекта',description:'Группа — это подпись-разделитель в списке проектов. Проекты одной группы идут вместе.',
-      fields:[{label:'Группа',type:'select',value:cur||'',options:[{value:'',label:'Без группы'},...groups.map(g=>({value:g,label:g})),{value:'__new',label:'＋ Новая группа…'},{value:'__empty',label:'＋ Пустая группа (проект не переносить)…'}]},{label:'Название новой группы',value:'',placeholder:'например, ЭР'}],
+      fields:[{label:'Группа',type:'select',value:cur||groups[0]||'__new',options:[...(cur?[{value:'',label:'Убрать из группы'}]:[]),...groups.map(g=>({value:g,label:g})),{value:'__new',label:'＋ Новая группа…'},{value:'__empty',label:'＋ Пустая группа (проект не переносить)…'}]},{label:'Название новой группы',value:'',placeholder:'например, ЭР'}],
       submitLabel:'Сохранить',
       onSubmit:([choice,fresh],wrap)=>{
         let g=choice==='__new'?String(fresh||'').trim():choice;
