@@ -128,6 +128,29 @@ try {
     assert(e.l >= Math.min(w, 500) - 10, `List follows the width ${w}: ${JSON.stringify(e)}`);
   }
   await page.evaluate(() => __listWidth.set(0));
+  // Пустая группа: создаётся без переноса проекта, держится после перезагрузки, удаляется крестиком, принимает проект.
+  await page.evaluate(() => { activeProject = 'Альфа'; renderAll(); });
+  const grpBefore = await page.evaluate(() => projectMeta['Альфа'] && projectMeta['Альфа'].group || '');
+  await page.locator('#projectMenuButton').click();
+  await page.locator('[data-project-action="__group"]').click();
+  await page.locator('.friendly-dialog select[name=f0]').selectOption('__empty');
+  await page.locator('.friendly-dialog input[name=f1]').fill('Пустая');
+  await page.locator('.friendly-dialog button[type=submit]').click();
+  assert((await heads()).includes('Пустая'), 'Empty group header shown: ' + (await heads()));
+  assert((await page.evaluate(() => projectMeta['Альфа'] && projectMeta['Альфа'].group || '')) === grpBefore, 'Project is not moved into an empty group');
+  assert((await page.locator('#projects .proj-group-head[data-group="Пустая"] .count').innerText()).toLowerCase().includes('пусто'), 'Empty group is marked');
+  await page.evaluate(() => { setProjectGroup('Альфа', 'Пустая'); });
+  assert((await page.locator('#projects .proj-group-head[data-group="Пустая"] .count').innerText()) === '1', 'Project joins the empty group');
+  await page.evaluate(() => { setProjectGroup('Альфа', ''); });
+  assert(!(await heads()).includes('Пустая'), 'Group without projects disappears as before');
+  await page.evaluate(() => { activeProject = 'Альфа'; renderAll(); });
+  await page.locator('#projectMenuButton').click();
+  await page.locator('[data-project-action="__group"]').click();
+  await page.locator('.friendly-dialog select[name=f0]').selectOption('__empty');
+  await page.locator('.friendly-dialog input[name=f1]').fill('Ещё');
+  await page.locator('.friendly-dialog button[type=submit]').click();
+  await page.locator('#projects .proj-group-head[data-group="Ещё"] [data-gdel]').click();
+  assert(!(await heads()).includes('Ещё'), 'Empty group deleted by the cross');
   assert(!errors.length, 'Page errors: ' + errors.join('; '));
   console.log('Project groups OK: menu, header, collapse, saved, checklist Enter/Esc');
 } finally {
