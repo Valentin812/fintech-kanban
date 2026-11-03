@@ -2172,6 +2172,8 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.11.03-11',date:'03.11.2026',title:'Встречи: название из Meeting Hub',items:['При объединении встречи с Meeting Hub название берётся из Meeting Hub (отмена вернёт прежнее).','Блок «Подготовка к встрече» можно свернуть и развернуть.']},
+ {v:'2026.11.03-10',date:'03.11.2026',title:'Группы: пустая группа',items:['В «Группа проекта…» можно создать пустую группу — проект при этом никуда не переносится. Пустую группу можно удалить крестиком, а проекты перетащить в неё мышкой.']},
  {v:'2026.11.03-08',date:'03.11.2026',title:'Группы: проекты с отступом',items:['Проекты внутри группы сдвинуты вправо и отмечены линией слева, после группы небольшой отступ — сразу видно, какие проекты в группе.']},
  {v:'2026.11.03-07',date:'03.11.2026',title:'Файл в окне новой задачи',items:['Файл можно бросить прямо в окно «Новая задача» (с проектом и без) или добавить кнопкой «＋ Файл» — он прикрепится к созданной задаче. Файл, брошенный мимо карточки, больше не вставляется в поле путём.']},
  {v:'2026.11.03-05',date:'03.11.2026',title:'Группы: можно ставить между проектами',items:['Группу можно перетащить на любое место списка — выше или ниже обычных проектов и других групп. Раньше группа стояла после всех проектов без группы.']},
@@ -2184,7 +2186,6 @@ const CHANGELOG=[
  {v:'2026.11.02-04',date:'02.11.2026',title:'CRM: удалённые задачи',items:['Задачи, удалённые в CRM (или больше не ваши), не вызывают окно «Задача закрыта в CRM». У карточки появляется метка «нет в CRM», а в «Мои задачи» — фильтр «🚫 Нет в CRM».']},
  {v:'2026.11.02-03',date:'02.11.2026',title:'Джарвис: подтверждение и заметки целиком',items:['Сообщение вида «Уточнить у Андрея:» и пункты списком (1. 2. или «-») бот делает одной задачей: в «Мои задачи» пункты становятся чекбоксами, в проекте — подзадачами.','Поле «Описание» в задаче запоминает высоту, которую вы задали вручную (потянув за уголок), и открывается такого же размера. Сбросить: двойной щелчок по уголку.','Бот перед отправкой в Kanban показывает, что получилось, и спрашивает: «Отправить», «Изменить» (ответом с исправленным текстом) или «Отменить». Неподтверждённое уходит в Kanban само только через 12 часов.','У задачи в боте срок обязателен: без него «Отправить» не сработает — выберите «Сегодня / Завтра / Послезавтра / Через неделю» или впишите в «Изменить».','Заметки больше не урезаются: сохраняется весь текст вместе с переносами строк (до 2000 символов).']},
  {v:'2026.11.02-02',date:'02.11.2026',title:'Встречи: красивые выпадающие списки',items:['Выбор проекта и другие списки во встречах теперь в стиле темы: закруглённое окно, подсветка, галочка у выбранного, поиск, если вариантов больше восьми, выбор стрелками и Enter.']},
- {v:'2026.11.03-10',date:'03.11.2026',title:'Группы: пустая группа',items:['В «Группа проекта…» можно создать пустую группу — проект при этом никуда не переносится. Пустую группу можно удалить крестиком, а проекты перетащить в неё мышкой.']},
  {v:'2026.11.02-01',date:'02.11.2026',title:'Переименование проекта',items:['Меню проекта → «Переименовать проект…»: новое название сразу обновляется в закреплённых задачах, порядке проектов, встречах (в том числе из Meeting Hub) и релизах.','Общий проект переименовать нельзя; название не должно совпадать с другим проектом или архивом.']},
  {v:'2026.10.30-03',date:'30.10.2026',title:'CRM: дополнительные ответственные',items:['При отправке задачи в CRM можно выбрать дополнительных ответственных (CRM их уведомит). В карточке связанной задачи — кнопка «👥 Доп. ответственные…», а имена видны в блоке CRM и в поле «Ответственный».']},
  {v:'2026.10.30-02',date:'30.10.2026',title:'Мои задачи: порядок перетаскиванием',items:['У каждой задачи слева значок ⠿: потяните его вверх или вниз, чтобы поставить задачу на своё место. Порядок запоминается для каждого списка.','С клавиатуры: поставьте фокус на ⠿ и нажмите стрелку вверх или вниз.','Новые задачи появляются в начале списка, пока вы их не переставите.']},
@@ -3631,7 +3632,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
   const topBtn=document.createElement('button');topBtn.className='btn';topBtn.id='meetingsTopButton';topBtn.type='button';topBtn.textContent='📅 Встречи';
   const team=$('teamTopButton');if(team)team.insertAdjacentElement('beforebegin',topBtn);
   topBtn.addEventListener('click',()=>{document.body.classList.remove('mb-top-open');nav.click()});
-  const S={openId:null,q:'',filter:'all',proj:'',hub:[],hubAt:0,hubErr:'',tokens:[],tr:{}};
+  const S={openId:null,q:'',filter:'all',proj:'',hub:[],hubAt:0,hubErr:'',tokens:[],tr:{},prepClosed:new Set()};
   const HUB_SEL='id,title,held_at,duration_sec,meeting_app,description,summary,decisions,tasks,open_questions,project_name';
   const signedIn=()=>!!cloudSession?.access_token;
   const arr=v=>Array.isArray(v)?v:[];
@@ -3732,7 +3733,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
   function setMtProjects(m,projects){m.projects=projects;m.tasks.forEach(tk=>{if(tk.state!=='added'&&!tk.project&&m.projects.length===1)tk.project=m.projects[0]});save();render()}
   // ---- объединение своей встречи (заметки) с записью из Meeting Hub ----
   async function mergeWithHub(m,h){
-    const before=JSON.stringify({summary:m.summary,transcript:m.transcript,tasks:m.tasks,hubId:m.hubId,status:m.status,time:m.time,projects:m.projects});
+    const before=JSON.stringify({title:m.title,summary:m.summary,transcript:m.transcript,tasks:m.tasks,hubId:m.hubId,status:m.status,time:m.time,projects:m.projects});
     let tr='';
     try{const r=await cloudRequest('/rest/v1/meetings?id=eq.'+encodeURIComponent(h.id)+'&select=transcript',{method:'GET'});tr=String(arr(r)[0]?.transcript||'')}catch(e){toast('Не удалось загрузить расшифровку: '+e.message);return}
     const parts=[];
@@ -3743,10 +3744,10 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     if(tr)m.transcript=cut((m.transcript?m.transcript+'\n\n— Расшифровка Meeting Hub —\n':'')+tr,60000);
     const have=new Set((m.tasks||[]).map(x=>one(x.title,300).toLowerCase()));if(!Array.isArray(m.tasks))m.tasks=[];
     h.tasks.forEach(t=>{const title=one(t.task+(t.owner?' — '+t.owner:''),300);if(have.has(title.toLowerCase()))return;m.tasks.push({id:rid('t'),title,project:h.project||'',state:isAdded(h.id,t.task)?'added':''})});
-    m.hubId=h.id;m.status='done';if(!m.time&&h.time)m.time=h.time;
+    m.hubId=h.id;m.status='done';if(h.title)m.title=one(h.title,200);if(!m.time&&h.time)m.time=h.time;
     if(h.project&&!(m.projects||[]).includes(h.project)&&projNames().includes(h.project))m.projects=[...(m.projects||[]),h.project];
     save();render();
-    undoToast('Встреча объединена с Meeting Hub',()=>{const b=JSON.parse(before);m.summary=b.summary;m.transcript=b.transcript;m.tasks=b.tasks;m.status=b.status;m.time=b.time;m.projects=b.projects;if(b.hubId===undefined)delete m.hubId;else m.hubId=b.hubId;save();render()});
+    undoToast('Встреча объединена с Meeting Hub',()=>{const b=JSON.parse(before);m.title=b.title;m.summary=b.summary;m.transcript=b.transcript;m.tasks=b.tasks;m.status=b.status;m.time=b.time;m.projects=b.projects;if(b.hubId===undefined)delete m.hubId;else m.hubId=b.hubId;save();render()});
   }
   function mergeDialog(m){
     const used=new Set(list().map(x=>x.hubId).filter(Boolean));
@@ -3783,7 +3784,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     return`<article class="mt-card open" data-mt="${esc(m.id)}">${head}<div class="mt-body">
       <div class="mt-grid"><label>Название<input data-mt-f="title" value="${esc(m.title)}" maxlength="200"></label><label>Дата<input type="date" data-mt-f="date" value="${esc(m.date)}"></label><label>Время<input type="time" data-mt-f="time" value="${esc(m.time)}"></label><label>Статус<select data-mt-f="status"><option value="planned"${m.status!=='done'?' selected':''}>Предстоит</option><option value="done"${m.status==='done'?' selected':''}>Прошла</option></select></label></div>
       <div class="mt-field"><span>Проекты</span><div class="mt-projs">${(m.projects||[]).map(n=>`<span class="mt-pchip on">${esc(n)}<button type="button" class="mt-pchip-x" data-mt-premove="${esc(n)}" aria-label="Убрать проект ${esc(n)}" title="Убрать">×</button></span>`).join('')}${projNames().some(n=>!(m.projects||[]).includes(n))?`<select class="mt-padd" data-mt-padd="1" aria-label="Добавить проект"><option value="">＋ Добавить проект…</option>${projNames().filter(n=>!(m.projects||[]).includes(n)).map(n=>`<option>${esc(n)}</option>`).join('')}</select>`:''}${!projNames().length?'<em>Нет проектов</em>':''}</div></div>
-      <label class="mt-field"><span>Подготовка к встрече</span><textarea data-mt-f="prep" rows="4" maxlength="20000" placeholder="Что обсудить, вопросы, цифры, что нужно подготовить">${esc(m.prep)}</textarea></label>
+      <details class="mt-field mt-prep" data-mt-prep="${esc(m.id)}"${S.prepClosed.has(m.id)?'':' open'}><summary>Подготовка к встрече${m.prep&&S.prepClosed.has(m.id)?' · есть текст':''}</summary><textarea data-mt-f="prep" rows="4" maxlength="20000" aria-label="Подготовка к встрече" placeholder="Что обсудить, вопросы, цифры, что нужно подготовить">${esc(m.prep)}</textarea></details>
       <label class="mt-field"><span>Краткий итог</span><textarea data-mt-f="summary" rows="5" maxlength="20000" placeholder="О чём договорились, решения, следующие шаги">${esc(m.summary)}</textarea></label>
       <details class="mt-field"${m.transcript?'':' hidden'}><summary>Расшифровка (${(m.transcript||'').length} симв.)</summary><textarea data-mt-f="transcript" rows="8" maxlength="60000">${esc(m.transcript)}</textarea></details>
       <div class="mt-field"><span>Задачи из встречи${(m.tasks||[]).length?` · не добавлено: ${pending}`:''}</span>
@@ -3812,8 +3813,10 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
   }
   window.renderMeetings=render;
   // ---- события ----
+  view.addEventListener('toggle',e=>{const d=e.target;if(d&&d.dataset&&d.dataset.mtPrep){if(d.open)S.prepClosed.delete(d.dataset.mtPrep);else S.prepClosed.add(d.dataset.mtPrep)}},true);
   view.addEventListener('click',e=>{
     const t=e.target;
+    const ps=t.closest('details[data-mt-prep]>summary');if(ps){const d=ps.parentElement;if(d.open)S.prepClosed.add(d.dataset.mtPrep);else S.prepClosed.delete(d.dataset.mtPrep)}
     const tg=t.closest('[data-mt-toggle]');if(tg&&!t.closest('input,select,button')){const id=tg.dataset.mtToggle;S.openId=S.openId===id?null:id;render();return}
     if(t.closest('[data-mt-new]')){const m={id:rid('m'),title:'Новая встреча',date:today(),time:'',status:'planned',prep:'',summary:'',transcript:'',projects:S.proj?[S.proj]:[],tasks:[],created:Date.now()};store().unshift(m);S.openId=m.id;save();render();return}
     const rv=t.closest('[data-mt-revoke]');
