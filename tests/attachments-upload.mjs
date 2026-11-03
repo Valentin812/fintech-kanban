@@ -70,6 +70,22 @@ try {
   await page.waitForTimeout(300);
   const st = Array.isArray(lastState) ? lastState[0] : lastState;
   assert(JSON.stringify(st?.state?.data?.[0]?.tasks?.[0]?.attachments || []).includes('photo.png'), 'Attachments are saved with the state');
+  // Окно «Новая задача без проекта»: файл не вставляется путём в поле, а прикрепляется к созданной задаче.
+  await page.evaluate(() => { closeDrawer(); switchView('mytasks'); openStandaloneTaskCreate(); });
+  await page.locator('#standaloneTitle').fill('Договор с УЦ');
+  const upBefore = uploads.length;
+  await page.evaluate(() => { const dt = new DataTransfer(); dt.items.add(new File(['doc'], 'Анкета.docx', { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })); const ta = document.getElementById('standaloneDescription'); ta.dispatchEvent(new DragEvent('dragover', { dataTransfer: dt, bubbles: true, cancelable: true })); ta.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true })); });
+  assert(await page.locator('#standaloneDescription').inputValue() === '', 'File path is not pasted into the description');
+  assert((await page.locator('#standaloneTaskModal .mf-chip').textContent()).includes('Анкета.docx'), 'Dropped file is listed in the modal');
+  await page.locator('#confirmStandaloneTask').click();
+  await page.waitForFunction(() => standaloneTasks.some((t) => t.title === 'Договор с УЦ' && (t.attachments || []).length === 1));
+  assert(uploads.length === upBefore + 1 && /\.docx$/.test(uploads[uploads.length - 1].path), 'The file is uploaded for the new task: ' + JSON.stringify(uploads.slice(-1)));
+  // Отмена окна ничего не загружает.
+  await page.evaluate(() => openStandaloneTaskCreate());
+  await page.locator('#standaloneTaskModal input[type=file]').setInputFiles({ name: 'x.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF') });
+  await page.locator('#cancelStandaloneTask').click();
+  await page.waitForTimeout(300);
+  assert(uploads.length === upBefore + 1, 'Cancel does not upload');
   assert(!errors.length, 'Page errors: ' + errors.join('; '));
   console.log('Attachments OK: button, drop, safe key, types, remove, saved');
 } finally {
