@@ -211,6 +211,16 @@ try {
   const mm = await page.evaluate(() => projectMeta.__meetings__.list.find((x) => x.id === 'mloc1'));
   if (!mm.summary.includes('Мои заметки') || !mm.summary.includes('Обсудили тарифы') || !mm.transcript.includes('Здравствуйте') || !mm.tasks.some((x) => x.title.startsWith('Подготовить договор')) || mm.status !== 'done') throw new Error('Merge result: ' + JSON.stringify(mm));
   if (await view.locator('.mt-card.hub', { hasText: 'Созвон с банком' }).count()) throw new Error('Merged Hub meeting must be hidden');
+  if (mm.title !== 'Созвон с банком') throw new Error('Merged meeting takes the Meeting Hub title: ' + mm.title);
+  // Подготовка сворачивается и остаётся свёрнутой после перерисовки.
+  await view.locator('.mt-card[data-mt="mloc1"] .mt-head').click().catch(() => {});
+  if (!(await view.locator('.mt-card[data-mt="mloc1"].open').count())) await view.locator('.mt-card[data-mt="mloc1"] .mt-head').click();
+  await view.locator('.mt-card.open details[data-mt-prep] > summary').click();
+  if (await view.locator('.mt-card.open details[data-mt-prep]').evaluate((d) => d.open)) throw new Error('Prep block must collapse');
+  await page.evaluate(() => { switchView('meetings'); });
+  if (await view.locator('.mt-card.open details[data-mt-prep]').evaluate((d) => d.open)) throw new Error('Prep block stays collapsed after redraw');
+  await view.locator('.mt-card.open details[data-mt-prep] > summary').click();
+  if (!(await view.locator('.mt-card.open details[data-mt-prep]').evaluate((d) => d.open))) throw new Error('Prep block must expand');
   // Все задачи встречи — в один проект одним выбором.
   await page.evaluate(() => { projectMeta.__meetings__.list.push({ id: 'mlocal2', title: 'Много задач', date: '2026-10-28', time: '', status: 'done', prep: '', summary: '', transcript: '', projects: [], tasks: [{ id: 'k1', title: 'Первая из встречи', project: '', state: '' }, { id: 'k2', title: 'Вторая из встречи', project: '', state: '' }, { id: 'k3', title: 'Третья из встречи', project: '', state: '' }], created: Date.now() }); window.__meetings.open('mlocal2'); });
   await view.locator('.mt-card.open[data-mt="mlocal2"]').waitFor();
