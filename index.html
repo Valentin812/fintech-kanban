@@ -2171,6 +2171,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.11.03-05',date:'03.11.2026',title:'Группы: можно ставить между проектами',items:['Группу можно перетащить на любое место списка — выше или ниже обычных проектов и других групп. Раньше группа стояла после всех проектов без группы.']},
  {v:'2026.11.03-04',date:'03.11.2026',title:'Вложения: свои файлы в задаче',items:['В карточке задачи можно прикрепить файл: перетащите его на карточку или нажмите «＋ Файл». Поддерживаются картинки, аудио, PDF, Word, Excel, PowerPoint, TXT и CSV до 20 МБ. Вложения из Telegram работают как раньше.']},
  {v:'2026.11.03-02',date:'03.11.2026',title:'Группы: перетаскивание на проект',items:['Группу можно бросить не только на подпись другой группы, но и на любой её проект — раньше в таком случае группа возвращалась на место.']},
  {v:'2026.11.03-01',date:'03.11.2026',title:'Группы проектов: порядок',items:['Группы можно переставлять мышкой: потяните подпись группы и бросьте на другую подпись.']},
@@ -3026,13 +3027,14 @@ function fmtDone(iso){const d=new Date(iso);return isNaN(d)?'':d.toLocaleDateStr
     if(!projectMeta[name])projectMeta[name]={};
     if(g)projectMeta[name].group=g;else delete projectMeta[name].group;
     save();renderProjects()}
-  // Порядок самих групп: projectMeta.__groups__.order; новые группы встают в конец.
-  const orderedGroups=found=>{const saved=((projectMeta&&projectMeta.__groups__&&projectMeta.__groups__.order)||[]).filter(g=>found.includes(g));return [...saved,...found.filter(g=>!saved.includes(g))]};
-  function placeGroup(g,target,after){
-    const list=orderedGroups(allGroups()),from=list.indexOf(g);if(from<0||list.indexOf(target)<0)return;
-    list.splice(from,1);let to=list.indexOf(target)+(after?1:0);list.splice(to,0,g);
-    projectMeta.__groups__={order:list};save();renderProjects()}
-  window.moveProjectGroup=(g,delta)=>{const list=orderedGroups(allGroups()),i=list.indexOf(g),j=i+delta;if(i<0||j<0||j>=list.length)return;placeGroup(g,list[j],delta>0)};
+  // Положение группы — место её проектов в общем порядке: группу можно поставить между любыми проектами.
+  function placeGroup(g,target,isGroup,after){
+    const members=data.filter(p=>groupOf(p.name)===g);if(!members.length)return;
+    const rest=data.filter(p=>!members.includes(p));let idx;
+    if(isGroup){const ids=rest.map((p,k)=>groupOf(p.name)===target?k:-1).filter(k=>k>=0);if(!ids.length)return;idx=after?ids[ids.length-1]+1:ids[0]}
+    else{const k=rest.findIndex(p=>p.name===target);if(k<0)return;idx=k+(after?1:0)}
+    data.splice(0,data.length,...rest.slice(0,idx),...members,...rest.slice(idx));
+    projectOrder=data.map(p=>p.name);save();renderProjects()}
   window.setProjectGroup=setGroup;
   window.editProjectGroup=function(){
     const p=active();if(!p)return;
@@ -3050,12 +3052,13 @@ function fmtDone(iso){const d=new Date(iso);return isNaN(d)?'':d.toLocaleDateStr
   function regroup(){
     const box=$('projects');if(!box)return;
     const btns=[...box.querySelectorAll(':scope>.project')];
-    const found=[];btns.forEach(b=>{const g=groupOf(b.dataset.project);if(g&&!found.includes(g))found.push(g)});
-    if(!found.length)return;const groups=orderedGroups(found);
+    if(!btns.some(b=>groupOf(b.dataset.project)))return;
+    const seq=[],seen=new Set();
+    btns.forEach(b=>{const g=groupOf(b.dataset.project);if(!g){seq.push({b});return}if(seen.has(g))return;seen.add(g);seq.push({g})});
     const collapsed=readSet(),frag=document.createDocumentFragment();
-    btns.filter(b=>!groupOf(b.dataset.project)).forEach(b=>frag.appendChild(b));
-    groups.forEach(g=>{
-      const members=btns.filter(b=>groupOf(b.dataset.project)===g);
+    seq.forEach(item=>{
+      if(item.b){frag.appendChild(item.b);return}
+      const g=item.g,members=btns.filter(b=>groupOf(b.dataset.project)===g);
       const open=!collapsed.has(g)||members.some(b=>b.classList.contains('active'));
       const head=document.createElement('button');head.type='button';head.className='proj-group-head';head.dataset.group=g;head.setAttribute('aria-expanded',String(open));
       head.innerHTML=`<span class="gh-name">${open?'▾':'▸'} ${esc(g)}</span><span class="count">${members.length}</span>`;
@@ -3063,9 +3066,9 @@ function fmtDone(iso){const d=new Date(iso);return isNaN(d)?'':d.toLocaleDateStr
       head.addEventListener('dragstart',e=>{window.__dragGroup=g;head.classList.add('dragging');try{e.dataTransfer.setData('text/plain','group:'+g);e.dataTransfer.effectAllowed='move'}catch(_){}});
       head.addEventListener('dragend',()=>{window.__dragGroup=null;document.querySelectorAll('#projects .proj-group-head').forEach(x=>x.classList.remove('dragging','drop-before','drop-after'))});
       head.addEventListener('click',e=>{const c=readSet();if(c.has(g))c.delete(g);else c.add(g);writeSet(c);renderProjects()});
-      head.addEventListener('dragover',e=>{if(window.__dragGroup){e.preventDefault();if(window.__dragGroup!==g){const r=head.getBoundingClientRect();document.querySelectorAll('#projects .proj-group-head').forEach(x=>x.classList.remove('drop-before','drop-after'));head.classList.add(e.clientY>r.top+r.height/2?'drop-after':'drop-before')}return}if(!window.__dragProject)return;e.preventDefault();head.classList.add('drop')});
+      head.addEventListener('dragover',e=>{if(window.__dragGroup){e.preventDefault();if(window.__dragGroup!==g){const r=head.getBoundingClientRect();document.querySelectorAll('#projects .proj-group-head,#projects .project').forEach(x=>x.classList.remove('drop-before','drop-after'));head.classList.add(e.clientY>r.top+r.height/2?'drop-after':'drop-before')}return}if(!window.__dragProject)return;e.preventDefault();head.classList.add('drop')});
       head.addEventListener('dragleave',()=>head.classList.remove('drop','drop-before','drop-after'));
-      head.addEventListener('drop',e=>{const dg=window.__dragGroup;if(dg){e.preventDefault();e.stopPropagation();window.__dragGroup=null;if(dg!==g){const r=head.getBoundingClientRect();placeGroup(dg,g,e.clientY>r.top+r.height/2)}return}const name=window.__dragProject;if(!name)return;e.preventDefault();e.stopPropagation();window.__dragProject=null;setGroup(name,g)});
+      head.addEventListener('drop',e=>{const dg=window.__dragGroup;if(dg){e.preventDefault();e.stopPropagation();window.__dragGroup=null;if(dg!==g){const r=head.getBoundingClientRect();placeGroup(dg,g,true,e.clientY>r.top+r.height/2)}return}const name=window.__dragProject;if(!name)return;e.preventDefault();e.stopPropagation();window.__dragProject=null;setGroup(name,g)});
       frag.appendChild(head);
       members.forEach(b=>{if(!open)b.style.display='none';frag.appendChild(b)})});
     box.appendChild(frag)}
@@ -3075,10 +3078,14 @@ function fmtDone(iso){const d=new Date(iso);return isNaN(d)?'':d.toLocaleDateStr
     document.querySelectorAll('#projects .project').forEach(b=>{
       b.addEventListener('dragstart',()=>{dragged=b.dataset.project});
       b.addEventListener('dragend',()=>{setTimeout(()=>{dragged=''},0)});
-      // Группу можно бросить и на проект другой группы: вниз — после неё, вверх — перед ней.
-      const side=()=>{const g=window.__dragGroup,tg=groupOf(b.dataset.project);if(!g||!tg||tg===g)return null;const list=orderedGroups(allGroups());return {g,tg,after:list.indexOf(g)<list.indexOf(tg)}};
-      b.addEventListener('dragover',e=>{const x=side();if(!x)return;e.preventDefault();document.querySelectorAll('#projects .proj-group-head').forEach(h=>h.classList.remove('drop-before','drop-after'));document.querySelector(`#projects .proj-group-head[data-group="${CSS.escape(x.tg)}"]`)?.classList.add(x.after?'drop-after':'drop-before')});
-      b.addEventListener('drop',e=>{const x=side();if(!x)return;e.preventDefault();e.stopPropagation();window.__dragGroup=null;placeGroup(x.g,x.tg,x.after)});
+      // Группу можно бросить на любой проект: на проект другой группы — рядом с этой группой, на обычный проект — рядом с ним.
+      const side=()=>{const g=window.__dragGroup;if(!g)return null;const tg=groupOf(b.dataset.project);if(tg===g)return null;
+        const kids=[...$('projects').children];
+        if(tg){const hd=document.querySelector(`#projects .proj-group-head[data-group="${CSS.escape(tg)}"]`),me=document.querySelector(`#projects .proj-group-head[data-group="${CSS.escape(g)}"]`);return {g,target:tg,isGroup:true,after:kids.indexOf(me)<kids.indexOf(hd),el:hd}}
+        return {g,target:b.dataset.project,isGroup:false,el:b}};
+      const cursorAfter=e=>{const r=b.getBoundingClientRect();return e.clientY>r.top+r.height/2};
+      b.addEventListener('dragover',e=>{const x=side();if(!x)return;e.preventDefault();const after=x.isGroup?x.after:cursorAfter(e);document.querySelectorAll('#projects .proj-group-head,#projects .project').forEach(h=>h.classList.remove('drop-before','drop-after'));x.el?.classList.add(after?'drop-after':'drop-before')});
+      b.addEventListener('drop',e=>{const x=side();if(!x)return;e.preventDefault();e.stopPropagation();window.__dragGroup=null;placeGroup(x.g,x.target,x.isGroup,x.isGroup?x.after:cursorAfter(e))});
       b.addEventListener('drop',()=>{const name=dragged;dragged='';if(!name||name===b.dataset.project)return;const g=groupOf(b.dataset.project);if(groupOf(name)!==g)setTimeout(()=>setGroup(name,g),0)})})}
   const orig=window.renderProjects;if(typeof orig!=='function')return;
   window.renderProjects=function(){const r=orig.apply(this,arguments);try{regroup();wireProjectDrops()}catch(e){console.warn('Project groups',e)}return r};

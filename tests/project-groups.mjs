@@ -66,21 +66,26 @@ try {
   await page.locator('#projects .project[data-project="Альфа"]').dragTo(page.locator('#projects .project[data-project="Гамма"]'), { targetPosition: { x: 20, y: 2 } });
   assert(await page.evaluate(() => projectMeta['Альфа']?.group) === 'ЭР', 'Drop on a project of a group joins that group: ' + await page.evaluate(() => JSON.stringify(projectMeta)));
   await page.evaluate(() => { setProjectGroup('Альфа', ''); });
-  // Порядок групп: стрелки и Alt+стрелки.
+  // Порядок групп: группа стоит там, где её проекты; её можно ставить между любыми проектами.
   await page.evaluate(() => { setProjectGroup('Альфа', 'НС'); });
-  assert((await heads()).join() === 'НС,ЭР', 'Groups follow first appearance: ' + (await heads()));
+  assert((await heads()).join() === 'НС,ЭР', 'Groups follow the order of their projects: ' + (await heads()));
   await page.locator('.proj-group-head[data-group="НС"]').dragTo(page.locator('.proj-group-head[data-group="ЭР"]'), { targetPosition: { x: 20, y: 25 } });
   assert((await heads()).join() === 'ЭР,НС', 'Dragging a group header below another moves it: ' + (await heads()));
-  assert(await page.locator('.gh-mv').count() === 0, 'No arrow buttons');
   await page.locator('.proj-group-head[data-group="НС"]').dragTo(page.locator('.proj-group-head[data-group="ЭР"]'), { targetPosition: { x: 20, y: 2 } });
   assert((await heads()).join() === 'НС,ЭР', 'Dragging a group header above another moves it up: ' + (await heads()));
-  // Группу можно бросить и на проект другой группы.
   await page.locator('.proj-group-head[data-group="НС"]').dragTo(page.locator('#projects .project[data-project="Гамма"]'));
   assert((await heads()).join() === 'ЭР,НС', 'Dropping a group on a project of a lower group puts it after: ' + (await heads()));
   await page.locator('.proj-group-head[data-group="НС"]').dragTo(page.locator('#projects .project[data-project="Бета"]'));
   assert((await heads()).join() === 'НС,ЭР', 'Dropping a group on a project of an upper group puts it before: ' + (await heads()));
-  await page.evaluate(() => { moveProjectGroup('НС', 1); });
-  assert((await heads()).join() === 'ЭР,НС' && await page.evaluate(() => projectMeta.__groups__.order.join()) === 'ЭР,НС', 'Group order is stored');
+  // Группа между обычными проектами.
+  await page.evaluate(() => { data.push({ name: 'Дельта', tasks: [] }); data.push({ name: 'Эпсилон', tasks: [] }); renderAll(); });
+  const all = () => page.locator('#projects > *').evaluateAll((els) => els.map((e) => e.dataset.project || ('[' + e.dataset.group + ']')));
+  assert((await all()).join() === '[НС],Альфа,[ЭР],Гамма,Бета,Дельта,Эпсилон', 'Plain projects follow groups in order: ' + (await all()));
+  await page.locator('.proj-group-head[data-group="ЭР"]').dragTo(page.locator('#projects .project[data-project="Эпсилон"]'), { targetPosition: { x: 20, y: 20 } });
+  assert((await all()).join() === '[НС],Альфа,Дельта,Эпсилон,[ЭР],Гамма,Бета', 'Group dropped below a plain project: ' + (await all()));
+  await page.locator('.proj-group-head[data-group="ЭР"]').dragTo(page.locator('#projects .project[data-project="Дельта"]'), { targetPosition: { x: 20, y: 2 } });
+  assert((await all()).join() === '[НС],Альфа,[ЭР],Гамма,Бета,Дельта,Эпсилон', 'Group dropped above a plain project: ' + (await all()));
+  await page.evaluate(() => { data.splice(data.findIndex((p) => p.name === 'Дельта'), 1); data.splice(data.findIndex((p) => p.name === 'Эпсилон'), 1); projectOrder = data.map((p) => p.name); renderAll(); });
   await page.evaluate(() => { setProjectGroup('Альфа', ''); });
   assert((await heads()).join() === 'ЭР', 'Empty group disappears: ' + (await heads()));
   // Сохранение и перезагрузка.
@@ -96,7 +101,7 @@ try {
   await page.locator('.friendly-dialog select[name=f0]').selectOption('');
   await page.locator('.friendly-dialog button[type=submit]').click();
   assert(await page.evaluate(() => !projectMeta['Бета']?.group), 'Group removed');
-  assert((await order()).join() === 'Альфа,Бета,Гамма', 'Order: ' + (await order()));
+  assert((await order()).join() === 'Альфа,Гамма,Бета', 'Order: ' + (await order()));
   // Чек-лист: Enter добавляет, Esc очищает, кнопки «Добавить» нет.
   await page.evaluate(() => { activeProject = 'Альфа'; renderAll(); switchView('tasks'); });
   await page.locator('article.task').first().locator('.tasktitle').click();
