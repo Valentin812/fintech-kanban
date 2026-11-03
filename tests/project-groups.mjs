@@ -51,6 +51,8 @@ try {
   const heads = () => page.locator('#projects .proj-group-head').evaluateAll((els) => els.map((e) => e.dataset.group));
   assert((await heads()).join() === 'ЭР', 'Group header shown: ' + (await heads()));
   assert((await order()).join() === 'Альфа,Бета,Гамма', 'Grouped projects stay together, ungrouped first: ' + (await order()));
+  const ind = await page.evaluate(() => { const g = getComputedStyle(document.querySelector('#projects .project[data-project="Бета"]')).marginLeft; const u = getComputedStyle(document.querySelector('#projects .project[data-project="Альфа"]')).marginLeft; return [parseFloat(g), parseFloat(u)]; });
+  assert(ind[0] > ind[1] + 8, 'Projects of a group are indented: ' + ind);
   // Свернуть: активный проект группы остаётся виден, при выборе другого — скрывается.
   await page.evaluate(() => { activeProject = 'Альфа'; renderAll(); });
   await page.locator('.proj-group-head').click();

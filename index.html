@@ -2172,6 +2172,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.11.03-08',date:'03.11.2026',title:'Группы: проекты с отступом',items:['Проекты внутри группы сдвинуты вправо и отмечены линией слева, после группы небольшой отступ — сразу видно, какие проекты в группе.']},
  {v:'2026.11.03-07',date:'03.11.2026',title:'Файл в окне новой задачи',items:['Файл можно бросить прямо в окно «Новая задача» (с проектом и без) или добавить кнопкой «＋ Файл» — он прикрепится к созданной задаче. Файл, брошенный мимо карточки, больше не вставляется в поле путём.']},
  {v:'2026.11.03-05',date:'03.11.2026',title:'Группы: можно ставить между проектами',items:['Группу можно перетащить на любое место списка — выше или ниже обычных проектов и других групп. Раньше группа стояла после всех проектов без группы.']},
  {v:'2026.11.03-04',date:'03.11.2026',title:'Вложения: свои файлы в задаче',items:['В карточке задачи можно прикрепить файл: перетащите его на карточку или нажмите «＋ Файл». Поддерживаются картинки, аудио, PDF, Word, Excel, PowerPoint, TXT и CSV до 20 МБ. Вложения из Telegram работают как раньше.']},
@@ -3079,7 +3080,7 @@ function fmtDone(iso){const d=new Date(iso);return isNaN(d)?'':d.toLocaleDateStr
         if(choice==='__new'&&!g){wrap.querySelector('.friendly-error').textContent='Введите название новой группы.';return false}
         setGroup(p.name,g);return true}})};
   const css=document.createElement('style');
-  css.textContent='#projects .proj-group-head{display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;margin:10px 0 2px;padding:5px 9px;border:0;border-radius:7px;background:transparent;color:var(--muted,#6b7587);font:inherit;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;text-align:left}#projects .proj-group-head:hover,#projects .proj-group-head.drop{background:rgba(100,120,170,.14)}#projects .proj-group-head .count{font-weight:600}#projects .proj-group-head.dragging{opacity:.4}#projects .proj-group-head.drop-before{box-shadow:0 -2px 0 var(--blue,#3b6fd6)}#projects .proj-group-head.drop-after{box-shadow:0 2px 0 var(--blue,#3b6fd6)}@media(max-width:700px){#projects .proj-group-head{flex:0 0 auto;width:auto;margin:0}}';
+  css.textContent='#projects .proj-group-head{display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;margin:10px 0 2px;padding:5px 9px;border:0;border-radius:7px;background:transparent;color:var(--muted,#6b7587);font:inherit;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;text-align:left}#projects .proj-group-head:hover,#projects .proj-group-head.drop{background:rgba(100,120,170,.14)}#projects .proj-group-head .count{font-weight:600}#projects .project.in-group{width:calc(100% - 14px);margin-left:14px!important;border-left:2px solid var(--line);border-radius:0 9px 9px 0}#projects .project.in-group-last{margin-bottom:10px!important}#projects .proj-group-head{margin-top:12px}@media(max-width:700px){#projects .project.in-group{width:auto;margin-left:0!important;border-left:0;border-radius:9px}#projects .project.in-group-last{margin-bottom:0!important}}#projects .proj-group-head.dragging{opacity:.4}#projects .proj-group-head.drop-before{box-shadow:0 -2px 0 var(--blue,#3b6fd6)}#projects .proj-group-head.drop-after{box-shadow:0 2px 0 var(--blue,#3b6fd6)}@media(max-width:700px){#projects .proj-group-head{flex:0 0 auto;width:auto;margin:0}}';
   document.head.appendChild(css);
   function regroup(){
     const box=$('projects');if(!box)return;
@@ -3102,7 +3103,7 @@ function fmtDone(iso){const d=new Date(iso);return isNaN(d)?'':d.toLocaleDateStr
       head.addEventListener('dragleave',()=>head.classList.remove('drop','drop-before','drop-after'));
       head.addEventListener('drop',e=>{const dg=window.__dragGroup;if(dg){e.preventDefault();e.stopPropagation();window.__dragGroup=null;if(dg!==g){const r=head.getBoundingClientRect();placeGroup(dg,g,true,e.clientY>r.top+r.height/2)}return}const name=window.__dragProject;if(!name)return;e.preventDefault();e.stopPropagation();window.__dragProject=null;setGroup(name,g)});
       frag.appendChild(head);
-      members.forEach(b=>{if(!open)b.style.display='none';frag.appendChild(b)})});
+      members.forEach((b,k)=>{b.classList.add('in-group');if(k===members.length-1)b.classList.add('in-group-last');if(!open)b.style.display='none';frag.appendChild(b)})});
     box.appendChild(frag)}
   // Проект, брошенный на проект другой группы (или без группы), переходит в эту группу.
   let dragged='';
