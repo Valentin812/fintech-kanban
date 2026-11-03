@@ -3807,6 +3807,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
   view.addEventListener('toggle',e=>{const d=e.target;if(d&&d.dataset&&d.dataset.mtPrep){if(d.open)S.prepClosed.delete(d.dataset.mtPrep);else S.prepClosed.add(d.dataset.mtPrep)}},true);
   view.addEventListener('click',e=>{
     const t=e.target;
+    const ps=t.closest('details[data-mt-prep]>summary');if(ps){const d=ps.parentElement;if(d.open)S.prepClosed.add(d.dataset.mtPrep);else S.prepClosed.delete(d.dataset.mtPrep)}
     const tg=t.closest('[data-mt-toggle]');if(tg&&!t.closest('input,select,button')){const id=tg.dataset.mtToggle;S.openId=S.openId===id?null:id;render();return}
     if(t.closest('[data-mt-new]')){const m={id:rid('m'),title:'Новая встреча',date:today(),time:'',status:'planned',prep:'',summary:'',transcript:'',projects:S.proj?[S.proj]:[],tasks:[],created:Date.now()};store().unshift(m);S.openId=m.id;save();render();return}
     const rv=t.closest('[data-mt-revoke]');
