@@ -58,6 +58,8 @@ jobs:
       - name: Run meeting AI browser test
         run: node tests/meeting-ai.mjs
 
+      - name: Run vault browser test
+        run: node tests/vault.mjs
       - name: Run meetings browser test
         run: node tests/meetings.mjs
 

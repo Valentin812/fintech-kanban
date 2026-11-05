@@ -2172,6 +2172,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.11.05-01',date:'05.11.2026',title:'Личный сейф',items:['В меню аккаунта появился «Личный сейф»: свободный текст (логины, пароли, заметки), зашифрованный мастер-паролем прямо в браузере. Мастер-пароль нигде не хранится и не восстанавливается; сейф сам блокируется через 5 минут без действий. Доступен с любого устройства после входа.']},
  {v:'2026.11.03-12',date:'03.11.2026',title:'Группы: без лишнего пункта',items:['В «Группа проекта…» у проекта без группы больше нет пункта «Без группы». У проекта в группе есть «Убрать из группы».']},
  {v:'2026.11.03-11',date:'03.11.2026',title:'Встречи: название из Meeting Hub',items:['При объединении встречи с Meeting Hub название берётся из Meeting Hub (отмена вернёт прежнее).','Блок «Подготовка к встрече» можно свернуть и развернуть.']},
  {v:'2026.11.03-10',date:'03.11.2026',title:'Группы: пустая группа',items:['В «Группа проекта…» можно создать пустую группу — проект при этом никуда не переносится. Пустую группу можно удалить крестиком, а проекты перетащить в неё мышкой.']},
@@ -2273,6 +2274,67 @@ const group=document.createElement('section');group.className='cloud-action-grou
 const modal=document.createElement('div');modal.className='modal';modal.id='changelogModal';modal.innerHTML=`<div class="modalcard changelog-card" role="dialog" aria-modal="true" aria-labelledby="changelogTitle"><div class="admin-head"><h3 id="changelogTitle">Что нового</h3><button class="close" id="changelogClose" aria-label="Закрыть">×</button></div><div class="changelog-list">${CHANGELOG.map((c,i)=>`<section class="changelog-entry"><h4>${esc(c.title)} <span class="mini">${esc(c.date)}</span>${i===0&&seen!==APP_VERSION?' <span class="changelog-new">новое</span>':''}</h4><ul>${c.items.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></section>`).join('')}</div></div>`;document.body.appendChild(modal);
 const close=()=>modal.classList.remove('show');$('changelogClose').onclick=close;modal.addEventListener('click',e=>{if(e.target===modal)close()});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal.classList.contains('show'))close()});
 $('changelogButton').onclick=()=>{$('cloudModal')?.classList.remove('show');modal.classList.add('show');try{localStorage.setItem(KEY,APP_VERSION)}catch(e){}$('changelogButton').querySelector('.changelog-new')?.remove()};})();
+
+/* ===== Личный сейф: заметки с паролями, зашифрованные мастер-паролем в браузере ===== */
+(function vaultModule(){
+  const cl=$('cloudChangelogGroup');if(!cl||$('cloudVaultGroup'))return;
+  const ITER=600000,IDLE=5*60*1000;
+  const sec=document.createElement('section');sec.className='cloud-action-group';sec.id='cloudVaultGroup';
+  sec.innerHTML='<div class="cloud-group-title">Сейф</div><button class="btn" id="vaultButton" type="button">🔒 Личный сейф</button>';
+  cl.parentNode.insertBefore(sec,cl);
+  const modal=document.createElement('div');modal.className='modal';modal.id='vaultModal';
+  modal.innerHTML='<div class="modalcard vault-card" role="dialog" aria-modal="true" aria-labelledby="vaultTitle"><div class="admin-head"><h3 id="vaultTitle">Личный сейф</h3><button class="close" id="vaultClose" aria-label="Закрыть">×</button></div>'
+   +'<p class="mini" id="vaultHint"></p><div id="vaultLock"><label class="field"><span id="vaultPassLabel">Мастер-пароль</span><input id="vaultPass" type="password" autocomplete="off" maxlength="200"></label><label class="field" id="vaultPass2Wrap" hidden><span>Повторите мастер-пароль</span><input id="vaultPass2" type="password" autocomplete="off" maxlength="200"></label><div class="vault-error" id="vaultErr" role="alert"></div><div class="mt-actions"><button class="btn primary" id="vaultOpen" type="button">Открыть</button></div></div>'
+   +'<div id="vaultBody" hidden><textarea id="vaultText" rows="12" maxlength="100000" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Записи сейфа" placeholder="Любой текст: логины, пароли, заметки"></textarea><div class="mt-actions"><button class="btn primary" id="vaultSave" type="button">Сохранить</button><button class="btn" id="vaultChange" type="button">Сменить мастер-пароль</button><button class="btn" id="vaultLockBtn" type="button">Заблокировать</button><span class="mini" id="vaultState"></span></div></div></div>';
+  document.body.appendChild(modal);
+  const css=document.createElement('style');css.textContent='.vault-card{max-width:560px}.vault-error{min-height:18px;margin:6px 0;color:#c0392b;font-size:13px}.vault-card textarea{width:100%;box-sizing:border-box;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px}';document.head.appendChild(css);
+  const te=new TextEncoder(),td=new TextDecoder();
+  let key=null,salt=null,timer=0,mode='open',exists=false,dirty=false;
+  const b64=u=>{let s='';for(let i=0;i<u.length;i+=8192)s+=String.fromCharCode.apply(null,u.subarray(i,i+8192));return btoa(s)};
+  const unb64=t=>Uint8Array.from(atob(t),c=>c.charCodeAt(0));
+  async function derive(pass,s,it){const base=await crypto.subtle.importKey('raw',te.encode(pass),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt:s,iterations:it,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['encrypt','decrypt'])}
+  async function seal(text){const iv=crypto.getRandomValues(new Uint8Array(12));const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,te.encode(text)));return JSON.stringify({v:1,i:ITER,s:b64(salt),n:b64(iv),c:b64(ct)})}
+  async function unseal(payload,pass){const p=JSON.parse(payload);const s=unb64(p.s);const k=await derive(pass,s,p.i||ITER);const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:unb64(p.n)},k,unb64(p.c));key=k;salt=s;return td.decode(pt)}
+  const $v=id=>document.getElementById(id);
+  const err=m=>{$v('vaultErr').textContent=m||''};
+  async function fetchRow(){const r=await cloudRequest('/rest/v1/vault?select=payload',{method:'GET'});return Array.isArray(r)?r[0]:null}
+  async function put(payload){await cloudRequest('/rest/v1/vault?on_conflict=owner_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({payload,updated_at:new Date().toISOString()})})}
+  function lock(){key=null;salt=null;dirty=false;clearTimeout(timer);$v('vaultText').value='';$v('vaultPass').value='';$v('vaultPass2').value='';$v('vaultBody').hidden=true;$v('vaultLock').hidden=false;err('')}
+  function close(){lock();modal.classList.remove('show')}
+  function touch(){clearTimeout(timer);if(key)timer=setTimeout(()=>{if(modal.classList.contains('show')){toast('Сейф заблокирован: долго не было действий');close()}else lock()},IDLE)}
+  function showLock(){mode=exists?'open':'create';$v('vaultBody').hidden=true;$v('vaultLock').hidden=false;$v('vaultPass2Wrap').hidden=exists;$v('vaultOpen').textContent=exists?'Открыть':'Создать сейф';$v('vaultPassLabel').textContent=exists?'Мастер-пароль':'Придумайте мастер-пароль (от 8 символов)';$v('vaultHint').textContent=exists?'Записи зашифрованы в вашем браузере. Мастер-пароль нигде не хранится и не восстанавливается.':'Мастер-пароль нигде не хранится. Если забудете его, записи нельзя будет прочитать — сброса нет.';setTimeout(()=>$v('vaultPass').focus(),30)}
+  $v('vaultButton').onclick=async()=>{
+    if(!cloudSession?.access_token){toast('Войдите в аккаунт, чтобы пользоваться сейфом');return}
+    $('cloudModal')?.classList.remove('show');lock();modal.classList.add('show');$v('vaultHint').textContent='Загрузка…';$v('vaultOpen').disabled=true;
+    try{const row=await fetchRow();exists=!!(row&&row.payload);modal._payload=row?row.payload:'';showLock()}catch(e){$v('vaultHint').textContent='Не удалось открыть сейф: '+e.message}
+    $v('vaultOpen').disabled=false};
+  $v('vaultOpen').onclick=async()=>{
+    err('');const pass=$v('vaultPass').value;
+    if(mode==='change'){
+      if(pass.length<8){err('Мастер-пароль — от 8 символов.');return}
+      if(pass!==$v('vaultPass2').value){err('Пароли не совпадают.');return}
+      try{const text=$v('vaultText').value;salt=crypto.getRandomValues(new Uint8Array(16));key=await derive(pass,salt,ITER);const payload=await seal(text);await put(payload);modal._payload=payload;$v('vaultPass').value='';$v('vaultPass2').value='';$v('vaultLock').hidden=true;$v('vaultBody').hidden=false;dirty=false;$v('vaultState').textContent='Мастер-пароль изменён';touch()}catch(e){err('Не удалось сменить пароль: '+e.message)}
+      return}
+    if(!pass){err('Введите мастер-пароль.');return}
+    if(!exists){
+      if(pass.length<8){err('Мастер-пароль — от 8 символов.');return}
+      if(pass!==$v('vaultPass2').value){err('Пароли не совпадают.');return}
+      try{salt=crypto.getRandomValues(new Uint8Array(16));key=await derive(pass,salt,ITER);const payload=await seal('');await put(payload);modal._payload=payload;exists=true}catch(e){key=null;err('Не удалось создать сейф: '+e.message);return}
+      $v('vaultText').value=''}
+    else{
+      try{$v('vaultText').value=await unseal(modal._payload,pass)}catch(e){key=null;err('Неверный мастер-пароль.');return}}
+    $v('vaultPass').value='';$v('vaultPass2').value='';$v('vaultLock').hidden=true;$v('vaultBody').hidden=false;$v('vaultHint').textContent='Записи шифруются в браузере перед отправкой.';$v('vaultState').textContent='';dirty=false;touch();setTimeout(()=>$v('vaultText').focus(),30)};
+  $v('vaultSave').onclick=async()=>{if(!key)return;$v('vaultState').textContent='Сохранение…';try{const payload=await seal($v('vaultText').value);await put(payload);modal._payload=payload;dirty=false;$v('vaultState').textContent='Сохранено';touch()}catch(e){$v('vaultState').textContent='Не сохранено: '+e.message}};
+  $v('vaultChange').onclick=()=>{if(!key)return;mode='change';$v('vaultBody').hidden=false;$v('vaultLock').hidden=false;$v('vaultPass2Wrap').hidden=false;$v('vaultPassLabel').textContent='Новый мастер-пароль (от 8 символов)';$v('vaultOpen').textContent='Сменить';$v('vaultPass').value='';$v('vaultPass2').value='';$v('vaultPass').focus()};
+  $v('vaultLockBtn').onclick=()=>{if(dirty&&!confirm('Есть несохранённые изменения. Заблокировать без сохранения?'))return;close()};
+  $v('vaultText').addEventListener('input',()=>{dirty=true;$v('vaultState').textContent='Не сохранено';touch()});
+  $v('vaultPass').addEventListener('keydown',e=>{if(e.key==='Enter'&&$v('vaultPass2Wrap').hidden)$v('vaultOpen').click()});
+  $v('vaultPass2').addEventListener('keydown',e=>{if(e.key==='Enter')$v('vaultOpen').click()});
+  $v('vaultClose').onclick=()=>{if(dirty&&!confirm('Есть несохранённые изменения. Закрыть без сохранения?'))return;close()};
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal.classList.contains('show')&&!dirty)close()});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden&&key&&!dirty){clearTimeout(timer);timer=setTimeout(()=>{if(modal.classList.contains('show'))close();else lock()},60000)}else touch()});
+  window.addEventListener('pagehide',lock);
+})();
 
 var avatarsByUser;
 function personInitials(name){return String(name||'?').trim().split(/\s+/).filter(Boolean).map(v=>v[0]).slice(0,2).join('').toLocaleUpperCase()||'?'}
