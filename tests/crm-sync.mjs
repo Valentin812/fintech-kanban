@@ -279,6 +279,14 @@ try {
   await page.evaluate(() => switchView('mytasks'));
   await page.locator('[data-crm-gone]').waitFor({ timeout: 5000 });
   if (!(await page.locator('[data-crm-gone]').textContent()).includes('Нет в CRM · 1')) throw new Error('Filter must count deleted tasks');
+  // Завершённые задачи не попадают в счётчики «новых» и «Нет в CRM».
+  const crmTxt = async () => (await page.locator('[data-crm-only]').textContent()) + '|' + (await page.locator('[data-crm-gone]').textContent());
+  const beforeTxt = await crmTxt();
+  await page.evaluate(() => { standaloneTasks.push({ id: 9300, title: 'Готово и пропало', status: 'Готово', start: '', end: '', crm: { id: '290', version: 1, gone: true, why: '', seen: false, sent: [], cids: [], cseen: 0, cl: { ids: [], tot: 0, done: 0 }, cancelled: false } }); switchView('inbox'); switchView('mytasks'); });
+  await page.locator('[data-crm-gone]').waitFor({ timeout: 5000 });
+  const afterTxt = await crmTxt();
+  if (afterTxt.replace(/CRM · \d+/, 'CRM · N') !== beforeTxt.replace(/CRM · \d+/, 'CRM · N') || !afterTxt.includes('Нет в CRM · 1')) throw new Error('Done tasks must not change badges: ' + beforeTxt + ' -> ' + afterTxt);
+  await page.evaluate(() => { standaloneTasks.splice(standaloneTasks.findIndex((t) => t.id === 9300), 1); switchView('inbox'); switchView('mytasks'); });
   await page.locator('[data-crm-gone]').click();
   const shown = await page.evaluate(() => [...document.querySelectorAll('#myTasksView .mytask-row')].filter((r) => r.style.display !== 'none').length);
   if (shown !== 1) throw new Error('Filter must leave only the deleted task, got ' + shown);
