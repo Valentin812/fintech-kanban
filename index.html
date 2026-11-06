@@ -2172,6 +2172,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.11.06-01',date:'06.11.2026',title:'CRM: верные счётчики',items:['Счётчики «новых» и «Нет в CRM» больше не считают завершённые и архивные задачи, которых нет в списке.']},
  {v:'2026.11.05-01',date:'05.11.2026',title:'Личный сейф',items:['В меню аккаунта появился «Личный сейф»: свободный текст (логины, пароли, заметки), зашифрованный мастер-паролем прямо в браузере. Мастер-пароль нигде не хранится и не восстанавливается; сейф сам блокируется через 5 минут без действий. Доступен с любого устройства после входа.']},
  {v:'2026.11.03-12',date:'03.11.2026',title:'Группы: без лишнего пункта',items:['В «Группа проекта…» у проекта без группы больше нет пункта «Без группы». У проекта в группе есть «Убрать из группы».']},
  {v:'2026.11.03-11',date:'03.11.2026',title:'Встречи: название из Meeting Hub',items:['При объединении встречи с Meeting Hub название берётся из Meeting Hub (отмена вернёт прежнее).','Блок «Подготовка к встрече» можно свернуть и развернуть.']},
@@ -4170,10 +4171,10 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
       const gh=my.querySelector('.mytask-group-crmnew h4');if(gh&&!gh.querySelector('[data-crm-seen-all]'))gh.insertAdjacentHTML('beforeend',' <button type="button" class="smallbtn" data-crm-seen-all="1">Отметить просмотренным</button>');
       const fl=my.querySelector('.mytask-filters');
       if(fl&&!fl.querySelector('[data-crm-only]')&&(enabled()||any||S.only)){const b=document.createElement('button');b.type='button';b.className='btn quick-filter';b.dataset.crmOnly='1';fl.appendChild(b)}
-      const goneN=crmTasks().filter(isGone).length;let gb=fl?.querySelector('[data-crm-gone]');
+      const live=x=>x.status!=='Готово'&&!x.done&&!x.archived;const goneN=crmTasks().filter(x=>isGone(x)&&live(x)).length;let gb=fl?.querySelector('[data-crm-gone]');
       if(fl&&!gb&&(goneN||S.gone)){gb=document.createElement('button');gb.type='button';gb.className='btn quick-filter';gb.dataset.crmGone='1';fl.appendChild(gb)}
       if(gb){if(!goneN&&!S.gone)gb.remove();else{gb.textContent='🚫 Нет в CRM · '+goneN;gb.title='Задачи, которые удалены в CRM или больше не у вас';gb.classList.toggle('active',!!S.gone);gb.setAttribute('aria-pressed',String(!!S.gone))}}
-      const ob=fl?.querySelector('[data-crm-only]');if(ob){ob.textContent='🔗 CRM · '+crmTasks().length+(crmTasks().filter(x=>x.crm.seen===false||x.crm.upd).length?' · '+crmTasks().filter(x=>x.crm.seen===false||x.crm.upd).length+' новых':'');ob.classList.toggle('active',S.only);ob.setAttribute('aria-pressed',String(S.only))}}}
+      const ob=fl?.querySelector('[data-crm-only]');if(ob){ob.textContent='🔗 CRM · '+crmTasks().length+(crmTasks().filter(x=>live(x)&&(x.crm.seen===false||x.crm.upd)).length?' · '+crmTasks().filter(x=>live(x)&&(x.crm.seen===false||x.crm.upd)).length+' новых':'');ob.classList.toggle('active',S.only);ob.setAttribute('aria-pressed',String(S.only))}}}
   function drawerInfo(t,shared){
     let box=$('crmInfo');const head=document.querySelector('#drawer .drawerhead');
     const canLink=!!t&&!t.crm&&enabled()&&signed()&&!shared&&!t.parent;
