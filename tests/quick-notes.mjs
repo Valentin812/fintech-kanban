@@ -88,9 +88,9 @@ try {
   await panel.waitFor();
   const input = panel.locator('.qn-input');
   await input.fill('Перезвонить Азату');
-  await input.press('Enter');
+  await input.press('Control+Enter');
   await input.fill('Отправить счёт');
-  await input.press('Enter');
+  await input.press('Control+Enter');
   if (await panel.locator('.qn-item').count() !== 2) throw new Error('Two notes expected');
   if (!(await page.evaluate(() => document.activeElement?.classList.contains('qn-input')))) throw new Error('Focus should stay in the input for the next note');
   // Shift+Enter makes a new line instead of saving; Enter saves the multi-line note.
@@ -98,7 +98,7 @@ try {
   await input.press('Shift+Enter');
   await input.type('Вторая строка');
   if (await panel.locator('.qn-item').count() !== 2) throw new Error('Shift+Enter must not save the note');
-  await input.press('Enter');
+  await input.press('Control+Enter');
   const multi = panel.locator('.qn-text', { hasText: 'Вторая строка' });
   await multi.waitFor();
   if (!(await multi.evaluate((el) => el.textContent.includes('\n') && getComputedStyle(el).whiteSpace === 'pre-wrap'))) throw new Error('Line break must be kept and shown');
@@ -126,7 +126,7 @@ try {
   if (await page.locator('#myTasksView .qn-item').count() !== 0) throw new Error('Converted note should leave the list');
   // Delete with undo.
   await page.locator('#myTasksView .qn-input').fill('Удалю');
-  await page.locator('#myTasksView .qn-input').press('Enter');
+  await page.locator('#myTasksView .qn-input').press('Control+Enter');
   await page.locator('#myTasksView [data-qn-del]').click();
   await page.locator('#undoToast button').click();
   await page.locator('#myTasksView .qn-text', { hasText: 'Удалю' }).waitFor();
@@ -147,7 +147,7 @@ try {
   await page.evaluate(() => { switchView('tasks'); });
   await page.locator('#qnTopButton').click();
   await page.locator('#qnPop .qn-input').fill('Из верхней панели');
-  await page.locator('#qnPop .qn-input').press('Enter');
+  await page.locator('#qnPop .qn-input').press('Control+Enter');
   await page.locator('#qnPop .qn-text', { hasText: 'Из верхней панели' }).waitFor();
   if (!(await page.locator('#qnTopButton').textContent()).includes('Заметки')) throw new Error('Top button shows the number of open notes');
   await page.keyboard.press('Escape');

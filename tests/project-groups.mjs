@@ -111,7 +111,9 @@ try {
   assert(await page.locator('#addChecklistItem').count() === 0, 'The add button is gone');
   await page.locator('#newChecklistItem').fill('Первый пункт');
   await page.keyboard.press('Enter');
-  assert(await page.locator('#checklistItems .checklist-row').count() === 1, 'Enter adds a checklist item');
+  assert(await page.locator('#checklistItems .checklist-row').count() === 0, 'Plain Enter does not add a checklist item');
+  await page.keyboard.press('Control+Enter');
+  assert(await page.locator('#checklistItems .checklist-row').count() === 1, 'Ctrl+Enter adds a checklist item');
   assert(await page.locator('#newChecklistItem').inputValue() === '', 'Input cleared after Enter');
   await page.locator('#newChecklistItem').fill('Не нужно');
   await page.keyboard.press('Escape');

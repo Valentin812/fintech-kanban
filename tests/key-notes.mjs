@@ -114,7 +114,7 @@ try {
   if (await card.locator('.kn-item').count() !== 0) throw new Error('Shift+Enter must not add');
   await card.locator('#knFile').setInputFiles({ name: 'tg.png', mimeType: 'image/png', buffer: Buffer.from('89504e470d0a1a0a', 'hex') });
   await card.locator('#knPending span', { hasText: 'tg.png' }).waitFor();
-  await card.locator('#knText').press('Enter');
+  await card.locator('#knText').press('Control+Enter');
   await card.locator('.kn-item').waitFor();
   const text = await card.locator('.kn-text').textContent();
   if (!text.includes('декабре') || !text.includes('\n')) throw new Error('Entry text with line break expected: ' + text);
