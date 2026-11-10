@@ -123,7 +123,7 @@ try {
   if (kept[0] !== 'Планёрка по автооплате' || !kept[1].includes('\n') || kept[3] !== 'done' || kept[4] !== 1) throw new Error('Meeting fields not saved: ' + JSON.stringify(kept));
   // A task can be added by hand and goes to the linked project.
   await view.locator('#mtNewTask').fill('Отправить презентацию');
-  await view.locator('#mtNewTask').press('Enter');
+  await view.locator('#mtNewTask').press('Control+Enter');
   await view.locator('.mt-tasks li', { hasText: 'Отправить презентацию' }).locator('[data-mt-tadd]').click();
   const added = await page.evaluate((name) => data.find((p) => p.name === name).tasks.some((t) => t.title === 'Отправить презентацию' && t.source === 'meeting'), projectName);
   if (!added) throw new Error('Task should land in the linked project');

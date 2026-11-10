@@ -66,8 +66,11 @@ try {
   await page.waitForFunction(() => document.querySelector('#drawer').classList.contains('open'));
   await page.locator('#newComment').fill('Первый комментарий');
   await page.keyboard.press('Enter');
+  assert(!(await page.locator('#dComment').textContent()).includes('Первый комментарий'), 'Plain Enter does not save a comment');
+  await page.locator('#newComment').fill('Первый комментарий');
+  await page.keyboard.press('Control+Enter');
   await page.locator('#newComment').fill('Второй комментарий');
-  await page.keyboard.press('Enter');
+  await page.keyboard.press('Control+Enter');
   const text = await page.locator('#dComment').textContent();
   assert(text.includes('Первый комментарий') && text.includes('Второй комментарий') && !text.includes('\\n'), `History shows both comments: ${text}`);
   const entries = await page.evaluate(() => commentEntries(active().tasks.find((t) => t.id === 1).comment));
@@ -92,7 +95,7 @@ try {
   const after = await page.evaluate(() => commentEntries(active().tasks.find((t) => t.id === 1).comment));
   assert(after.length === 1 && after[0].includes('Второй комментарий'), `Entry deleted: ${JSON.stringify(after)}`);
   await page.locator('#newComment').fill('Третий');
-  await page.keyboard.press('Enter');
+  await page.keyboard.press('Control+Enter');
   await page.keyboard.press('Escape');
   await page.waitForFunction(() => !document.querySelector('#drawer').classList.contains('open'));
   const badge = page.locator('#myTasksView .mytask-row', { hasText: 'Без комментариев' }).locator('.mytask-comments');
