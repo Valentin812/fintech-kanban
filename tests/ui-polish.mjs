@@ -97,6 +97,13 @@ try {
   const w1 = await colW();
   assert(w1 < w0 - 100, `Block got narrower by dragging: ${w0} -> ${w1}`);
   assert(await page.evaluate(() => localStorage.getItem('fintech-kanban-list-w')) !== null, 'Width is remembered');
+  // Ручка ширины не рисуется поверх открытой карточки задачи.
+  await page.evaluate(() => openTask(1));
+  await page.waitForTimeout(400);
+  const covered = await page.evaluate(() => { const d = document.getElementById('drawer').getBoundingClientRect(), g = document.getElementById('listWidthGrip'); g.style.display = 'block'; g.style.left = (d.left + 40) + 'px'; g.style.top = '0px'; g.style.height = '600px'; const el = document.elementFromPoint(d.left + 40, 300); const r = el === g; g.style.display = ''; return r; });
+  assert(!covered, 'Width grip must stay under the open task drawer');
+  await page.evaluate(() => closeDrawerSafely());
+  await page.waitForTimeout(300);
   // Rows look like «Мои задачи»: title above, info line under it, on the left
   const geo = await page.locator('#board article.task').first().evaluate((e) => { const t = e.querySelector('.tasktitle').getBoundingClientRect(), m = e.querySelector('.subtask-add').getBoundingClientRect(), c = e.getBoundingClientRect(); return { below: m.top >= t.bottom - 2, left: m.left - c.left }; });
   assert(geo.below && geo.left < 400, 'Info line is under the title and near the left: ' + JSON.stringify(geo));

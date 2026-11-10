@@ -1205,7 +1205,7 @@ html[data-layout="rows"] .board .cards>.task .date{order:5}
 html[data-layout="rows"] .board .cards>.task .pin-btn{order:6}
 html[data-layout="rows"] .board .cards>.task .subtask-add{display:inline-block;flex:0 0 auto;width:auto;margin:0;padding:0;border:0;font-size:12px;white-space:nowrap}
 html[data-layout="rows"] .board .cards>.task .archive-task{position:static;flex:0 0 auto;margin:0}
-#listWidthGrip{position:fixed;width:9px;margin-left:-4px;cursor:ew-resize;z-index:30;display:none;background:transparent;touch-action:none}#listWidthGrip:hover,#listWidthGrip.drag{background:rgba(100,120,170,.35)}
+#listWidthGrip{position:fixed;width:9px;margin-left:-4px;cursor:ew-resize;z-index:8;display:none;background:transparent;touch-action:none}#listWidthGrip:hover,#listWidthGrip.drag{background:rgba(100,120,170,.35)}
 #myTasksView .qn-panel{max-width:960px}
 html.list-w-set #myTasksView .mytask-group,html.list-w-set #myTasksView .mytask-list,html.list-w-set #myTasksView .qn-panel,html.list-w-set #myTasksView .mytasks-head,html.list-w-set #completedView .cp-list{max-width:var(--list-w)}
 html.list-w-set[data-layout="rows"] .board .column{max-width:var(--list-w)}
@@ -2175,7 +2175,8 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
- {v:'2026.11.10-01',date:'10.11.2026',title:'Сохранение по Ctrl+Enter',items:['Комментарий, пункт чек-листа, ссылка, быстрая заметка, «Важное по проекту», задача из встречи и название новой задачи сохраняются по Ctrl+Enter (на Mac — Cmd+Enter). Простой Enter ничего не сохраняет, в многострочных полях он делает перенос строки.']},
+ {v:'2026.11.10-03',date:'10.11.2026',title:'Сохранение по Ctrl+Enter',items:['Комментарий, пункт чек-листа, ссылка, быстрая заметка, «Важное по проекту», задача из встречи и название новой задачи сохраняются по Ctrl+Enter (на Mac — Cmd+Enter). Простой Enter ничего не сохраняет, в многострочных полях он делает перенос строки.']},
+ {v:'2026.11.10-02',date:'10.11.2026',title:'Ручка ширины списка под карточкой',items:['Полоса изменения ширины списка больше не рисуется поверх открытой карточки задачи и не мешает нажимать на чек-лист.']},
  {v:'2026.11.06-01',date:'06.11.2026',title:'CRM: верные счётчики',items:['Счётчики «новых» и «Нет в CRM» больше не считают завершённые и архивные задачи, которых нет в списке.']},
  {v:'2026.11.05-01',date:'05.11.2026',title:'Личный сейф',items:['В меню аккаунта появился «Личный сейф»: свободный текст (логины, пароли, заметки), зашифрованный мастер-паролем прямо в браузере. Мастер-пароль нигде не хранится и не восстанавливается; сейф сам блокируется через 5 минут без действий. Доступен с любого устройства после входа.']},
  {v:'2026.11.03-12',date:'03.11.2026',title:'Группы: без лишнего пункта',items:['В «Группа проекта…» у проекта без группы больше нет пункта «Без группы». У проекта в группе есть «Убрать из группы».']},
