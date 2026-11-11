@@ -2175,6 +2175,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.11.11-01',date:'11.11.2026',title:'CRM: логин и пароль в приложении',items:['В меню аккаунта — «Данные для входа в CRM»: логин и пароль проверяются входом в CRM и хранятся на сервере только зашифрованными (в браузер пароль не возвращается). Если CRM перестала принимать вход, приложение подскажет обновить данные.']},
  {v:'2026.11.10-03',date:'10.11.2026',title:'Сохранение по Ctrl+Enter',items:['Комментарий, пункт чек-листа, ссылка, быстрая заметка, «Важное по проекту», задача из встречи и название новой задачи сохраняются по Ctrl+Enter (на Mac — Cmd+Enter). Простой Enter ничего не сохраняет, в многострочных полях он делает перенос строки.']},
  {v:'2026.11.10-02',date:'10.11.2026',title:'Ручка ширины списка под карточкой',items:['Полоса изменения ширины списка больше не рисуется поверх открытой карточки задачи и не мешает нажимать на чек-лист.']},
  {v:'2026.11.06-01',date:'06.11.2026',title:'CRM: верные счётчики',items:['Счётчики «новых» и «Нет в CRM» больше не считают завершённые и архивные задачи, которых нет в списке.']},
@@ -4110,9 +4111,11 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
       for(const t of need){if(fetched>=10)break;fetched++;try{const f=await call({action:'task',productId:t.crm.productId,id:t.crm.id});if(f.task){merge(t,f.task);mergeCl(t,f.task);changed=true}}catch(e){console.warn('CRM checklist failed',e)}}
       for(const t of crmTasks()){if(fetched>=10)break;if(t.crm.gone||t.crm.cancelled||(t.crm.comments||0)===(t.crm.cseen||0))continue;fetched++;try{if(await pullComments(t))changed=true;else changed=true}catch(e){console.warn('CRM comments failed',e)}}
       if(changed){save();renderAll()}
+      if(S.credsBad){S.credsBad=false;label()}
       S.last=Date.now();if(manual)toast('CRM: обновлено');setTimeout(()=>{if(!askLegacy())askOff()},500)
     }catch(e){
       if(e.body?.disabled){projectMeta.__crm__={enabled:false};save();label();toast('CRM: '+e.message);return}
+      if(e.body?.authFailed||e.body?.needCreds){const first=!S.credsBad;S.credsBad=true;label();if(first||manual)toast('CRM: не удаётся войти. Откройте меню аккаунта → «Данные для входа в CRM» и обновите логин и пароль.');return}
       if(manual||!S.warned){S.warned=true;toast('CRM: '+e.message)}
     }finally{S.busy=false;decorate()}}
   // Старые проекты «Этажи · …» (до метки): переносим задачи в «Мои задачи» целиком, пустые проекты убираем.
@@ -4328,7 +4331,30 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     const b=$('crmConnectButton');if(b)b.textContent=enabled()?'Внешняя CRM: подключена · отключить':'Подключить внешнюю CRM';
     let sb=$('crmSyncButton');
     if(enabled()&&b&&!sb){sb=document.createElement('button');sb.id='crmSyncButton';sb.type='button';sb.className='btn';sb.textContent='⟳ Обновить из CRM';b.insertAdjacentElement('afterend',sb);sb.addEventListener('click',()=>{if(!signed()){toast('Сначала войдите в аккаунт');return}sync(true)})}
-    if(sb)sb.hidden=!enabled()}
+    if(sb)sb.hidden=!enabled();
+    let cb=$('crmCredsButton');
+    if(b&&!cb){cb=document.createElement('button');cb.id='crmCredsButton';cb.type='button';cb.className='btn';(sb||b).insertAdjacentElement('afterend',cb);cb.addEventListener('click',openCreds)}
+    if(cb){cb.textContent='🔑 Данные для входа в CRM'+(S.credsBad?' · нужно обновить':'');cb.hidden=!signed()}}
+  // Логин и пароль CRM: вводятся здесь, на сервере проверяются входом в CRM и хранятся только зашифрованными.
+  function openCreds(){
+    if(!signed()){toast('Сначала войдите в аккаунт');return}
+    if($('crmCredsModal'))return;
+    const w=document.createElement('div');w.className='modal show';w.id='crmCredsModal';
+    w.innerHTML='<div class="modalcard" role="dialog" aria-modal="true" aria-labelledby="crmCredsTitle"><h3 id="crmCredsTitle">Данные для входа в CRM</h3><p class="mini" id="crmCredsHint">Загрузка…</p><form class="friendly-form" autocomplete="off"><div class="field"><label for="crmCredsLogin">Логин</label><input id="crmCredsLogin" name="crmlogin" type="text" autocomplete="off" maxlength="200"></div><div class="field"><label for="crmCredsPass">Пароль</label><input id="crmCredsPass" name="crmpass" type="password" autocomplete="new-password" maxlength="200"></div><div class="vault-error" id="crmCredsErr" role="alert" style="color:#c24141;min-height:18px;font-size:13px"></div><div class="friendly-actions"><button type="button" class="btn friendly-cancel">Отмена</button><button type="submit" class="btn primary" id="crmCredsSave">Проверить и сохранить</button></div></form></div>';
+    document.body.appendChild(w);
+    const q=id=>w.querySelector('#'+id);let gone=false;
+    const close=()=>{if(gone)return;gone=true;q('crmCredsPass').value='';document.removeEventListener('keydown',key);w.remove()};
+    const key=e=>{if(e.key==='Escape'){e.preventDefault();close()}};document.addEventListener('keydown',key);
+    w.addEventListener('click',e=>{if(e.target===w)close()});w.querySelector('.friendly-cancel').onclick=close;
+    call({action:'creds-status'}).then(r=>{if(gone)return;q('crmCredsLogin').value=r.login||'';
+      q('crmCredsHint').textContent=!r.keyReady?'На сервере ещё не настроен ключ шифрования (секрет CRM_CRED_KEY) — сохранить пароль пока нельзя.':r.configured?(r.source==='db'?'Сейчас используются данные, сохранённые здесь. Пароль не показывается. Введите новый пароль, чтобы заменить.':'Сейчас используются данные из настроек сервера. Введите свои, чтобы заменить их.'):'Данных для входа пока нет. Пароль проверяется входом в CRM и хранится зашифрованным.';
+      setTimeout(()=>q(r.login?'crmCredsPass':'crmCredsLogin').focus(),30)}).catch(e=>{if(!gone)q('crmCredsHint').textContent='Не удалось загрузить: '+e.message});
+    w.querySelector('form').onsubmit=async ev=>{ev.preventDefault();const err=q('crmCredsErr'),btn=q('crmCredsSave');err.textContent='';
+      const login=q('crmCredsLogin').value.trim(),password=q('crmCredsPass').value;
+      if(!login||!password){err.textContent='Введите логин и пароль.';return}
+      btn.disabled=true;btn.textContent='Проверяем вход…';
+      try{await call({action:'creds-save',login,password});close();S.credsBad=false;label();toast('CRM: данные для входа сохранены');if(enabled()){S.last=0;sync(true)}}
+      catch(e){err.textContent=e.message||'Не удалось сохранить.';btn.disabled=false;btn.textContent='Проверить и сохранить'}}}
   $('crmConnectButton')?.addEventListener('click',()=>{
     if(!signed()){toast('Сначала войдите в аккаунт');return}
     if(enabled()){friendlyConfirm('Отключить внешнюю CRM?','Карточки с меткой останутся в канбане, но перестанут обновляться и отправлять изменения в CRM.',()=>{projectMeta.__crm__={enabled:false};save();label();renderAll()},'Отключить');return}

@@ -102,7 +102,10 @@ try {
       const b = JSON.parse(request.postData() || '{}');
       crm.calls.push(b);
       const ok = (o, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
+      if (b.action === 'pull' && crm.authBroken) { await ok({ error: 'CRM не приняла логин или пароль. Обновите данные для входа.', authFailed: true }, 502); return; }
       if (b.action === 'pull') { await ok({ me: { id: '101', name: 'Валентин' }, crmUrl: 'https://crm.example.test', products: [{ id: 7, name: 'Ремонты', complete: true, tasks: crm.tasks.filter((x) => !x.hidden).map(listView) }, { id: 8, name: 'Продажи', complete: true, tasks: [] }] }); return; }
+      if (b.action === 'creds-status') { await ok({ configured: true, source: 'env', login: 'old-login', updatedAt: '', keyReady: true }); return; }
+      if (b.action === 'creds-save') { crm.saved = b; if (b.password === 'wrong') { await ok({ error: 'CRM не приняла логин или пароль. Обновите данные для входа.', authFailed: true }, 400); return; } await ok({ ok: true, login: b.login }); return; }
       if (b.action === 'products') { await ok({ products: [{ id: 7, name: 'Ремонты' }, { id: 8, name: 'Продажи' }] }); return; }
       if (b.action === 'task') { await ok({ task: crm.tasks.find((x) => x.id === b.id) }); return; }
       if (b.action === 'update') {
@@ -428,6 +431,40 @@ try {
   await page.evaluate(() => { standaloneTasks.find((t) => t.crm).title = 'После отключения'; save(); });
   await page.waitForTimeout(5000);
   if (crm.calls.length !== before) throw new Error('No CRM calls after turning off');
+  // Логин и пароль CRM вводятся в приложении.
+  await page.evaluate(() => switchView('inbox'));
+  await page.evaluate(() => { projectMeta.__crm__ = { enabled: true }; });
+  crm.authBroken = true;
+  await page.evaluate(() => window.__crm.sync(true));
+  await page.waitForFunction(() => document.getElementById('crmCredsButton')?.textContent.includes('нужно обновить'), null, { timeout: 5000 });
+  // Окно вопроса про отменённую задачу из предыдущих шагов теста не относится к этой проверке.
+  await page.waitForTimeout(900);
+  await page.evaluate(() => document.querySelectorAll('.friendly-dialog').forEach((d) => d.remove()));
+  await page.evaluate(() => document.getElementById('crmCredsButton').click());
+  await page.locator('#crmCredsModal').waitFor();
+  await page.waitForFunction(() => document.getElementById('crmCredsLogin').value === 'old-login');
+  if ((await page.locator('#crmCredsPass').getAttribute('type')) !== 'password') throw new Error('Password field must be masked');
+  await page.locator('#crmCredsLogin').fill('new-login'); await page.locator('#crmCredsPass').fill('wrong');
+  await page.locator('#crmCredsSave').click();
+  await page.waitForFunction(() => document.getElementById('crmCredsErr').textContent.includes('не приняла'), null, { timeout: 5000 });
+  if (!(await page.locator('#crmCredsModal').count())) throw new Error('Dialog stays open on wrong credentials');
+  crm.authBroken = false;
+  await page.locator('#crmCredsPass').fill('good-pass-1');
+  await page.locator('#crmCredsSave').click();
+  await page.locator('#crmCredsModal').waitFor({ state: 'detached', timeout: 5000 });
+  if (crm.saved?.login !== 'new-login' || crm.saved?.password !== 'good-pass-1') throw new Error('Credentials are sent to the function: ' + JSON.stringify({ l: crm.saved?.login }));
+  const credsAfter = await page.evaluate(() => JSON.stringify({ btn: document.getElementById('crmCredsButton').textContent, state: localStorage.length + '|' + document.documentElement.innerHTML.includes('good-pass-1') }));
+  if (credsAfter.includes('нужно обновить') || credsAfter.includes('|true')) throw new Error('Password must not stay in the page: ' + credsAfter);
+  const leaked = await page.evaluate(() => Object.keys(localStorage).some((k) => (localStorage.getItem(k) || '').includes('good-pass-1')) || JSON.stringify(projectMeta).includes('good-pass-1'));
+  if (leaked) throw new Error('Password leaked into local state');
+  // Backdrop click does not submit.
+  await page.evaluate(() => document.getElementById('crmCredsButton').click());
+  await page.locator('#crmCredsModal').waitFor();
+  const savesBefore = crm.calls.filter((x) => x.action === 'creds-save').length;
+  await page.locator('#crmCredsPass').fill('typed-but-not-sent');
+  await page.mouse.click(5, 5);
+  await page.locator('#crmCredsModal').waitFor({ state: 'detached', timeout: 3000 });
+  if (crm.calls.filter((x) => x.action === 'creds-save').length !== savesBefore) throw new Error('Closing by backdrop must not submit the password');
   if (pageErrors.length) throw new Error('Page errors: ' + pageErrors.join('; '));
   console.log('CRM sync OK');
 } finally {

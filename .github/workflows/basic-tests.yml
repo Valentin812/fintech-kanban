@@ -60,6 +60,8 @@ jobs:
 
       - name: Run vault browser test
         run: node tests/vault.mjs
+      - name: Run CRM credentials test
+        run: node --experimental-strip-types tests/crm-credentials.mjs
       - name: Run meetings browser test
         run: node tests/meetings.mjs
 

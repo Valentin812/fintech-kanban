@@ -1,6 +1,7 @@
 // Синхронизация задач с CRM «Этажи» через её API (код CRM не меняется).
 // Вход в CRM — логин и пароль владельца из секретов функции; токен CRM не покидает сервер.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { cleanCreds, decryptSecret, encryptSecret, MIN_KEY_LENGTH } from "./creds.ts";
 import { buildChecklist, buildComment, buildCreate, buildPatch, normalizeComment, normalizeTask } from "./logic.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -8,6 +9,7 @@ const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const crmBase = (Deno.env.get("CRM_BASE_URL") ?? "https://samsonovtsi-chat-713b.twc1.net").replace(/\/+$/, "");
 const crmLogin = Deno.env.get("CRM_LOGIN") ?? "";
 const crmPassword = Deno.env.get("CRM_PASSWORD") ?? "";
+const credKey = Deno.env.get("CRM_CRED_KEY") ?? "";
 const allowedEmail = (Deno.env.get("CRM_ALLOWED_EMAIL") ?? "").trim().toLowerCase();
 const allowedOrigin = Deno.env.get("ASSISTANT_ALLOWED_ORIGIN") ?? "https://valentin812.github.io";
 const db = createClient(supabaseUrl, serviceRoleKey);
@@ -21,19 +23,40 @@ const cors = (extra: Record<string, string> = {}) => ({
 });
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: cors({ "Content-Type": "application/json" }) });
 
-class CrmError extends Error { constructor(public status: number, message: string, public body: any = null) { super(message); } }
+class CrmError extends Error { constructor(public status: number, message: string, public body: any = null, public auth = false) { super(message); } }
 
 let crmToken: { value: string; expires: number } | null = null;
-async function login(): Promise<string> {
+// Данные для входа: сначала введённые в приложении (в базе, зашифрованы), потом секреты функции.
+async function loadCreds(): Promise<{ login: string; password: string; source: "db" | "env"; updatedAt: string } | null> {
+  if (credKey.length >= MIN_KEY_LENGTH) {
+    try {
+      const { data } = await db.from("crm_credentials").select("login,password_enc,updated_at").eq("id", true).maybeSingle();
+      if (data?.login && data?.password_enc) return { login: String(data.login), password: await decryptSecret(String(data.password_enc), credKey), source: "db", updatedAt: String(data.updated_at ?? "") };
+    } catch (_e) { console.error("CRM credentials could not be loaded"); }
+  }
+  if (crmLogin && crmPassword) return { login: crmLogin, password: crmPassword, source: "env", updatedAt: "" };
+  return null;
+}
+async function rawLogin(login: string, password: string): Promise<{ value: string; expires: number }> {
   const r = await fetch(`${crmBase}/api/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ login: crmLogin, password: crmPassword }),
+    body: JSON.stringify({ login, password }),
     signal: AbortSignal.timeout(15000),
   });
   const b = await r.json().catch(() => null);
-  if (!r.ok || !b?.token) { console.error("CRM login failed:", r.status); throw new CrmError(502, r.status === 429 ? "CRM временно ограничила вход, попробуйте позже." : "Не удалось войти в CRM. Проверьте логин и пароль в секретах."); }
-  crmToken = { value: String(b.token), expires: Date.now() + Math.max(60, Number(b.expiresIn) || 28800) * 1000 };
+  if (!r.ok || !b?.token) {
+    console.error("CRM login failed:", r.status);
+    if (r.status === 429) throw new CrmError(502, "CRM временно ограничила вход, попробуйте позже.");
+    if (r.status === 400 || r.status === 401 || r.status === 403) throw new CrmError(502, "CRM не приняла логин или пароль. Обновите данные для входа.", null, true);
+    throw new CrmError(502, "Не удалось войти в CRM.");
+  }
+  return { value: String(b.token), expires: Date.now() + Math.max(60, Number(b.expiresIn) || 28800) * 1000 };
+}
+async function login(): Promise<string> {
+  const c = await loadCreds();
+  if (!c) throw new CrmError(502, "Нет данных для входа в CRM. Укажите логин и пароль.", { needCreds: true });
+  crmToken = await rawLogin(c.login, c.password);
   return crmToken.value;
 }
 async function crm(path: string, init: { method?: string; product?: number; body?: unknown } = {}, retry = true): Promise<any> {
@@ -64,6 +87,13 @@ async function myTasks(product: number) {
   return { tasks: [...seen.values()], complete };
 }
 
+const saves = new Map<string, number[]>();
+function saveAllowed(id: string) {
+  const now = Date.now();
+  const l = (saves.get(id) ?? []).filter((t) => now - t < 3600_000);
+  if (l.length >= 10) { saves.set(id, l); return false; }
+  l.push(now); saves.set(id, l); return true;
+}
 const hits = new Map<string, number[]>();
 function allowed(id: string) {
   const now = Date.now();
@@ -79,7 +109,7 @@ Deno.serve(async (req) => {
   const { data: auth } = token ? await db.auth.getUser(token) : { data: { user: null } };
   const user = auth?.user;
   if (!user) return json({ error: "Нужен вход в аккаунт." }, 401);
-  if (!crmLogin || !crmPassword || !allowedEmail) return json({ error: "Интеграция с CRM не настроена.", disabled: true }, 503);
+  if (!allowedEmail) return json({ error: "Интеграция с CRM не настроена.", disabled: true }, 503);
   // Интеграция личная: работает только для владельца учётки CRM.
   if (String(user.email ?? "").toLowerCase() !== allowedEmail) return json({ error: "Интеграция с CRM недоступна.", disabled: true }, 403);
   if (!allowed(user.id)) return json({ error: "Слишком много запросов к CRM." }, 429);
@@ -88,6 +118,23 @@ Deno.serve(async (req) => {
   try { body = await req.json(); } catch { return json({ error: "Некорректный запрос." }, 400); }
   const product = Number(body?.productId) || 0;
   try {
+    if (body?.action === "creds-status") {
+      const c = await loadCreds();
+      return json({ configured: !!c, source: c?.source ?? "", login: c?.login ?? "", updatedAt: c?.updatedAt ?? "", keyReady: credKey.length >= MIN_KEY_LENGTH });
+    }
+    if (body?.action === "creds-save") {
+      if (!saveAllowed(user.id)) return json({ error: "Слишком много попыток входа. Подождите час." }, 429);
+      if (credKey.length < MIN_KEY_LENGTH) return json({ error: "На сервере не настроен ключ шифрования (секрет CRM_CRED_KEY).", needKey: true }, 400);
+      const c = cleanCreds(body?.login, body?.password);
+      if ("error" in c) return json({ error: c.error }, 400);
+      let session: { value: string; expires: number };
+      try { session = await rawLogin(c.login, c.password); }
+      catch (e) { return json({ error: (e as Error).message, authFailed: (e as CrmError).auth === true }, 400); }
+      const { error } = await db.from("crm_credentials").upsert({ id: true, login: c.login, password_enc: await encryptSecret(c.password, credKey), updated_at: new Date().toISOString(), updated_by: user.id });
+      if (error) { console.error("CRM credentials save failed"); return json({ error: "Не удалось сохранить данные." }, 500); }
+      crmToken = session;
+      return json({ ok: true, login: c.login });
+    }
     if (body?.action === "pull") {
       const me = await crm("/api/me");
       const productsRaw = await crm("/api/products");
@@ -181,6 +228,7 @@ Deno.serve(async (req) => {
   } catch (e) {
     const status = e instanceof CrmError ? (e.status >= 500 || e.status === 401 ? 502 : e.status) : 502;
     console.error("CRM error:", e instanceof CrmError ? e.status : "", String((e as Error)?.message ?? e).slice(0, 200));
-    return json({ error: e instanceof CrmError ? e.message : "CRM недоступна." }, status);
+    const flags = e instanceof CrmError ? { ...(e.auth ? { authFailed: true } : {}), ...(e.body?.needCreds ? { needCreds: true } : {}) } : {};
+    return json({ error: e instanceof CrmError ? e.message : "CRM недоступна.", ...flags }, status);
   }
 });
