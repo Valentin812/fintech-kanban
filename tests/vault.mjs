@@ -45,6 +45,7 @@ try {
   // Создание сейфа.
   await openVault();
   await page.locator('#vaultPass').waitFor({ state: 'visible' });
+  await page.waitForFunction(() => { const b = document.getElementById('vaultOpen'); return b && !b.disabled; });
   await page.fill('#vaultPass', 'short'); await page.fill('#vaultPass2', 'short'); await page.click('#vaultOpen');
   await page.waitForFunction((t) => document.getElementById('vaultErr').textContent.includes(t), '8', { timeout: 8000 }).catch(() => { throw new Error('Short master password rejected'); });
   await page.fill('#vaultPass', 'test-master-123'); await page.fill('#vaultPass2', 'other-master-123'); await page.click('#vaultOpen');
@@ -62,6 +63,7 @@ try {
   // Неверный и верный пароль.
   await openVault();
   await page.locator('#vaultPass').waitFor({ state: 'visible' });
+  await page.waitForFunction(() => { const b = document.getElementById('vaultOpen'); return b && !b.disabled; });
   await page.fill('#vaultPass', 'wrong-master-1'); await page.click('#vaultOpen');
   await page.waitForFunction((t) => document.getElementById('vaultErr').textContent.includes(t), 'Неверный', { timeout: 8000 }).catch(() => { throw new Error('Wrong password rejected: '); });
   assert(await page.locator('#vaultBody').isHidden(), 'Body stays hidden');
@@ -75,6 +77,7 @@ try {
   await page.click('#vaultLockBtn');
   await openVault();
   await page.locator('#vaultPass').waitFor({ state: 'visible' });
+  await page.waitForFunction(() => { const b = document.getElementById('vaultOpen'); return b && !b.disabled; });
   await page.fill('#vaultPass', 'test-master-123'); await page.click('#vaultOpen');
   await page.waitForFunction((t) => document.getElementById('vaultErr').textContent.includes(t), 'Неверный', { timeout: 8000 }).catch(() => { throw new Error('Old password no longer works'); });
   await page.fill('#vaultPass', 'new-master-456'); await page.click('#vaultOpen');
