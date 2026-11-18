@@ -2175,6 +2175,7 @@ h.addEventListener('dblclick',clear);h.addEventListener('keydown',e=>{if(e.key!=
 new ResizeObserver(()=>{if(!app.classList.contains('side-sized'))syncHandle()}).observe(side);})();
 
 const CHANGELOG=[
+ {v:'2026.11.18-01',date:'18.11.2026',title:'CRM: ссылки на задачи',items:['Ссылка в карточке CRM-задачи теперь ведёт прямо на эту задачу и обновляется сама, если адрес CRM изменился.']},
  {v:'2026.11.11-01',date:'11.11.2026',title:'CRM: логин и пароль в приложении',items:['В меню аккаунта — «Данные для входа в CRM»: логин и пароль проверяются входом в CRM и хранятся на сервере только зашифрованными (в браузер пароль не возвращается). Если CRM перестала принимать вход, приложение подскажет обновить данные.']},
  {v:'2026.11.10-03',date:'10.11.2026',title:'Сохранение по Ctrl+Enter',items:['Комментарий, пункт чек-листа, ссылка, быстрая заметка, «Важное по проекту», задача из встречи и название новой задачи сохраняются по Ctrl+Enter (на Mac — Cmd+Enter). Простой Enter ничего не сохраняет, в многострочных полях он делает перенос строки.']},
  {v:'2026.11.10-02',date:'10.11.2026',title:'Ручка ширины списка под карточкой',items:['Полоса изменения ширины списка больше не рисуется поверх открытой карточки задачи и не мешает нажимать на чек-лист.']},
@@ -4014,7 +4015,10 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     for(const ri of r.checklist)if(!have.has(String(ri.id))&&!prev.has(String(ri.id)))list.push({text:ri.title,done:ri.completed,cid:ri.id,csnap:{text:ri.title,done:ri.completed}});
     t.checklist=list;c.cl={ids:r.checklist.map(i=>String(i.id)),tot:r.clTotal,done:r.clDone};
     return JSON.stringify(list)!==before}
-  function newTask(r){const t={id:freshTaskId(),title:'',start:ru(r.createdAt)||todayRu(),end:'',status:'Очередь',owner:'',description:'',comment:'',link:S.url,linkTitle:'Открыть CRM',mt:'',documents:[],extraLinks:[],source:'crm'};merge(t,r);if(Date.now()-(Date.parse(r.createdAt)||0)<7*864e5){t.crm.seen=false;t.crm.at=Date.now()}return t}
+  // Ссылка на задачу в CRM: адрес берётся с сервера, поэтому при смене адреса CRM ссылки в карточках обновляются сами.
+  const taskLink=(id,pid)=>S.url?S.url.replace(/\/+$/,'')+'/?task='+encodeURIComponent(id)+(pid?'&product='+encodeURIComponent(pid):''):'';
+  function fixLinks(){let n=0;if(!S.url)return n;for(const t of crmTasks()){if(t.linkTitle!=='Открыть CRM'||!t.crm?.id)continue;const old=String(t.link||'');if(old&&!/^https?:\/\/[^/\s]+\/?(\?task=[^\s#]*)?$/.test(old))continue;const want=taskLink(t.crm.id,t.crm.productId);if(want&&old!==want){t.link=want;n++}}return n}
+  function newTask(r){const t={id:freshTaskId(),title:'',start:ru(r.createdAt)||todayRu(),end:'',status:'Очередь',owner:'',description:'',comment:'',link:taskLink(r.id,r.productId),linkTitle:'Открыть CRM',mt:'',documents:[],extraLinks:[],source:'crm'};merge(t,r);if(Date.now()-(Date.parse(r.createdAt)||0)<7*864e5){t.crm.seen=false;t.crm.at=Date.now()}return t}
   function diff(t){
     const s=t.crm?.snap;if(!s||t.crm.gone||t.crm.cancelled)return null;const f={};
     if((t.title||'')!==(s.title||'')&&String(t.title||'').trim())f.title=t.title;
@@ -4085,7 +4089,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     if(S.busy||!enabled()||!cloudStateReady||!signed())return;S.busy=true;
     try{
       await pushAll();
-      const r=await call({action:'pull'});S.url=r.crmUrl||S.url;let changed=false;const need=[];let checks=0;
+      const r=await call({action:'pull'});S.url=r.crmUrl||S.url;let changed=fixLinks()>0;const need=[];let checks=0;
       for(const prod of Array.isArray(r.products)?r.products:[]){
         const tasks=Array.isArray(prod.tasks)?prod.tasks:[];
         const byId=new Map(crmTasks().filter(t=>Number(t.crm.productId)===Number(prod.id)).map(t=>[String(t.crm.id),t]));
@@ -4190,7 +4194,7 @@ body[data-bg] .add-status,body[data-bg] #addStatus,body[data-bg] .empty-state{ba
     if(!box){box=document.createElement('div');box.id='crmInfo';box.className='crm-info';head?.insertAdjacentElement('afterend',box)}
     if(!t.crm){box.innerHTML=`<button type="button" class="btn" data-crm-attach="1" aria-pressed="false">☐ CRM</button> <span class="mini">Отправить задачу в CRM и держать её в синхроне</span>`;return}
     const c=t.crm,open=!c.cancelled&&!c.gone&&c.st!=='done';
-    box.innerHTML=`<button type="button" class="btn" data-crm-detach="1" aria-pressed="true" title="Снять метку">☑ CRM</button> Задача №${esc(c.id)}${c.pn?` · проект CRM: ${esc(c.pn)}`:''}${c.requester?` · от кого: ${esc(c.requester)}`:''}${c.protocolId?` · протокол №${esc(c.protocolId)}`:''}${SL[c.st]?` · статус в CRM: ${SL[c.st]}`:''}${c.addNames?.length?` · доп. ответственные: ${esc(c.addNames.join(', '))}`:''}${c.dueTime?` · время срока ${esc(c.dueTime)}`:''}${c.comments?` · комментариев: ${c.comments}`:''}${offText(c)?` · <b>${offText(c)}</b>`:''}${S.url?` · <a href="${esc(S.url)}" target="_blank" rel="noopener">открыть CRM ↗</a>`:''}${open?`<div class="crm-actions"><button type="button" class="btn" data-crm-done="1">✓ Выполнено в CRM</button><button type="button" class="btn" data-crm-add="1" title="Кого CRM тоже уведомит по задаче">👥 Доп. ответственные…</button><button type="button" class="btn" data-crm-cancel="1">Отмена в CRM (в архив)</button></div>`:''}`}
+    box.innerHTML=`<button type="button" class="btn" data-crm-detach="1" aria-pressed="true" title="Снять метку">☑ CRM</button> Задача №${esc(c.id)}${c.pn?` · проект CRM: ${esc(c.pn)}`:''}${c.requester?` · от кого: ${esc(c.requester)}`:''}${c.protocolId?` · протокол №${esc(c.protocolId)}`:''}${SL[c.st]?` · статус в CRM: ${SL[c.st]}`:''}${c.addNames?.length?` · доп. ответственные: ${esc(c.addNames.join(', '))}`:''}${c.dueTime?` · время срока ${esc(c.dueTime)}`:''}${c.comments?` · комментариев: ${c.comments}`:''}${offText(c)?` · <b>${offText(c)}</b>`:''}${S.url?` · <a href="${esc(taskLink(c.id,c.productId)||S.url)}" target="_blank" rel="noopener">открыть CRM ↗</a>`:''}${open?`<div class="crm-actions"><button type="button" class="btn" data-crm-done="1">✓ Выполнено в CRM</button><button type="button" class="btn" data-crm-add="1" title="Кого CRM тоже уведомит по задаче">👥 Доп. ответственные…</button><button type="button" class="btn" data-crm-cancel="1">Отмена в CRM (в архив)</button></div>`:''}`}
   const showInfo=()=>{try{const t=currentDrawerTask();const sh=selectedStandaloneId===null&&!!active()?.shared;drawerInfo(t,sh)}catch(e){}};
   const ot=window.openTask;if(typeof ot==='function')window.openTask=function(){const r=ot.apply(this,arguments);showInfo();return r};
   const os2=window.openStandaloneTask;if(typeof os2==='function')window.openStandaloneTask=function(){const r=os2.apply(this,arguments);try{const ct=currentDrawerTask();if(ct?.crm&&(ct.crm.seen===false||ct.crm.upd)){ct.crm.seen=true;ct.crm.upd=false;save();try{renderMyTasks()}catch(e){}}}catch(e){}showInfo();return r};

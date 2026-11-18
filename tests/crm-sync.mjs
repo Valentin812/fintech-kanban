@@ -465,6 +465,14 @@ try {
   await page.mouse.click(5, 5);
   await page.locator('#crmCredsModal').waitFor({ state: 'detached', timeout: 3000 });
   if (crm.calls.filter((x) => x.action === 'creds-save').length !== savesBefore) throw new Error('Closing by backdrop must not submit the password');
+  // Ссылки на задачи CRM обновляются при смене адреса и ведут на конкретную задачу.
+  await page.evaluate(() => switchView('inbox'));
+  const linkInfo = await page.evaluate(() => { const ts = standaloneTasks.filter((t) => t.crm && !t.crm.gone && !t.crm.cancelled); const a = ts[0], c = ts[1]; a.linkTitle = 'Открыть CRM'; a.link = 'https://old.example.test/'; if (c) { c.linkTitle = 'Моя ссылка'; c.link = 'https://mine.example.test/x'; } return { a: { id: a.crm.id, pid: a.crm.productId, key: a.id }, c: c ? c.id : null }; });
+  await page.evaluate(() => { window.__crm.state.last = 0; return window.__crm.sync(true); });
+  await page.waitForFunction((k) => standaloneTasks.find((t) => t.id === k)?.link?.startsWith('https://crm.example.test/'), linkInfo.a.key, { timeout: 5000 });
+  const fixed = await page.evaluate((k) => standaloneTasks.find((t) => t.id === k).link, linkInfo.a.key);
+  if (fixed !== `https://crm.example.test/?task=${linkInfo.a.id}&product=${linkInfo.a.pid}`) throw new Error('Link points to the task on the new address: ' + fixed);
+  if (linkInfo.c !== null) { const mine = await page.evaluate((k) => standaloneTasks.find((t) => t.id === k).link, linkInfo.c); if (mine !== 'https://mine.example.test/x') throw new Error('Own link must stay: ' + mine); }
   if (pageErrors.length) throw new Error('Page errors: ' + pageErrors.join('; '));
   console.log('CRM sync OK');
 } finally {
