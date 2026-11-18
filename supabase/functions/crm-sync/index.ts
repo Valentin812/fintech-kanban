@@ -6,7 +6,7 @@ import { buildChecklist, buildComment, buildCreate, buildPatch, normalizeComment
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const crmBase = (Deno.env.get("CRM_BASE_URL") ?? "https://samsonovtsi-chat-713b.twc1.net").replace(/\/+$/, "");
+const crmBase = (Deno.env.get("CRM_BASE_URL") ?? "https://crmdop.ru").replace(/\/+$/, "");
 const crmLogin = Deno.env.get("CRM_LOGIN") ?? "";
 const crmPassword = Deno.env.get("CRM_PASSWORD") ?? "";
 const credKey = Deno.env.get("CRM_CRED_KEY") ?? "";
